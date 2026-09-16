@@ -74,11 +74,11 @@ public sealed class MainForm : Form
         int optY = 330;
         AddOption(_cmbSize, "Tamanho", optY, 0);
         AddOption(_cmbEcc, "Correção", optY, 150);
-        AddOption(_chkAuto, "Auto-gerar ao digitar", optY + 34, 0);
+        AddOption(_chkAuto, "Auto-gerar ao digitar", optY + 55, 0);
 
         _btnGenerate.Text = "Gerar QR Code";
         _btnGenerate.Size = new Size(160, 34);
-        _btnGenerate.Location = new Point(120, optY + 70);
+        _btnGenerate.Location = new Point(120, optY + 95);
         _btnGenerate.Click += OnGenerateClicked;
         Controls.Add(_btnGenerate);
 
@@ -91,7 +91,7 @@ public sealed class MainForm : Form
         _lblError.AutoSize = true;
         _lblError.ForeColor = Color.Firebrick;
         _lblError.MaximumSize = new Size(395, 60);
-        _lblError.Location = new Point(15, optY + 118);
+        _lblError.Location = new Point(15, optY + 145);
         _lblError.Visible = false;
         Controls.Add(_lblError);
 
@@ -127,10 +127,10 @@ public sealed class MainForm : Form
         {
             Text = label,
             AutoSize = true,
-            Location = new Point(x + 4, y + 3)
+            Location = new Point(x + 4, y)
         };
-        combo.Location = new Point(x + 90, y);
-        combo.Size = new Size(80, 26);
+        combo.Location = new Point(x + 4, y + 20);
+        combo.Size = new Size(90, 26);
         combo.DropDownStyle = ComboBoxStyle.DropDownList;
         Controls.Add(lbl);
         Controls.Add(combo);
