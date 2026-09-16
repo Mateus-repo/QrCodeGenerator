@@ -1,3 +1,4 @@
+using System.Globalization;
 using QRCoder;
 
 namespace QrCodeGenerator;
@@ -8,6 +9,10 @@ public enum QrCategory
     Texto,
     Email,
     Telefone,
+    SMS,
+    WhatsApp,
+    Evento,
+    Localização,
     WiFi,
     VCard
 }
@@ -29,6 +34,15 @@ public sealed class QrFields
     public string? MailBody { get; set; }
     public string? PhonePrefix { get; set; }
     public string? PhoneNumber { get; set; }
+    public string? SmsMessage { get; set; }
+    public string? WaMessage { get; set; }
+    public string? EventTitle { get; set; }
+    public string? EventDescription { get; set; }
+    public string? EventLocation { get; set; }
+    public DateTime EventStart { get; set; }
+    public DateTime EventEnd { get; set; }
+    public string? GeoLat { get; set; }
+    public string? GeoLng { get; set; }
     public string? WifiSsid { get; set; }
     public string? WifiPass { get; set; }
     public string? WifiSec { get; set; }
@@ -59,14 +73,32 @@ public static class QrService
                     return "Indica o destinatário do email.";
                 break;
             case QrCategory.Telefone:
-                var prefix = NormalizePhonePrefix(f.PhonePrefix);
+                var phonePrefix = NormalizePhonePrefix(f.PhonePrefix);
                 if (string.IsNullOrWhiteSpace(f.PhoneNumber)
                     && string.IsNullOrWhiteSpace(f.PhonePrefix))
                     return "Indica o número de telefone.";
                 if (string.IsNullOrWhiteSpace(f.PhoneNumber))
                     return "Falta o número de telefone.";
-                if (string.IsNullOrWhiteSpace(prefix))
+                if (string.IsNullOrWhiteSpace(phonePrefix))
                     return "Indica o indicativo do país (ex.: +351).";
+                break;
+            case QrCategory.SMS:
+            case QrCategory.WhatsApp:
+                if (string.IsNullOrWhiteSpace(f.PhoneNumber)
+                    || string.IsNullOrWhiteSpace(NormalizePhonePrefix(f.PhonePrefix)))
+                    return "Indica o indicativo e o número de telefone.";
+                break;
+            case QrCategory.Evento:
+                if (string.IsNullOrWhiteSpace(f.EventTitle))
+                    return "Indica o título do evento.";
+                if (f.EventEnd < f.EventStart)
+                    return "A data de fim não pode ser anterior à de início.";
+                break;
+            case QrCategory.Localização:
+                if (!TryParseCoord(f.GeoLat, out _))
+                    return "Indica uma latitude válida (ex.: 38.7223).";
+                if (!TryParseCoord(f.GeoLng, out _))
+                    return "Indica uma longitude válida (ex.: -9.1393).";
                 break;
             case QrCategory.WiFi:
                 if (string.IsNullOrWhiteSpace(f.WifiSsid))
@@ -128,8 +160,18 @@ public static class QrService
         QrCategory.Email => new PayloadGenerator.Mail(
             f.MailTo!.Trim(), f.MailSubject, f.MailBody,
             PayloadGenerator.Mail.MailEncoding.MAILTO).ToString(),
-        QrCategory.Telefone => new PayloadGenerator.PhoneNumber(
-            NormalizePhonePrefix(f.PhonePrefix) + f.PhoneNumber!.Trim()).ToString(),
+        QrCategory.Telefone => new PayloadGenerator.PhoneNumber(Phone(f)).ToString(),
+        QrCategory.SMS => new PayloadGenerator.SMS(Phone(f), f.SmsMessage ?? "",
+            PayloadGenerator.SMS.SMSEncoding.SMS).ToString(),
+        QrCategory.WhatsApp => new PayloadGenerator.WhatsAppMessage(DigitsOnly(Phone(f)), f.WaMessage ?? "").ToString(),
+        QrCategory.Evento => new PayloadGenerator.CalendarEvent(
+            f.EventTitle!.Trim(), f.EventDescription ?? "", f.EventLocation ?? "",
+            f.EventStart, f.EventEnd, false,
+            PayloadGenerator.CalendarEvent.EventEncoding.iCalComplete).ToString(),
+        QrCategory.Localização => new PayloadGenerator.Geolocation(
+            ParseCoord(f.GeoLat!).ToString(CultureInfo.InvariantCulture),
+            ParseCoord(f.GeoLng!).ToString(CultureInfo.InvariantCulture),
+            PayloadGenerator.Geolocation.GeolocationEncoding.GoogleMaps).ToString(),
         QrCategory.WiFi => CreateWifiPayload(f),
         QrCategory.VCard => CreateVCardPayload(f),
         _ => throw new InvalidOperationException("Categoria desconhecida.")
@@ -191,5 +233,24 @@ public static class QrService
         else if (!p.StartsWith("+", StringComparison.Ordinal))
             p = "+" + p;
         return p;
+    }
+
+    private static string Phone(QrFields f) => NormalizePhonePrefix(f.PhonePrefix) + f.PhoneNumber!.Trim();
+
+    private static string DigitsOnly(string s) => new(s.Where(char.IsDigit).ToArray());
+
+    private static bool TryParseCoord(string? s, out double value)
+    {
+        value = 0;
+        if (string.IsNullOrWhiteSpace(s))
+            return false;
+        var clean = s.Trim().Replace(',', '.');
+        return double.TryParse(clean, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static double ParseCoord(string s)
+    {
+        TryParseCoord(s, out var value);
+        return value;
     }
 }

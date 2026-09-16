@@ -21,6 +21,15 @@ public sealed class MainForm : Form
     private readonly TextBox _txtMailBody = new();
     private readonly TextBox _txtPhoneCountry = new();
     private readonly TextBox _txtPhoneNumber = new();
+    private readonly TextBox _txtSmsMessage = new();
+    private readonly TextBox _txtWaMessage = new();
+    private readonly TextBox _txtEventTitle = new();
+    private readonly DateTimePicker _dtpEventStart = new();
+    private readonly DateTimePicker _dtpEventEnd = new();
+    private readonly TextBox _txtEventLocation = new();
+    private readonly TextBox _txtEventDescription = new();
+    private readonly TextBox _txtGeoLat = new();
+    private readonly TextBox _txtGeoLng = new();
     private readonly TextBox _txtWifiSsid = new();
     private readonly TextBox _txtWifiPass = new();
     private readonly ComboBox _cmbWifiSec = new();
@@ -39,7 +48,7 @@ public sealed class MainForm : Form
         Text = "Gerador de QR Codes";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(940, 600);
-        MinimumSize = new Size(820, 600);
+        MinimumSize = new Size(962, 640);
         BackColor = SystemColors.Control;
         Font = new Font("Segoe UI", 9F);
 
@@ -64,7 +73,7 @@ public sealed class MainForm : Form
 
         int optY = 330;
         AddOption(_cmbSize, "Tamanho", optY, 0);
-        AddOption(_cmbEcc, "Correcção", optY, 150);
+        AddOption(_cmbEcc, "Correção", optY, 150);
         AddOption(_chkAuto, "Auto-gerar ao digitar", optY + 34, 0);
 
         _btnGenerate.Text = "Gerar QR Code";
@@ -162,6 +171,17 @@ public sealed class MainForm : Form
         _txtText.ScrollBars = ScrollBars.Vertical;
         _txtMailBody.Multiline = true;
         _txtMailBody.ScrollBars = ScrollBars.Vertical;
+        _txtSmsMessage.Multiline = true;
+        _txtSmsMessage.ScrollBars = ScrollBars.Vertical;
+        _txtWaMessage.Multiline = true;
+        _txtWaMessage.ScrollBars = ScrollBars.Vertical;
+        _txtEventDescription.Multiline = true;
+        _txtEventDescription.ScrollBars = ScrollBars.Vertical;
+
+        _dtpEventStart.Format = DateTimePickerFormat.Short;
+        _dtpEventEnd.Format = DateTimePickerFormat.Short;
+        _dtpEventStart.Value = DateTime.Now;
+        _dtpEventEnd.Value = DateTime.Now.AddHours(1);
 
         foreach (var c in FieldControls())
         {
@@ -171,6 +191,8 @@ public sealed class MainForm : Form
                 cb.SelectedIndexChanged += OnFieldChanged;
             else if (c is CheckBox chk)
                 chk.CheckedChanged += OnFieldChanged;
+            else if (c is DateTimePicker dtp)
+                dtp.ValueChanged += OnFieldChanged;
         }
 
         _cmbSize.SelectedIndexChanged += OnFieldChanged;
@@ -188,6 +210,15 @@ public sealed class MainForm : Form
         yield return _txtMailBody;
         yield return _txtPhoneCountry;
         yield return _txtPhoneNumber;
+        yield return _txtSmsMessage;
+        yield return _txtWaMessage;
+        yield return _txtEventTitle;
+        yield return _dtpEventStart;
+        yield return _dtpEventEnd;
+        yield return _txtEventLocation;
+        yield return _txtEventDescription;
+        yield return _txtGeoLat;
+        yield return _txtGeoLng;
         yield return _txtWifiSsid;
         yield return _txtWifiPass;
         yield return _cmbWifiSec;
@@ -219,6 +250,31 @@ public sealed class MainForm : Form
         {
             ("País (indicativo)", (Control)_txtPhoneCountry),
             ("Número", (Control)_txtPhoneNumber)
+        },
+        QrCategory.SMS => new[]
+        {
+            ("País (indicativo)", (Control)_txtPhoneCountry),
+            ("Número", (Control)_txtPhoneNumber),
+            ("Mensagem", (Control)_txtSmsMessage)
+        },
+        QrCategory.WhatsApp => new[]
+        {
+            ("País (indicativo)", (Control)_txtPhoneCountry),
+            ("Número", (Control)_txtPhoneNumber),
+            ("Mensagem", (Control)_txtWaMessage)
+        },
+        QrCategory.Evento => new[]
+        {
+            ("Título", (Control)_txtEventTitle),
+            ("Data início", (Control)_dtpEventStart),
+            ("Data fim", (Control)_dtpEventEnd),
+            ("Local", (Control)_txtEventLocation),
+            ("Descrição", (Control)_txtEventDescription)
+        },
+        QrCategory.Localização => new[]
+        {
+            ("Latitude", (Control)_txtGeoLat),
+            ("Longitude", (Control)_txtGeoLng)
         },
         QrCategory.WiFi => new[]
         {
@@ -274,6 +330,15 @@ public sealed class MainForm : Form
         MailBody = _txtMailBody.Text,
         PhonePrefix = _txtPhoneCountry.Text,
         PhoneNumber = _txtPhoneNumber.Text,
+        SmsMessage = _txtSmsMessage.Text,
+        WaMessage = _txtWaMessage.Text,
+        EventTitle = _txtEventTitle.Text,
+        EventDescription = _txtEventDescription.Text,
+        EventLocation = _txtEventLocation.Text,
+        EventStart = _dtpEventStart.Value,
+        EventEnd = _dtpEventEnd.Value,
+        GeoLat = _txtGeoLat.Text,
+        GeoLng = _txtGeoLng.Text,
         WifiSsid = _txtWifiSsid.Text,
         WifiPass = _txtWifiPass.Text,
         WifiSec = _cmbWifiSec.SelectedItem?.ToString(),
