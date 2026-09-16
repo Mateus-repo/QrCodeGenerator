@@ -1,0 +1,42 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Build
+dist/
+publish/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.dll
+*.exe
+*.pdb
+*.cache
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+
+## IDE - Visual Studio
+.vs/
+*.swp
+~$*
+
+## IDE - Rider
+.idea/
+*.iml
+
+## Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
