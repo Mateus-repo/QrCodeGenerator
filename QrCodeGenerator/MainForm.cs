@@ -313,10 +313,12 @@ public sealed class MainForm : Form
             control.Location = new Point(90, _fieldY);
             control.Width = _fieldHost.ClientSize.Width - 90 - 8;
             if (control is TextBox { Multiline: true } multi)
-                multi.Height = 64;
+                multi.Height = ReferenceEquals(multi, _txtText) ? 150 : 64;
             _fieldHost.Controls.Add(control);
 
-            int height = control is TextBox { Multiline: true } ? 64 : 24;
+            int height = control is TextBox { Multiline: true } m
+                ? (ReferenceEquals(m, _txtText) ? 150 : 64)
+                : 24;
             _fieldY += height + 12;
         }
     }

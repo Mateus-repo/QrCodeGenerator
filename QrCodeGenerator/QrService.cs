@@ -138,6 +138,11 @@ public static class QrService
             bitmap = qr.GetGraphic(scale, Color.Black, Color.White, true);
             return true;
         }
+        catch (QRCoder.Exceptions.DataTooLongException)
+        {
+            error = "Conteúdo demasiado longo para um QR code. Reduz o texto ou escolhe o nível de correção L (mais capacidade).";
+            return false;
+        }
         catch (Exception ex)
         {
             error = ex.Message;
