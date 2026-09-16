@@ -27,7 +27,8 @@ public sealed class QrFields
     public string? MailTo { get; set; }
     public string? MailSubject { get; set; }
     public string? MailBody { get; set; }
-    public string? Phone { get; set; }
+    public string? PhonePrefix { get; set; }
+    public string? PhoneNumber { get; set; }
     public string? WifiSsid { get; set; }
     public string? WifiPass { get; set; }
     public string? WifiSec { get; set; }
@@ -58,8 +59,14 @@ public static class QrService
                     return "Indica o destinatário do email.";
                 break;
             case QrCategory.Telefone:
-                if (string.IsNullOrWhiteSpace(f.Phone))
-                    return "Indica um número de telefone (com indicativo).";
+                var prefix = NormalizePhonePrefix(f.PhonePrefix);
+                if (string.IsNullOrWhiteSpace(f.PhoneNumber)
+                    && string.IsNullOrWhiteSpace(f.PhonePrefix))
+                    return "Indica o número de telefone.";
+                if (string.IsNullOrWhiteSpace(f.PhoneNumber))
+                    return "Falta o número de telefone.";
+                if (string.IsNullOrWhiteSpace(prefix))
+                    return "Indica o indicativo do país (ex.: +351).";
                 break;
             case QrCategory.WiFi:
                 if (string.IsNullOrWhiteSpace(f.WifiSsid))
@@ -121,7 +128,8 @@ public static class QrService
         QrCategory.Email => new PayloadGenerator.Mail(
             f.MailTo!.Trim(), f.MailSubject, f.MailBody,
             PayloadGenerator.Mail.MailEncoding.MAILTO).ToString(),
-        QrCategory.Telefone => new PayloadGenerator.PhoneNumber(f.Phone!.Trim()).ToString(),
+        QrCategory.Telefone => new PayloadGenerator.PhoneNumber(
+            NormalizePhonePrefix(f.PhonePrefix) + f.PhoneNumber!.Trim()).ToString(),
         QrCategory.WiFi => CreateWifiPayload(f),
         QrCategory.VCard => CreateVCardPayload(f),
         _ => throw new InvalidOperationException("Categoria desconhecida.")
@@ -171,5 +179,17 @@ public static class QrService
             return "https://" + url;
         }
         return url;
+    }
+
+    private static string NormalizePhonePrefix(string? prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+            return "";
+        var p = prefix.Trim();
+        if (p.StartsWith("00", StringComparison.Ordinal))
+            p = "+" + p[2..];
+        else if (!p.StartsWith("+", StringComparison.Ordinal))
+            p = "+" + p;
+        return p;
     }
 }

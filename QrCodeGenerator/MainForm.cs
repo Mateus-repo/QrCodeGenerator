@@ -9,6 +9,7 @@ public sealed class MainForm : Form
     private readonly ComboBox _cmbEcc = new();
     private readonly CheckBox _chkAuto = new();
     private readonly Button _btnGenerate = new();
+    private readonly Button _btnRefresh = new();
     private readonly Button _btnSave = new();
     private readonly Label _lblError = new();
     private readonly PictureBox _preview = new();
@@ -18,7 +19,8 @@ public sealed class MainForm : Form
     private readonly TextBox _txtMailTo = new();
     private readonly TextBox _txtMailSubject = new();
     private readonly TextBox _txtMailBody = new();
-    private readonly TextBox _txtPhone = new();
+    private readonly TextBox _txtPhoneCountry = new();
+    private readonly TextBox _txtPhoneNumber = new();
     private readonly TextBox _txtWifiSsid = new();
     private readonly TextBox _txtWifiPass = new();
     private readonly ComboBox _cmbWifiSec = new();
@@ -71,6 +73,12 @@ public sealed class MainForm : Form
         _btnGenerate.Click += OnGenerateClicked;
         Controls.Add(_btnGenerate);
 
+        _btnRefresh.Text = "Atualizar QR Code";
+        _btnRefresh.Size = new Size(230, 40);
+        _btnRefresh.Location = new Point(450, 490);
+        _btnRefresh.Click += OnGenerateClicked;
+        Controls.Add(_btnRefresh);
+
         _lblError.AutoSize = true;
         _lblError.ForeColor = Color.Firebrick;
         _lblError.MaximumSize = new Size(395, 60);
@@ -86,8 +94,8 @@ public sealed class MainForm : Form
         Controls.Add(_preview);
 
         _btnSave.Text = "Baixar PNG";
-        _btnSave.Size = new Size(220, 40);
-        _btnSave.Location = new Point(578, 500);
+        _btnSave.Size = new Size(230, 40);
+        _btnSave.Location = new Point(696, 490);
         _btnSave.Enabled = false;
         _btnSave.Click += OnSaveClicked;
         Controls.Add(_btnSave);
@@ -149,7 +157,7 @@ public sealed class MainForm : Form
 
     private void WireFieldControls()
     {
-        _txtPhone.Text = "+351 ";
+        _txtPhoneCountry.Text = "+351";
         _txtText.Multiline = true;
         _txtText.ScrollBars = ScrollBars.Vertical;
         _txtMailBody.Multiline = true;
@@ -178,7 +186,8 @@ public sealed class MainForm : Form
         yield return _txtMailTo;
         yield return _txtMailSubject;
         yield return _txtMailBody;
-        yield return _txtPhone;
+        yield return _txtPhoneCountry;
+        yield return _txtPhoneNumber;
         yield return _txtWifiSsid;
         yield return _txtWifiPass;
         yield return _cmbWifiSec;
@@ -208,7 +217,8 @@ public sealed class MainForm : Form
         },
         QrCategory.Telefone => new[]
         {
-            ("Número (indicativo incl.)", (Control)_txtPhone)
+            ("País (indicativo)", (Control)_txtPhoneCountry),
+            ("Número", (Control)_txtPhoneNumber)
         },
         QrCategory.WiFi => new[]
         {
@@ -262,7 +272,8 @@ public sealed class MainForm : Form
         MailTo = _txtMailTo.Text,
         MailSubject = _txtMailSubject.Text,
         MailBody = _txtMailBody.Text,
-        Phone = _txtPhone.Text,
+        PhonePrefix = _txtPhoneCountry.Text,
+        PhoneNumber = _txtPhoneNumber.Text,
         WifiSsid = _txtWifiSsid.Text,
         WifiPass = _txtWifiPass.Text,
         WifiSec = _cmbWifiSec.SelectedItem?.ToString(),
