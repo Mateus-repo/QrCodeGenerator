@@ -19,6 +19,44 @@ x86/
 *.pdb
 *.cache
 
+## Java
+target/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+.mvn/
+
+## Gradle / Android
+.gradle/
+build/
+local.properties
+captures/
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+## Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+## Node (site, se um dia levar build)
+node_modules/
+.vite/
+dist-web/
+
+## Editores
+*.swp
+.vscode/
+
 ## NuGet
 *.nupkg
 **/[Pp]ackages/*

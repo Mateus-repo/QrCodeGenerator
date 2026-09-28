@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "versao": 1,
+  "descricao": "Vetores de teste partilhados entre stacks. 'campos' e o input, 'payload' e a string exata que qualquer implementacao deve produzir.",
+  "tipos": [
+    "pix"
+  ],
+  "vectors": [
+    {
+      "id": "pix_uuid_sem_valor",
+      "tipo": "pix",
+      "descricao": "Exemplo do Manual do Banco Central: chave aleatória, sem valor.",
+      "fonte": "Banco Central do Brasil, Manual de Padroes para Iniciacao do Pix",
+      "campos": {
+        "key": "123e4567-e12b-12d1-a456-426655440000",
+        "name": "Fulano de Tal",
+        "city": "BRASILIA"
+      },
+      "payload": "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Fulano de Tal6008BRASILIA62070503***63041D3D",
+      "bytes": 137,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_email_com_valor",
+      "tipo": "pix",
+      "descricao": "Chave email com valor fixo.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "Fulano2019@example.com",
+        "name": "Fulano de Tal",
+        "city": "BRASILIA",
+        "amount": "25,75"
+      },
+      "payload": "00020126440014br.gov.bcb.pix0122fulano2019@example.com520400005303986540525.755802BR5913Fulano de Tal6008BRASILIA62070503***6304B711",
+      "bytes": 132,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_cpf_com_valor",
+      "tipo": "pix",
+      "descricao": "Chave CPF escrita com mascara.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "529.982.247-25",
+        "name": "Ana Silva",
+        "city": "Belo Horizonte",
+        "amount": "0.01"
+      },
+      "payload": "00020126330014br.gov.bcb.pix01115299822472552040000530398654040.015802BR5909Ana Silva6014Belo Horizonte62070503***63043012",
+      "bytes": 122,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_cnpj",
+      "tipo": "pix",
+      "descricao": "Chave CNPJ de empresa.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "11.222.333/0001-81",
+        "name": "Empresa Exemplo SA",
+        "city": "Curitiba"
+      },
+      "payload": "00020126360014br.gov.bcb.pix0114112223330001815204000053039865802BR5918Empresa Exemplo SA6008Curitiba62070503***630428F4",
+      "bytes": 120,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_telefone_com_txid",
+      "tipo": "pix",
+      "descricao": "Telefone sem +55, com txid personalizado.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "5511966666666",
+        "name": "Loja Doce",
+        "city": "Sao Paulo",
+        "txid": "pedido123"
+      },
+      "payload": "00020126360014br.gov.bcb.pix0114+55119666666665204000053039865802BR5909Loja Doce6009Sao Paulo62130509pedido1236304C2E1",
+      "bytes": 118,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_nome_truncado",
+      "tipo": "pix",
+      "descricao": "Nome com mais de 25 caracteres e truncado.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "fulano@example.com",
+        "name": "Jose Carlos dos Santos Silva Jr",
+        "city": "Sao Paulo"
+      },
+      "payload": "00020126400014br.gov.bcb.pix0118fulano@example.com5204000053039865802BR5925Jose Carlos dos Santos Si6009Sao Paulo62070503***630470F7",
+      "bytes": 132,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_nome_com_acento",
+      "tipo": "pix",
+      "descricao": "Acentos normalizados para ASCII antes de contar o comprimento.",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "fulano@example.com",
+        "name": "José Antônio Café",
+        "city": "São Paulo"
+      },
+      "payload": "00020126400014br.gov.bcb.pix0118fulano@example.com5204000053039865802BR5917Jose Antonio Cafe6009Sao Paulo62070503***6304293A",
+      "bytes": 124,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_descricao_26_02",
+      "tipo": "pix",
+      "descricao": "Campo opcional 26.02 (descricao).",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "fulano@example.com",
+        "name": "Jose Antonio Cafe LTDA",
+        "city": "Sao Paulo",
+        "description": "Obrigado!"
+      },
+      "payload": "00020126530014br.gov.bcb.pix0118fulano@example.com0209Obrigado!5204000053039865802BR5922Jose Antonio Cafe LTDA6009Sao Paulo62070503***6304F7DB",
+      "bytes": 142,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_uso_unico_com_cep",
+      "tipo": "pix",
+      "descricao": "QR de uso unico (campo 01) com codigo postal (campo 61).",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "fulano@example.com",
+        "name": "Fulano",
+        "city": "Recife",
+        "postcode": "52010-100",
+        "single_use": true
+      },
+      "payload": "00020101021226400014br.gov.bcb.pix0118fulano@example.com5204000053039865802BR5906Fulano6006Recife61085201010062070503***63040F58",
+      "bytes": 128,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "pix_valor_milhar",
+      "tipo": "pix",
+      "descricao": "Valor com separador de milhar (1.234,56).",
+      "fonte": "gerado por python/qrcode_core",
+      "campos": {
+        "key": "fulano@example.com",
+        "name": "Fulano",
+        "city": "Recife",
+        "amount": "1.234,56"
+      },
+      "payload": "00020126400014br.gov.bcb.pix0118fulano@example.com52040000530398654071234.565802BR5906Fulano6006Recife62070503***6304979C",
+      "bytes": 121,
+      "verificado": [
+        "crc",
+        "parse_round_trip",
+        "rebuild_identico",
+        "png_descodificado"
+      ]
+    }
+  ]
+}

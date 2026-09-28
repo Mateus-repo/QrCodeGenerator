@@ -1,4 +1,6 @@
 using System.Drawing.Imaging;
+using System.Globalization;
+using QrCodeGenerator.Core;
 
 namespace QrCodeGenerator;
 
@@ -35,10 +37,24 @@ public sealed class MainForm : Form
     private readonly ComboBox _cmbWifiSec = new();
     private readonly CheckBox _chkWifiHidden = new();
     private readonly TextBox _txtVcName = new();
+    private readonly TextBox _txtVcLastName = new();
     private readonly TextBox _txtVcPhone = new();
+    private readonly TextBox _txtVcPhone2 = new();
     private readonly TextBox _txtVcEmail = new();
     private readonly TextBox _txtVcOrg = new();
     private readonly TextBox _txtVcRole = new();
+    private readonly TextBox _txtVcStreet = new();
+    private readonly TextBox _txtVcCity = new();
+    private readonly TextBox _txtVcZip = new();
+    private readonly TextBox _txtVcCountry = new();
+
+    private readonly TextBox _txtPixKey = new();
+    private readonly TextBox _txtPixName = new();
+    private readonly TextBox _txtPixCity = new();
+    private readonly TextBox _txtPixAmount = new();
+    private readonly TextBox _txtPixTxid = new();
+    private readonly TextBox _txtPixDescription = new();
+    private readonly CheckBox _chkPixSingleUse = new();
 
     private readonly Panel _fieldHost;
     private int _fieldY;
@@ -146,7 +162,7 @@ public sealed class MainForm : Form
 
     private void PopulateCombos()
     {
-        foreach (var name in Enum.GetNames(typeof(QrCategory)))
+        foreach (var name in QrCategoryNames.All)
             _cmbCategory.Items.Add(name);
         _cmbCategory.SelectedIndex = 0;
 
@@ -177,6 +193,8 @@ public sealed class MainForm : Form
         _txtWaMessage.ScrollBars = ScrollBars.Vertical;
         _txtEventDescription.Multiline = true;
         _txtEventDescription.ScrollBars = ScrollBars.Vertical;
+        _txtPixDescription.Multiline = true;
+        _txtPixDescription.ScrollBars = ScrollBars.Vertical;
 
         _dtpEventStart.Format = DateTimePickerFormat.Short;
         _dtpEventEnd.Format = DateTimePickerFormat.Short;
@@ -224,10 +242,23 @@ public sealed class MainForm : Form
         yield return _cmbWifiSec;
         yield return _chkWifiHidden;
         yield return _txtVcName;
+        yield return _txtVcLastName;
         yield return _txtVcPhone;
+        yield return _txtVcPhone2;
         yield return _txtVcEmail;
         yield return _txtVcOrg;
         yield return _txtVcRole;
+        yield return _txtVcStreet;
+        yield return _txtVcCity;
+        yield return _txtVcZip;
+        yield return _txtVcCountry;
+        yield return _txtPixKey;
+        yield return _txtPixName;
+        yield return _txtPixCity;
+        yield return _txtPixAmount;
+        yield return _txtPixTxid;
+        yield return _txtPixDescription;
+        yield return _chkPixSingleUse;
     }
 
     private IEnumerable<(string Label, Control Control)> RowsFor(QrCategory category) => category switch
@@ -271,7 +302,7 @@ public sealed class MainForm : Form
             ("Local", (Control)_txtEventLocation),
             ("Descrição", (Control)_txtEventDescription)
         },
-        QrCategory.Localização => new[]
+        QrCategory.Localizacao => new[]
         {
             ("Latitude", (Control)_txtGeoLat),
             ("Longitude", (Control)_txtGeoLng)
@@ -286,10 +317,26 @@ public sealed class MainForm : Form
         QrCategory.VCard => new[]
         {
             ("Nome", (Control)_txtVcName),
+            ("Apelido", (Control)_txtVcLastName),
             ("Telefone", (Control)_txtVcPhone),
+            ("Telefone 2", (Control)_txtVcPhone2),
             ("Email", (Control)_txtVcEmail),
             ("Organização", (Control)_txtVcOrg),
-            ("Cargo", (Control)_txtVcRole)
+            ("Cargo", (Control)_txtVcRole),
+            ("Rua", (Control)_txtVcStreet),
+            ("Cidade", (Control)_txtVcCity),
+            ("Código postal", (Control)_txtVcZip),
+            ("País", (Control)_txtVcCountry)
+        },
+        QrCategory.Pix => new[]
+        {
+            ("Chave PIX", (Control)_txtPixKey),
+            ("Nome do recebedor", (Control)_txtPixName),
+            ("Cidade", (Control)_txtPixCity),
+            ("Valor (opcional)", (Control)_txtPixAmount),
+            ("Txid (opcional)", (Control)_txtPixTxid),
+            ("Descrição (opcional)", (Control)_txtPixDescription),
+            ("Uso único", (Control)_chkPixSingleUse)
         },
         _ => Array.Empty<(string, Control)>()
     };
@@ -310,10 +357,13 @@ public sealed class MainForm : Form
             };
             _fieldHost.Controls.Add(lbl);
 
-            control.Location = new Point(90, _fieldY);
-            control.Width = _fieldHost.ClientSize.Width - 90 - 8;
             if (control is TextBox { Multiline: true } multi)
                 multi.Height = ReferenceEquals(multi, _txtText) ? 150 : 64;
+
+            control.Location = control is CheckBox
+                ? new Point(0, _fieldY + 4)
+                : new Point(90, _fieldY);
+            control.Width = _fieldHost.ClientSize.Width - 90 - 8;
             _fieldHost.Controls.Add(control);
 
             int height = control is TextBox { Multiline: true } m
@@ -339,18 +389,46 @@ public sealed class MainForm : Form
         EventLocation = _txtEventLocation.Text,
         EventStart = _dtpEventStart.Value,
         EventEnd = _dtpEventEnd.Value,
-        GeoLat = _txtGeoLat.Text,
-        GeoLng = _txtGeoLng.Text,
+        GeoLat = ParseCoord(_txtGeoLat.Text),
+        GeoLng = ParseCoord(_txtGeoLng.Text),
         WifiSsid = _txtWifiSsid.Text,
         WifiPass = _txtWifiPass.Text,
         WifiSec = _cmbWifiSec.SelectedItem?.ToString(),
         WifiHidden = _chkWifiHidden.Checked,
-        VcName = _txtVcName.Text,
+        VcFirstName = _txtVcName.Text,
+        VcLastName = _txtVcLastName.Text,
         VcPhone = _txtVcPhone.Text,
+        VcPhone2 = _txtVcPhone2.Text,
         VcEmail = _txtVcEmail.Text,
         VcOrg = _txtVcOrg.Text,
-        VcRole = _txtVcRole.Text
+        VcRole = _txtVcRole.Text,
+        VcStreet = _txtVcStreet.Text,
+        VcCity = _txtVcCity.Text,
+        VcZip = _txtVcZip.Text,
+        VcCountry = _txtVcCountry.Text,
+        PixKey = _txtPixKey.Text,
+        PixName = _txtPixName.Text,
+        PixCity = _txtPixCity.Text,
+        PixAmount = _txtPixAmount.Text,
+        PixTxid = _txtPixTxid.Text,
+        PixDescription = _txtPixDescription.Text,
+        PixSingleUse = _chkPixSingleUse.Checked
     };
+
+    /// <summary>
+    /// Converte a caixa de texto numa coordenada. Aceita vírgula ou ponto como
+    /// separador decimal, independentemente da cultura do Windows.
+    /// </summary>
+    private static double? ParseCoord(string text)
+    {
+        var s = (text ?? string.Empty).Trim().Replace(',', '.');
+        if (s.Length == 0)
+            return null;
+
+        return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+    }
 
     private void OnCategoryChanged(object? sender, EventArgs e)
     {
@@ -373,7 +451,7 @@ public sealed class MainForm : Form
         int size = int.TryParse(_cmbSize.SelectedItem?.ToString(), out var s) ? s : 512;
         var level = (EccLevel)_cmbEcc.SelectedIndex;
 
-        if (QrService.TryGenerate(category, fields, size, level, out var bmp, out var error))
+        if (QrRenderer.TryGenerate(category, fields, size, level, out var bmp, out var error))
         {
             _lblError.Visible = false;
             _preview.Image?.Dispose();

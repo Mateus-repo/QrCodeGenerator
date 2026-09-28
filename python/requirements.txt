@@ -1,0 +1,9 @@
+# Dependências de desenvolvimento e uso.
+#   pip install -r python/requirements.txt
+
+segno>=1.6        # geração do QR (obrigatória)
+Pillow>=10.0      # saída PNG (o SVG não precisa)
+
+# Só para testes e para a spec:
+zxing-cpp>=2.2    # descodifica o PNG gerado — valida que o QR é legível
+pytest>=8.0

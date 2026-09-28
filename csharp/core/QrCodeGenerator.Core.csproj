@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Núcleo de payloads: texto puro, sem dependências.
+
+    Não referencia System.Drawing nem WinForms, o que permite testar os payloads
+    em qualquer runner e reusar a mesma lógica noutras stacks. A parte que
+    desenha o PNG/SVG fica em ../desktop-winforms.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
