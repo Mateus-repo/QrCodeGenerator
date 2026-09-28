@@ -10,6 +10,7 @@ csharp/
 ```
 
 Detalhe de cada pasta no seu próprio README.
+Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
 ## Comandos
 

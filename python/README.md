@@ -1,6 +1,9 @@
 # Python
 
-Implementação de referência do gerador. É aqui que a spec é executável.
+Biblioteca + linha de comandos. É a **implementação de referência** da spec.
+
+> ⚠️ **Só o PIX está implementado.** Os 10 tipos que já existem no C# e no site
+> ainda não foram portados. Ver [`../docs/TODO.md`](../docs/TODO.md).
 
 ```
 python/
@@ -12,6 +15,8 @@ python/
 ├── tests/           ← pytest
 └── conftest.py      ← path setup para os testes
 ```
+
+Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
 ## Instalar
 

@@ -53,6 +53,7 @@ public sealed class MainForm : Form
     private readonly TextBox _txtPixCity = new();
     private readonly TextBox _txtPixAmount = new();
     private readonly TextBox _txtPixTxid = new();
+    private readonly TextBox _txtPixPostcode = new();
     private readonly TextBox _txtPixDescription = new();
     private readonly CheckBox _chkPixSingleUse = new();
 
@@ -257,6 +258,7 @@ public sealed class MainForm : Form
         yield return _txtPixCity;
         yield return _txtPixAmount;
         yield return _txtPixTxid;
+        yield return _txtPixPostcode;
         yield return _txtPixDescription;
         yield return _chkPixSingleUse;
     }
@@ -335,6 +337,7 @@ public sealed class MainForm : Form
             ("Cidade", (Control)_txtPixCity),
             ("Valor (opcional)", (Control)_txtPixAmount),
             ("Txid (opcional)", (Control)_txtPixTxid),
+            ("CEP (opcional)", (Control)_txtPixPostcode),
             ("Descrição (opcional)", (Control)_txtPixDescription),
             ("Uso único", (Control)_chkPixSingleUse)
         },
@@ -411,6 +414,7 @@ public sealed class MainForm : Form
         PixCity = _txtPixCity.Text,
         PixAmount = _txtPixAmount.Text,
         PixTxid = _txtPixTxid.Text,
+        PixPostcode = _txtPixPostcode.Text,
         PixDescription = _txtPixDescription.Text,
         PixSingleUse = _chkPixSingleUse.Checked
     };

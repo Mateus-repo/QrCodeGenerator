@@ -1,31 +1,49 @@
 # Ideia — Próximo Passo do QrCodeGenerator
 
-> Documento de planeamento. Define **o que** fazer a seguir, **como** organizar o
-> repositório e **porquê**. Nada aqui é obrigatório; é a base para decidirmos.
+> Documento de planeamento original. Define **o que** fazer, **como** organizar o
+> repositório e **porquê**. Está um pouco desatualizado à medida que o trabalho
+> avançou — a secção 1 foi reescrita e a 7 marca o que ficou para trás.
 >
-> O checklist concreto e bloqueante está em [`TODO.md`](TODO.md) — lê esse primeiro.
+> | Documento | Para quê |
+> |---|---|
+> | [`COMO-USAR.md`](COMO-USAR.md) | **Como usar e como partilhar cada app** |
+> | [`TODO.md`](TODO.md) | O checklist do que falta |
+> | [`TIPOS-QR.md`](TIPOS-QR.md) | A spec: formato exato de cada payload |
+> | Este | O raciocínio por trás das decisões |
 
 ---
 
 ## 1. Onde estamos hoje
 
-Existe uma única implementação: **C# / .NET 8 WinForms** (`csharp/desktop-winforms`),
-com 10 categorias de QR, preview em tempo real, export PNG e exe standalone.
+**Três stacks completas**, com os mesmos 11 tipos e os mesmos payloads,
+verificadas contra a mesma spec partilhada.
 
-O que já provou funcionar:
+| Stack | O que é | Estado |
+|---|---|---|
+| `web` | PWA + encoder QR próprio, zero dependências | ✅ 54 testes · Lighthouse 100/100/100 |
+| `csharp` | App Windows + `core` sem dependências | ✅ 137 testes |
+| `python` | Biblioteca + CLI | ✅ 108 testes |
 
-- Geração de payload por categoria (Link, Texto, Email, Telefone, SMS, WhatsApp,
-  Evento, Geo, WiFi, VCard).
-- Validação de campos com mensagens em português.
-- Deteção de conteúdo demasiado longo (`DataTooLongException`).
-- UI simples, sem dependências externas além do QRCoder.
+```
+299 testes no total, mais 29 matrizes de QR confirmadas por leitura com o ZXing
+```
+
+O que já está resolvido:
+
+- **Spec formalizada** em `docs/TIPOS-QR.md` e `spec/vectors.json`.
+- **Os 7 bugs do antigo `QrService.cs` corrigidos**, cada um com teste.
+- **PIX** implementado e validado contra o exemplo oficial do Banco Central.
+- **Três clientes concordam byte a byte** nos vetores da spec.
+- **Paridade testada em dois níveis**: o payload (string a string) e a imagem
+  (gerar PNG e descodificar com um leitor independente).
 
 O que **não** existe ainda:
 
-- Nenhum outro cliente (site, APK, Java, Python).
-- Nenhum catálogo de tipos formalizado — as regras estão espalhadas em `QrService.cs`.
-- Nenhum teste. As regras podem divergir silenciosamente entre plataformas.
-- Export apenas em PNG, apenas 256/512/1024, sem estilo nem logo.
+- Java e Kotlin (pastas com README, vazias de propósito).
+- GUI em Python (`python/gui/`).
+- Os 10 tipos antigos ainda não estão portados para Python.
+- Sem estilo, sem logo, sem geração em lote, sem leitor de QR.
+- Sem CI.
 
 ---
 
@@ -133,7 +151,7 @@ Escolhas e raciocínio:
 
 ## 5. Mais tipos de QR (o pedido principal)
 
-Estado: ✅ já existe · 🆕 novo · 🔧 fix
+Estado: ✅ pronto nas 3 stacks · 🔧 corrigido · ⬜ por escrever
 
 | # | Tipo | Payload alvo | Estado |
 |---|---|---|---|
@@ -143,41 +161,49 @@ Estado: ✅ já existe · 🆕 novo · 🔧 fix
 | 4 | Telefone | `tel:+351…` | ✅ |
 | 5 | SMS | `SMSTO:+351…:msg` | ✅ |
 | 6 | WhatsApp | `https://wa.me/<num>?text=` | ✅ |
-| 7 | Evento (iCal) | `BEGIN:VCALENDAR…` | ✅ |
-| 8 | Localização | `geo:lat,lng` | ✅ |
+| 7 | Evento (iCal) | `BEGIN:VCALENDAR…` | ✅ 🔧 |
+| 8 | Localização | `geo:lat,lng` | ✅ 🔧 |
 | 9 | WiFi | `WIFI:T:WPA;S:;P:;H:;;` | ✅ |
-| 10 | VCard 4.0 | `BEGIN:VCARD…` | ✅ |
-| 11 | **PIX / pagamento** | BR Code EMV (`00020126…6304…`) | 🆕 |
-| 12 | **Crypto** | `bitcoin:`, `ethereum:` (EIP-681) | 🆕 |
-| 13 | **Produto (GS1)** | `https://gs1.org/01/<GTIN>` | 🆕 |
-| 14 | **ISBN / EAN** | `urn:isbn:` / AI `(01)` | 🆕 |
-| 15 | **Redes sociais** | link/handle por plataforma | 🆕 |
-| 16 | **App / deep link** | `myapp://`, App Link, store URL | 🆕 |
-| 17 | **Documento / PDF** | URL (+ hash opcional) | 🆕 |
-| 18 | **Cupão / desconto** | URL curta assinada | 🆕 |
-| 19 | **MeCard** | `MECARD:N:;TEL:;;` | 🆕 |
-| 20 | **Bluetooth** | `BT:addr;nome;;` | 🆕 (experimental) |
-| 21 | **Fidelidade / loyalty** | payload JSON assinado | 🆕 |
-| 22 | **Ficha técnica / menu** | URL do documento | 🆕 |
+| 10 | VCard 4.0 | `BEGIN:VCARD…` | ✅ 🔧 |
+| 11 | **PIX / pagamento** | BR Code EMV (`00020126…6304…`) | ✅ |
+| 12 | **Crypto** | `bitcoin:`, `ethereum:` (EIP-681) | ⬜ |
+| 13 | **Produto (GS1)** | `https://gs1.org/01/<GTIN>` | ⬜ |
+| 14 | **ISBN / EAN** | `urn:isbn:` / AI `(01)` | ⬜ |
+| 15 | **Redes sociais** | link/handle por plataforma | ⬜ |
+| 16 | **App / deep link** | `myapp://`, App Link, store URL | ⬜ |
+| 17 | **Documento / PDF** | URL (+ hash opcional) | ⬜ |
+| 18 | **Cupão / desconto** | URL curta assinada | ⬜ |
+| 19 | **MeCard** | `MECARD:N:;TEL:;;` | ⬜ |
+| 20 | **Bluetooth** | `BT:addr;nome;;` | ⬜ (experimental) |
+| 21 | **Fidelidade / loyalty** | payload JSON assinado | ⬜ |
+| 22 | **Ficha técnica / menu** | URL do documento | ⬜ |
 
-🔧 **Bugs/limitações a corrigir já** (encontrados ao ler `QrService.cs`):
+### 🔧 Bugs encontrados e corrigidos
 
-- **VCard perde a morada**: os parâmetros de endereço/endereço estão todos a
-  passar `""`, logo o endereço nunca entra no payload. Adicionar morada
-  (rua, número, cidade, CEP, país).
-- **VCard não tem N/TITLE consistentes** para vários campos (dois telefones,
-  tipo `work`/`cell`).
-- **iCal usa `Environment.NewLine`**: em Windows dá CRLF, noutro platform dá LF.
-  A spec de iCalendar exige CRLF. Fixa `CRLF` explicitamente em todas as stacks.
-- **iCal não escapa**: vírgulas, `;` e newlines nos campos de texto produzem
-  iCal inválido. Falta `\,` `\;` `\\` `\n`.
-- **Coordenadas aceitam valores fora do intervalo** (lat ±90, lng ±180).
-- **`GeoLat`/`GeoLng` em string** — deveria ser `double?` para não haver
-  `Parse` duplicado nem risco de parsing inconsistente.
-- **Link aceita qualquer coisa**: `javascript:`, `data:`, `ftp:` passam. Validar
-  esquema.
-- **Normalização de telefone inconsistente**: `00` → `+` só no início, e o
-  WhatsApp remove todos os não-dígitos do prefixo mas não valida o tamanho.
+Todos encontrados ao ler o `QrService.cs` original, todos corrigidos em
+`csharp/core/`, todos com teste de regressão em `csharp/tests/BugFixTests.cs`.
+
+| Bug | Consequência | Correção |
+|---|---|---|
+| VCard perdia a morada | contacto sem endereço | ADR completo (rua, cidade, CEP, país) |
+| VCard sem tipos de telefone | um único número, sem `cell`/`work` | dois telefones com tipo, `N` com a família primeiro |
+| iCal com `Environment.NewLine` | LF fora do Windows → payload diferente por SO | CRLF explícito (RFC 5545) |
+| iCal sem escaping | iCal inválido com `,` `;` `\` | `\,` `\;` `\\` `\n` |
+| Coordenadas sem validação | `geo:` que nenhum mapa abre | intervalo lat ±90, lng ±180 |
+| `GeoLat`/`GeoLng` em `string` | parsing inconsistente | `double?` |
+| Link sem filtro de esquema | `javascript:` e `data:` passavam | allowlist + recusa explícita |
+| Telefone normalizado a meio | `00` só convertido no início | normalização consistente |
+
+### 🐛 Bugs encontrados no encoder de QR do site
+
+Encontrados pelo teste que **descodifica** a imagem com o ZXing, e não por
+nenhum teste estrutural:
+
+- **Máscara 4 com `x` e `y` trocados.** A norma define as máscaras em termos de
+  (linha, coluna) e a 4 é a única assimétrica. As outras sete são simétricas,
+  por isso só esta falhava — e só em 1 dos 29 casos testados.
+- **Posições dos padrões de alinhamento erradas** a partir da versão 7. O QR
+  "parecia" certo e nenhum leitor o lia.
 
 O detalhe exato de cada payload (com escaping e exemplos) vai para
 `docs/TIPOS-QR.md`.
@@ -189,72 +215,73 @@ O detalhe exato de cada payload (com escaping e exemplos) vai para
 Nem todos precisam de tudo. Prioridade:
 
 **P0 — em todas**
-- [ ] Catálogo de tipos idêntico (da spec)
-- [ ] Export **PNG** em 256 / 512 / 1024 / 2048
-- [ ] Nível de correção L/M/Q/H com explicação em linguagem simples
-- [ ] Validação com mensagem **por campo** (não um erro genérico)
-- [ ] Cópia para clipboard do PNG e do payload
-- [ ] Deteção de overflow com dica acionável ("o teu texto tem 3 100 caracteres,
-      o limite com ECC L é 2 953")
-- [ ] Tema claro/escuro
-- [ ] pt-PT como base; en/es só na web
+- [x] Catálogo de tipos idêntico (da spec) — 11 tipos em C#, Python e web
+- [x] Export **PNG** em 256 / 512 / 1024 / 2048 (web, C#, Python)
+- [x] Nível de correção L/M/Q/H com explicação em linguagem simples (web)
+- [x] Validação com mensagem **por campo** (não um erro genérico)
+- [x] Cópia para clipboard do PNG e do payload (web)
+- [x] Deteção de overflow com números concretos ("123 de 2331 bytes (ECC M)")
+- [x] Tema claro/escuro (web, segue o SO)
+- [x] pt-PT em todas; en/es por fazer
 
 **P1 — onde faz sentido**
-- [ ] Export **SVG** (web, Python, C#) — escala sem perda
+- [x] Export **SVG** (web, Python) — escala sem perda
+- [ ] Export **SVG** no C#
 - [ ] Export **PDF** com vários QR numa página
 - [ ] **Estilo**: cor foreground/background, módulos arredondados, logo ao centro
       (com validação de contraste e da "zona de leitura")
 - [ ] **Geração em lote** a partir de CSV/JSON → N PNG + ZIP (Python, web, C#)
 - [ ] Histórico local + favoritos + templates
-- [ ] **Leitura** de QR existente (ZXing no Java/Kotlin, `pyzbar`/`zxing-cpp`
-      no Python, `BarcodeDetector` na web)
+- [ ] **Leitura** de QR existente (ZXing no Java/Kotlin, `zxing-cpp` no Python,
+      `BarcodeDetector` na web) — o `zxing-cpp` já está nos testes
 
 **P2 — Stretch**
 - [ ] Códigos de **barras**: Code128, EAN-13, ITF, Code39
 - [ ] Outras simbologias 2D: Data Matrix, PDF417, Aztec
 - [ ] QR **dinâmico** (conteúdo real num link curto, permite analytics/desativar)
-- [ ] PWA instalável e offline
+- [x] PWA instalável e offline
 - [ ] Assinatura criptográfica de payloads (fidelidade/cupões)
 
 ---
 
 ## 7. Roadmap
 
-### Fase 0 — Fundação (1 a 2 dias, sem código de app)
+### Fase 0 — Fundação ✅
 Porque primeiro: sem isto, as 5 stacks divergem e não há como saber qual está certa.
 
-- [ ] Criar `docs/TIPOS-QR.md` com o formato exato dos 22 tipos
-- [ ] Criar `spec/vectors.json` com ~30 casos (incl. caracteres especiais, emoji,
-      acentos, quebras de linha, payload vazio, limites)
-- [ ] Criar `spec/payloads.json` (metadados: nome, ícones, ordem, campos)
-- [ ] Script `spec/dump-csharp-payloads` que corra sobre o `QrService` atual e
-      imprima cada payload → serve para calibrar a spec com o comportamento real
-- [ ] CI: lint dos JSON + validação dos vectors (formato, não conteúdo)
-- [ ] Corrigir os bugs 🔧 da secção 5 **antes** de propagar
+- [x] `docs/TIPOS-QR.md` com o formato exato dos 22 tipos
+- [x] `spec/vectors.json` com 10 casos de PIX, cada um verificado por CRC,
+      round-trip e **descodificação do PNG**
+- [x] Gerador `spec/gerar-vectors.py`
+- [x] Corrigir os 7 bugs 🔧 **antes** de propagar
+- [ ] `spec/payloads.json` (metadados: nome, ícones, ordem, campos) — hoje
+      vive no código de cada stack
+- [ ] Vetores dos 10 tipos antigos (depende de os portar para Python)
+- [ ] CI
 
-### Fase 1 — Python (implementação de referência)
-- [ ] `qrcode_core/payloads.py` — as 22 categorias, funções puras, sem UI
-- [ ] `qrcode_core/render.py` — PNG/SVG, ECC, tamanho, estilo
+### Fase 1 — Python (implementação de referência) 🟡
+- [x] `qrcode_core/pix.py` — PIX completo
+- [x] `qrcode_core/render.py` — PNG/SVG, matriz, capacidade
+- [x] `cli/qrcli.py` — `pix`, `pix-leer`, `fix-crc`
+- [x] Testes a correr a spec/vectors.json
+- [ ] `qrcode_core/payloads.py` — os outros 10 tipos
 - [ ] `qrcode_core/batch.py` — CSV → ZIP
-- [ ] `cli/` — `qrcli link --url ... -o out.png`, útil para CI e scripts
-- [ ] `gui/` — Tkinter, mesma estrutura de formulários
-- [ ] Testes a correr a spec/vectors.json
+- [ ] `gui/` — Tkinter
 
-Porque primeiro: é o mais rápido a iterar, e valida a spec antes de a escrever
-em 3 linguagens mais.
+### Fase 2 — Web (PWA) ✅
+- [x] `index.html` + CSS, layout responsivo
+- [x] Módulos JS por tipo, espelhando a spec
+- [x] Canvas com preview em tempo real, export PNG/SVG
+- [x] Service worker + manifest (offline, instalável)
+- [x] **Encoder de QR próprio** (~450 linhas, zero dependências)
+- [x] Ficheiro único para `file://`
+- [ ] Publicar no GitHub Pages
 
-### Fase 2 — Web (PWA)
-- [ ] `index.html` + CSS com layout de 2 colunas (form / preview)
-- [ ] Um módulo JS por categoria, espelhando `payloads.py`
-- [ ] Canvas com preview em tempo real, export PNG/SVG
-- [ ] Service worker + manifest (offline, instalável)
-- [ ] Site GitHub Pages: `https://<user>.github.io/QrCodeGenerator/`
-
-### Fase 3 — C# (paridade)
-- [ ] Extrair `QrService` → `core/` sem dependências de WinForms
-- [ ] Implementar os tipos novos + bugs
+### Fase 3 — C# (paridade) ✅
+- [x] Extrair `QrService` → `core/` sem dependências de WinForms
+- [x] Tipos novos + os 7 bugs
+- [x] 137 testes, incluindo leitura do PNG com o ZXing
 - [ ] Export SVG/PDF
-- [ ] Referência de UI para as outras stacks (a que já tem preview)
 
 ### Fase 4 — Java desktop
 - [ ] Maven/Gradle, Java 21, JavaFX
@@ -294,57 +321,74 @@ para cada vetor:
 ```
 
 O Nível 2 é o que interessa: garante que o QR gerado é mesmo legível por um
-leitor real, independentemente da biblioteca usada.
+leitor real, independentemente da biblioteca usada. **Foi ele que encontrou os
+dois bugs do encoder de QR do site.**
 
-Um script `spec/verificar-paridade.sh` corre as 5 stacks e imprime uma tabela
-✅/❌ por vetor. Quando a coluna do Java ficar verde, a spec está boa.
+Estado atual:
+
+| Stack | Nível 1 | Nível 2 | Comando |
+|---|---|---|---|
+| Python | ✅ 108 testes | ✅ zxing-cpp | `python -m pytest tests -q` |
+| C# | ✅ 137 testes | ✅ ZXing.Net | `dotnet test` |
+| Web | ✅ 54 testes | ✅ 29 matrizes, zxing-cpp | `node --test` + `descodificar.py` |
+| Java | ⬜ | ⬜ | — |
+| Kotlin | ⬜ | ⬜ | — |
+
+Falta um `spec/verificar-paridade.sh` que corra as stacks e imprima uma tabela
+✅/❌ por vetor. Por agora corre-se cada uma à parte.
 
 ---
 
 ## 9. Riscos e decisões em aberto
 
-| Tema | Opção A | Opção B | Recomendação |
+| Tema | Opção A | Opção B | Decidido |
 |---|---|---|---|
-| Código partilhado | Kotlin Multiplatform | Spec em JSON + 5 implementações | **Spec em JSON.** Menos toolchain, e cada app é idiomática |
-| Biblioteca web | Escrever à mão (~250 linhas) | `qrcode.js` | Escrever à mão, é um bom exercício e elimina dependências |
-| UI Python | Tkinter | PySide6 | **Tkinter** no início (zero install). PySide6 só se o visual unacceptable |
-| Ordem de implementação | Python primeiro | Web primeiro | **Python primeiro**: é a spec executável mais barata de fazer |
-| Idiomas | pt-PT só | pt/en/es | **pt-PT** primeiro; i18n com ficheiros de strings desde o início |
-| Estilo (logo, cores) | Em todas | Só na web | **Só na web e Python** (onde há Cycle); o resto fica funcional |
-| LICENSE | MIT (atual) | MIT | Manter |
+| Código partilhado | Kotlin Multiplatform | Spec em JSON + N implementações | **Spec em JSON** — menos toolchain, cada app idiomática |
+| Biblioteca web | Escrever à mão | `qrcode.js` | **À mão** (~450 linhas), zero dependências. Verificado com o ZXing |
+| UI Python | Tkinter | PySide6 | **Tkinter** (zero install). Por decidir |
+| Ordem de implementação | Python primeiro | Web primeiro | **Python primeiro**, como planeado. O site foi depois |
+| Idiomas | pt-PT só | pt/en/es | **pt-PT**. en/es por fazer |
+| Estilo (logo, cores) | Em todas | Só na web | Por decidir. Recomendação: só web |
+| Módulos ES em `file://` | Módulos | Ficheiro único | **As duas**: ESM servido + bundle para duplo clique |
+| LICENSE | MIT | MIT | Manter |
 
 Riscos técnicos a vigiar:
 
-- **QR não é ilimitado.** Limite real: 2 953 bytes (ECC L, byte mode). Erros de
-  quota de payloads grandes (WiFi com password longa, VCard com foto) são o
-  problema número 1. A UI deve avisar **antes** de gerar.
+- **QR não é ilimitado.** Limite real: 2 953 bytes (ECC L, modo byte). Payloads
+  grandes (WiFi com password longa, VCard completa) são o problema número 1.
+  A UI já avisa **antes** de gerar, com os números.
 - **Escaping é onde as implementações divergem.** Cada caractere especial tem
-  regra própria por tipo (`\:` no WiFi, `\;` no iCal, `%0A` em mailto). Testes
-  com strings que contêm caracteres problemáticos.
-- **Aleatoriedade na escolha de máscara** pode variar entre bibliotecas → o PNG
-  nunca é byte-a-byte igual entre stacks. Daí o Nível 2 (descodificar) em vez de
-  comparar hashes.
-- **5× o esforço de manutenção.** Cada correção na spec tem de ser replicada.
+  regra própria por tipo (`\:` no WiFi, `\;` no iCal, `%20` em mailto). Já
+  confirmado na prática: foi um bug de escaping (a máscara 4) que só o teste
+  de leitura apanhou.
+- **Escolha de máscara pode variar entre bibliotecas** → o PNG nunca é
+  byte-a-byte igual entre stacks. Daí o Nível 2 (descodificar) em vez de
+  comparar hashes. Também torna fútil comparar matrizes com outra biblioteca.
+- **N× o esforço de manutenção.** Cada correção na spec tem de ser replicada.
   É o custo do modelo escolhido; pagamos por clareza, não por DRY de código.
+- **Divergência silenciosa.** Uma stack pode passar o Nível 1 e falhar o Nível 2
+  — payload certo, QR ilegível. O Nível 2 não é opcional.
 
 ---
 
-## 10. Próximo passo imediato (se hoje fosse começar)
+## 10. Próximo passo
 
-1. Escrever `docs/TIPOS-QR.md` com os 22 tipos (payload exato + escaping).
-2. Gerar `spec/vectors.json` com 30 casos a partir dessa doc.
-3. Corrigir os 7 bugs 🔧 em `csharp/desktop-winforms/QrService.cs`.
-4. Implementar `python/qrcode_core` e fazer passar os vectors.
-5. Quando o Python passar, o resto é copiar a estrutura 4 vezes.
-
-Nada disto precisa de mais do que as ferramentas que já tens instaladas.
+1. Portar os 10 tipos antigos para `python/qrcode_core/payloads.py` — é a peça
+   que falta para o Python ter paridade com C# e web.
+2. Gerar os vetores desses 10 tipos na spec e passar nas 3 stacks.
+3. `spec/verificar-paridade.sh` para correr tudo de uma vez.
+4. CI (GitHub Actions) com um job por stack.
+5. JavaFX e depois Kotlin.
 
 ---
 
 ## Notas de repo
 
-- `.gitignore` foi alargado para cobrir Java (`target/`, `*.class`),
-  Android/Gradle (`.gradle/`, `build/`, `local.properties`),
-  Python (`__pycache__/`, `.venv/`, `*.egg-info/`) e Node (`node_modules/`).
-- Artefactos grandes (APK, exe, ZIP de release) continuam fora do git —
-  usar GitHub Releases.
+- `.gitignore` cobre Java (`target/`, `*.class`), Android/Gradle (`.gradle/`,
+  `build/`, `local.properties`), Python (`__pycache__/`, `.venv/`,
+  `*.egg-info/`, `.pytest_cache/`), Node (`node_modules/`) e os artefactos
+  gerados do site (`web/dist/`, `web/.crosscheck/`).
+- Artefactos grandes (APK, exe, ZIP de release, o ficheiro único do site)
+  ficam fora do git — usar GitHub Releases.
+- `spec/` é a fonte de verdade. Se um payload mudar, muda-se aqui primeiro e
+  depois em todas as stacks, com a spec a provar que ficaram iguais.

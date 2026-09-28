@@ -8,6 +8,8 @@ ou telemóvel, sem instalar nada.
 **Estado:** ✅ 11 tipos · ✅ 54 testes · ✅ encoder verificado com o ZXing ·
 Lighthouse 100/100/100
 
+Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
+
 ---
 
 ## Duas formas de usar

@@ -1,12 +1,16 @@
-# O que fazer ANTES de continuar
+# O que falta
 
-> Checklist de bloqueio. Nada disto é opcional, e nada disto depende de
-> implementar C#, Java, Kotlin, Python ou web. É a fundação que impede as 5
-> implementações de divergirem. Ver `IDEIA.md` para o porque.
+> Checklist do que ainda não está feito. Os BLOQUEIOS 1–3 já estão resolvidos —
+> ficaram os quatro que não dependem da spec.
+>
+> Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
-**Estado:** a spec do PIX está feita e validada contra o exemplo oficial do
-Banco Central. Os 10 tipos do C# estão descritos mas ainda sem vetores.
-Python tem 108 testes a passar.
+**Estado:** 3 stacks completas (web, C#, Python), 11 tipos, 299 testes. A spec do
+PIX está validada contra o exemplo oficial do Banco Central e os 7 bugs do
+`QrService.cs` original estão corrigidos com teste de regressão.
+
+O que bloqueia: **Python só tem PIX** — é a maior lacuna de paridade. Java e
+Kotlin não existem. Não há CI.
 
 ---
 
@@ -104,22 +108,30 @@ qualquer código novo:
 - [ ] CI (GitHub Actions) com um job por stack, mesmo que vazio no início
 - [x] `README.md` raíz reescrito como índice das 5 pastas
 - [x] `python/README.md` escrito (os outros conforme forem implementados)
-- [ ] `requirements.txt` em `python/`
+- [x] `requirements.txt` em `python/`
+- [x] `docs/COMO-USAR.md` — como usar e como partilhar cada app
+- [x] README próprio em cada pasta (web, csharp, python, java, kotlin)
+- [ ] `spec/verificar-paridade.sh` — correr as stacks todas de uma vez
 
 ---
 
-## Depois disto (ordem de implementação)
+## Ordem de implementação
 
 ```
-1. python/qrcode_core   → ✅ PIX pronto. Falta os 10 tipos existentes
+1. python/qrcode_core   → ✅ PIX pronto. FALTA os 10 tipos existentes  ← aqui
 2. web/                 → ✅ PWA + encoder próprio + ficheiro único
 3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
 4. java/desktop-javafx  → Payloads.java espelhado + jpackage
 5. kotlin/android       → Compose + scan de câmara
-6. extras               → lote, leitor, simbologias, PDF/SVG
+6. extras               → lote, leitor, simbologias, PDF
 ```
 
-Cada passo só avança quando os vectors passam nessa stack.
+Cada passo só avança quando os vetores passam nessa stack.
+
+**A ordem mudou em relação ao plano original:** o site foi feito antes de o
+Python ter os 10 tipos, porque era o cliente com mais alcance. O resultado é
+que o Python é hoje a única stack incompleta — e é a implementação de
+referência, o que é uma incoerência que vale resolver.
 
 ---
 
@@ -130,5 +142,22 @@ Cada passo só avança quando os vectors passam nessa stack.
 - [x] `QrService.cs` sem os 7 bugs, com teste de regressão para cada um
 - [x] `verificar-paridade` a correr em 3 stacks (C#, Python e web) com ✅
 - [x] Encoder de QR do site verificado por leitura com o ZXing (29 matrizes)
+- [x] `docs/COMO-USAR.md` — como usar e como partilhar cada app
 - [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python e web)
 - [ ] Respostas ao BLOQUEIO 4 registadas em `IDEIA.md` secção 9
+
+## Dívidas conhecidas
+
+Coisas que ficaram por fazer e que se notam:
+
+- [ ] **Python só tem PIX.** Os 10 tipos antigos estão no C# e no site, mas não
+      na biblioteca Python. É a maior lacuna de paridade.
+- [ ] **Java e Kotlin não existem.** As pastas têm README, nada mais.
+- [ ] **Sem GUI em Python.** `python/gui/` está vazio.
+- [ ] **Sem CI.** Os testes correm à mão, uma stack de cada vez. Um
+      `verificar-paridade.sh` juntava tudo.
+- [ ] **`assets/icon-192.png` e `icon-512.png` não existem** — estão
+      declarados no manifesto mas nunca gerados. Num PWA instalável no telemóvel
+      isso nota-se.
+- [ ] **`responder.txt`** na raiz: parece ser texto solto que ficou num commit.
+      Convém confirmar se se deve apagar.
