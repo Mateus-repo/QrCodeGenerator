@@ -1,0 +1,44 @@
+Feito. Criei o `.md` do que é para fazer antes de continuar.
+
+## Ficheiros criados
+
+**`docs/TODO.md`** — o que pediste: checklist bloqueante, 5 blocos
+
+| Bloco | Conteúdo |
+|---|---|
+| 1 | **Spec dos 22 tipos** — formato exato do payload, campos, escaping, limite de bytes. Começar pelos 10 que já existem |
+| 2 | **`spec/vectors.json`** — 30 casos `input → payload esperado` + `spec/payloads.json` (metadados) |
+| 3 | **Corrigir 7 bugs no `QrService.cs`** antes de propagar para as outras stacks |
+| 4 | **Decisões de produto** que precisas de responder (7 perguntas) |
+| 5 | **Repos/ferramentas** — `.gitignore`, CI, READMEs por pasta |
+
+Termina com "como saber que está feito" (5 checkboxes objetivos).
+
+**`docs/IDEIA.md`** — o documento de ideias (já tinha escrito): visão geral, organização de pastas, stack por pasta, catálogo dos 22 tipos, funcionalidades P0/P1/P2, roadmap em 7 fases, método de teste de paridade, riscos.
+
+## Bugs reais que encontrei ao ler o `QrService.cs`
+
+Estão no Bloco 3 — são o motivo de o checklist existir:
+
+1. **VCard perde a morada** — todos os parâmetros de endereço passam `""` (`QrService.cs:204-217`)
+2. **iCal usa `Environment.NewLine`** — dá CRLF no Windows, LF no resto. A spec iCalendar exige CRLF → payload diferente por plataforma
+3. **iCal não escapa** `,` `;` `\` e newlines → iCal inválido
+4. **Coordenadas sem validação** de intervalo (lat ±90, lng ±180)
+5. **Link aceita `javascript:`, `data:`, `ftp:`** — `NormalizeUrl` só acrescenta `https://`
+6. **`00` → `+`** só é convertido se estiver exatamente no início
+7. **`GeoLat`/`GeoLng` são `string`** em vez de `double?`
+
+## Estrutura de pastas já organizada
+
+```
+csharp/desktop-winforms/   (movido com git mv, histórico preservado)
+java/desktop-javafx/
+kotlin/android/
+python/{qrcode_core,cli,gui}/
+web/assets/
+docs/
+```
+
+## Bloqueio 4 — preciso de respostas tuas antes de escrever código
+
+As mais decisivas: **PIX entra já?** (é o tipo com mais regras — EMV + CRC16 + chave) e **QR dinâmico com link curto?** — esse segundo implica backend e muda o âmbito de "app local" para "serviço".
