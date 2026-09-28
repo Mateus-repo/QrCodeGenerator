@@ -121,70 +121,155 @@ qualquer código novo:
 Mais do que QR code. Os 1D lineares e os 2D matriciais, cada um com o seu
 encoder, e todos verificados pelo ZXing antes de entrarem.
 
-**O que está feito e verificado** (18 casos, todos lidos por leitor independente):
+**Feito e verificado.** Cada um com o ZXing a devolver a string certa. São
+28 casos de teste, todos legíveis por leitor independente.
+
+### 1D — 7 de 11
 
 - [x] EAN-13 — `web/symbologies/upcean.js`
 - [x] EAN-8
 - [x] UPC-A
 - [x] Code 128, com escolha automática de conjunto — `web/symbologies/code128.js`
-- [x] Harness de nível 2 para lineares: `web/tests/gerar-lineares.mjs` +
-      `web/tests/descodificar-lineares.py`
+- [x] Code 39, com dígito de controlo mod 43 — `web/symbologies/code39.js`
+- [x] ITF-14, o das caixas — `web/symbologies/itf.js`
+- [x] Codabar, com início e paragem à escolha — `web/symbologies/codabar.js`
+- [ ] **UPC-E** — deixado de fora de propósito. A tabela de paridade depende do
+      dígito de controlo do UPC-A expandido, e escrevê-la de memória é a forma
+      rápida de entregar códigos que não passam em leitor nenhum. Entra com a
+      ISO/IEC 6120 à mão. É a versão comprimida do UPC-A, e só codifica uma
+      parte dos produtos.
+- [ ] **Code 93** — mais compacto e mais seguro que o Code 39. Não é um
+      Code 39 melhorado: tem dois dígitos de controlo e uma tabela diferente.
+      O `python-barcode` não o tem, por isso a tabela vem de outra fonte.
+- [ ] **Code 11** — telecomunicações. Formato antigo, três dígitos de
+      controlo. Precisa da especificação.
+- [ ] **GS1-128** — não é um encoder novo: é Code 128 com o caractere FNC1 no
+      início, para os dados de Application Identifier da GS1 (data de
+      validade, lote, quantidade). Barato de fazer; falta decidir que campos
+      da GS1 se expõem na interface.
 
-**Fica de fora, e porquê.** Isto é o ponto importante desta secção: quatro
-encoders foram escritos e **não passaram na leitura**, por isso não estão no
-repositório.
+### 2D matriciais — 1 de 5
 
-- [ ] **Code 39** — a tabela tem 43 entradas de nove elementos (cinco barras,
-      quatro espaços, três largos). Escrita de memória saiu com doze
-      elementos por carácter, e a segunda tentativa, já pela regra 2-de-5 da
-      especificação, esbarrou nos caracteres finais (`-`, `.`, espaço, `*`,
-      `$`, `/`, `+`, `%`), que não seguem a regra: têm as cinco barras
-      estreitas e três espaços largos, ao contrário dos outros 35. Precisa da
-      tabela completa da ISO/IEC 16388, não de dedução.
-- [ ] **ITF e ITF-14** — a tabela dos dez dígitos está certa, e o formato é
-      simples. O que falta é acertar a moldura: a razão larga/estreita tem de
-      ser igual na moldura e nos dados (o leitor mede-a na moldura), e a
-      moldura de início não pode ter barra larga. Duas correções feitas e ainda
-      não leu — falta perceber qual das duas o leitor está a recusar.
-- [ ] **Codabar** — mesma situação: a estrutura de sete elementos é conhecida,
-      a tabela dos dezassete caracteres não.
-- [ ] **UPC-E** — deixado de fora do `upcean.js` de propósito. A tabela de
-      paridade depende do dígito de controlo do UPC-A expandido, e escrevê-la
-      de memória é a forma rápida de entregar códigos que não passam em
-      leitor nenhum. Entra com a ISO/IEC 6120 à mão.
-- [ ] **Code 93** — ainda nem tentado.
-- [ ] **GS1 DataBar** (Omni, Expanded, Limited) — o mais difícil dos 1D.
+- [x] QR Code, versões 1–40, com correção de erros — `web/qrcode.js`
+- [ ] **Micro QR** (M1–M4) — estrutura completamente diferente do QR: um só
+      padrão de localização no M1 e dois nos restantes, quatro máscaras em vez
+      de oito, e máscaras de dados próprias. A ISO/IEC 18004 é a mesma do QR
+      normal, o que é uma vantagem: a parte difícil, que é a colocação dos
+      codewords, é partilhada.
+- [ ] **Data Matrix (ECC200)** — o padrão da indústria farmacêutica,
+      aeroespacial e de defesa. Pequeno e quadrado, sem os quadrados grandes
+      nos cantos. Reed-Solomon sobre GF(256) e cinco modos de codificação
+      (ASCII, C40, Text, EDIFACT, Base256).
+- [ ] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
+      cabeçalho FNC1 em ASCII, para rastreabilidade na saúde e na logística.
+- [ ] **Aztec** — bilhetes de comboio e cartões de embarque. Tem um padrão de
+      orientação central e usa Reed-Solomon sobre GF(16) e GF(256). Não é
+      apenas mais difícil: é um algoritmo diferente do QR.
+- [ ] **MaxiCode** — desenvolvido pela UPS para encomendas em movimento. Tem
+      uma tabela de 866 codewords de correcção em anéis concêntricos. É dos
+      mais difíceis da lista.
 
-**2D matriciais**, por ordem de dificuldade. Todos são verificáveis pelo ZXing,
-que já os lê: Data Matrix, Aztec, PDF417, Micro QR, rMQR.
+### 2D da família QR
 
-- [ ] **FrameQR** — não é uma simbologia nova, é um pós-processamento sobre o QR
-      que já existe: um rectangle branco no centro para caber um logótipo. É o
-      mais barato de todos e vale ser o primeiro.
-- [ ] Data Matrix (ECC200)
-- [ ] Aztec
-- [ ] PDF417
-- [ ] Micro QR (M1–M4) — estrutura completamente diferente: um só padrão de
-      alinhamento, e máscaras e máscaras de dados próprias
-- [ ] rMQR —矩形, com reflexão. Especificação de 2022.
+- [x] **FrameQR** — `web/frameqr.js`, ligado à interface. Não é uma simbologia
+      nova: é pós-processamento sobre o QR, apagar um quadrado centrado e pôr
+      o logótipo lá dentro. A correcção de erros é que reconstrói os módulos
+      apagados. Tem 12 testes de estrutura e os **oito logótipos que a aplicação
+      recomenda foram lidos por leitor independente** — mais o PNG que o browser
+      exportou.
+- [ ] **Afinar o limite do logótipo por versão.** Hoje a mesma percentagem vale
+      para todas as versões, o que é conservador nos QR grandes. A conta certa é
+      em codewords: quantos o bloco aguenta estragar, e não que percentagem de
+      área. Deixa o logótipo maior no H sem perder a garantia.
+- [ ] **rMQR Code** — ISO/IEC 23941 (2022). A especificação é **paga** (CHF 204
+      na ISO), mas as tabelas que interessam são públicas: as 32 versões com os
+      seus codewords, os comprimentos do indicador de contagem por versão, a
+      máscara (`(i/2 + j/3) mod 9 = 0`) e a informação de formato. E há
+      implementações abertas da ISO. Viável.
+- [ ] **SQRC (Secret Function Equipped QR Code)** — o contentor é especificado
+      pela DENSO (AES-128 em dois segmentos, com o ID da chave no primeiro
+      byte), e o browser tem AES no Web Crypto sem dependências. **Mas**: quem
+      distribui a chave, e como? Um código "secreto" cuja chave vai no mesmo
+      sítio não é secreto. Falta uma decisão sobre o modelo de chaves antes de
+      valer a pena escrever.
 
-**E três coisas da lista que não são código:**
+### E uma que não é código
 
 - [ ] **iQR Code** — propriedade da Denso Wave, e a especificação não é
-      publicada. Não é implementável com rigor. Dizer não é a resposta errada.
-- [ ] **SQRC** — a parte encriptada exige AES *e* um modelo de distribuição de
-      chaves que não é nosso para decidir. O contentor é possível; o segredo não
-      sem o utilizador dizer como é que a chave chega ao leitor.
-- [ ] **QR dinâmico** — aponta para um URL curto de redirecção que só um servidor
-      pode servir. Uma app que corre toda no dispositivo, sem contas nem
-      servidor, não tem como fazer isto. E os "scan analytics" são tracking de
-      pessoas.
+      publicada. Não é implementável com rigor; dizer não é a resposta errada.
 
-**Regra que rege esta secção:** um encoder só entra no repositório depois de o
-ZXing devolver a string certa. Não há "quase". O motivo está em cima — quatro
-encoders pareceram certos durante a escrita e não eram.
+### As duas regras que regem esta secção
 
----
+**Um encoder só entra no repositório depois de o ZXing devolver a string certa.**
+Não há "quase".
+
+**E as tabelas dos códigos de barras nunca mais se escrevem de memória.** Vêm de
+um `python-barcode` — que é Python puro, com as tabelas no código-fonte em forma
+legível — e o `tests/tabelas.test.mjs` compara-as com as minhas, entrada a
+entrada. Sem isso aconteceu duas vezes: o Code 39 saiu com doze elementos por
+carácter em vez de nove, e o ITF com dois elementos na moldura de paragem em vez
+de três. Os dois desenhavam-se com o aspecto certo e não liam.
+
+```bash
+python -m pip install python-barcode   # só para os testes
+python web/tests/extrair-tabelas.py     # extrai as tabelas de referência
+node --test "web/tests/*.test.mjs"      # compara com as minhas
+```
+
+### Um padrão de bug que se repetiu três vezes
+
+O **separador entre caracteres**. O Code 39, o ITF e o Codabar têm um caractere
+de início — ou uma moldura — que **acaba numa barra**, e o primeiro carácter de
+dados **começa noutra barra**. Sem um espaço entre eles, as duas somam-se numa
+barra larga a mais. O código tem o aspecto certo, os testes estruturais passam, e
+o leitor não lê nada.
+
+Aconteceu três vezes em três formatos diferentes, e é a razão de o teste de
+leitura não ser opcional: nenhum teste estrutural o apanha, porque o erro não é
+uma tabela errada, é uma montagem errada com a tabela certa.
+
+### A percentagem da correcção de erros não é uma percentagem de área
+
+Isto valeu um dia de trabalho e é o que mais custou acertar no FrameQR.
+
+A norma diz que a correcção de erros do QR desfaz 4% (L) a 24% (H) dos erros.
+Lido à letra, é a resposta à pergunta "quanto logótipo cabe?" — e é a resposta
+errada por um factor de **4 a 6**, nas piores medições.
+
+A razão: essa percentagem é de **codewords errados**, e só é válida com os erros
+espalhados por vários blocos. Um QR pequeno tem poucos. A versão 2 a nível M
+tem **um** bloco, e nele a correcção desfaz 14 erros. Uma zona de logótipo de
+6x6 módulos é uma mancha contígua, e toca uma dúzia de codewords diferentes —
+cada um com um erro. Doze cabe, quinze não.
+
+Medido com o ZXing, varrendo o tamanho do logótipo em cada nível:
+
+```
+nível   pior caso medido   QR          teórico
+L       0.96%               v2  25x25    4%
+M       0.96%               v2  25x25    8%
+Q       3.52%               v2  25x25   14%
+H       2.85%               v3  29x29   24%
+```
+
+E notem-se dois factos que só a medição mostra:
+
+**Não sobem de forma regular de L para H.** O H tem mais correcção de erros, e
+por isso o mesmo texto sai num QR **maior** — e num QR maior a mancha toca
+menos codewords por módulo. O H aguanta uma percentagem menor e um logótipo
+maior em módulos.
+
+**Só contam os módulos escuros apagados.** Um módulo que já era claro não custa
+nada à correcção de erros. Numa zona quadrada isso é cerca de metade, e a conta
+tem de levar isso em conta. Dividir a área toda pela percentagem dava
+logótipos pequenos demais sem que ninguém percebesse porquê.
+
+Com os valores medidos, a consequência prática é que **um QR de 29x29 a nível M
+não leva logótipo nenhum** — e a interface diz isso e manda subir para Q ou H, em
+vez de fingir que o problema é da aplicação.
+
+O que ficou por fazer está em cima, no BLOQUEIO 6: a conta certa é em
+codewords, e daria logótipos maiores no H sem perder a garantia.
 
 ## Ordem de implementação
 

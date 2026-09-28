@@ -118,6 +118,40 @@ cortada dos dois lados — o código varria bem, os dois níveis de teste passav
 e a etiqueta é que não se lia. Se mexeres no desenho de um código, exporta pelo
 browser e manda o ficheiro ao leitor.
 
+**E um nível zero, que é o mais barato e o que mais apanha:** as tabelas dos
+códigos de barras **nunca se escrevem de memória**. Vêm do `python-barcode` (Python
+puro, com as tabelas no código-fonte legíveis) e o `tests/tabelas.test.mjs`
+compara-as com as tuas, entrada a entrada. Escrever a tabela do Code 39 de
+memória deu doze elementos por carácter em vez de nove, e a do ITF deu dois
+elementos na moldura de paragem em vez de três. Nenhum teste estrutural apanha
+uma tabela errada.
+
+```powershell
+python -m pip install python-barcode   # só para os testes
+python web/tests/extrair-tabelas.py
+```
+
+**E um padrão de bug que apareceu três vezes:** o separador entre caracteres. O
+Code 39, o ITF e o Codabar têm um caractere de início que **acaba numa barra**, e
+o primeiro carácter de dados **começa noutra**. Sem um espaço entre eles, as duas
+somam-se numa barra larga a mais. O código tem o aspecto certo e o leitor não lê
+nada. Se um código de barras "não lê" e a tabela está certa, é este.
+
+**E uma armadilha numérica que custou um dia:** a percentagem de correcção de
+erros do QR (4% a L, 24% a H) **não é uma percentagem de área**. É de
+*codewords errados*, e só vale com os erros espalhados por vários blocos. Num QR
+pequeno há poucos — a versão 2 a nível M tem um só bloco — e uma mancha de
+logótipo é contígua, pelo que toca muitos codewords de uma vez. Medido com o
+ZXing, a teórica é 4 a 6 vezes o que um QR pequeno aguenta. Os valores em
+`frameqr.js` são medidos, não teóricos, e `analisar-frameqr.py` é quem os mede.
+Não voltes a pôr a percentagem da norma.
+
+**E a regra do que entra no repositório, que é mais forte do que parece:** um
+encoder só entra depois de o ZXing devolver a string certa. Não há "quase" —
+nada de parcial, nada de "está quase certo". E um `frameqr.js` sem
+`descodificar-frameqr.py` a dizer que os logótipos recomendados leem-se é
+código não verificado, por muito que passe nos testes de estrutura.
+
 ### O QR code é sempre preto sobre branco
 
 Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há

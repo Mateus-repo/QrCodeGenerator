@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + 4 simbologias 1D · ✅ 126 testes · ✅ 9 temas × 3 modos · ✅ encodererificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + FrameQR + 7 simbologias 1D · ✅ 151 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -54,6 +54,9 @@ web/
 ├── symbologies/
 │   ├── upcean.js         EAN-13, EAN-8, UPC-A
 │   ├── code128.js        Code 128, com escolha automática de conjunto
+│   ├── code39.js         Code 39, com controlo mod 43
+│   ├── itf.js            ITF e ITF-14
+│   ├── codabar.js        Codabar
 │   ├── index.js          registo: validação e altura por simbologia
 │   └── linear.js         desenho em canvas e SVG, com a legenda
 ├── payloads/
@@ -128,21 +131,39 @@ apanhou a máscara 4 do QR, com `x` e `y` trocados.
 ### Os testes
 
 ```bash
-node --test "web/tests/*.test.mjs"     # inclui tests/linear.test.mjs
+# As tabelas de referência, que o teste de comparação usa
+python -m pip install python-barcode   # só para os testes
+python web/tests/extrair-tabelas.py
+
+node --test "web/tests/*.test.mjs"     # inclui linear.test.mjs e tabelas.test.mjs
 node web/tests/gerar-lineares.mjs         # escreve as matrizes
 python web/tests/descodificar-lineares.py # o ZXing lê e compara
 ```
 
-`linear.test.mjs` é nível 1: confere as dimensões, o número de barras por módulo
-escuro, que o SVG e o canvas concordam, e que a legenda concatenada dá o número
-completo. `descodificar-lineares.py` é nível 2: desenha e deixa o ZXing ler.
+São três níveis, e cada um apanha o que os outros não apanham:
 
-E houve uma verificação a que nenhum dos dois chega, que vale registar: **os PNG
-exportados pelo browser, lidos pelo ZXing.** Foi assim que apareceu o bug da
-legenda cortada — o tipo de letra só sabia crescer, e um texto de 13 dígitos
-saía cortado dos dois lados. Os testes de nível 1 e 2 passavam: o código estava
-correto, a etiqueta é que não se lia. Os quatro PNG exportados pela interface
-agora voltam a número certo.
+| Nível | Teste | O que apanha |
+|---|---|---|
+| 0 | `tabelas.test.mjs` | uma tabela transcrita de memória |
+| 1 | `linear.test.mjs` | dimensões, SVG vs canvas, legenda |
+| 2 | `descodificar-lineares.py` | o módulo na posição errada |
+| 3 | o PNG exportado pelo browser | a etiqueta que não se lê |
+
+**O nível 0 é o que impede a classe de erro mais comum.** Escrever a tabela de um
+código de barras de memória dá errado, e deu: o Code 39 saiu com doze elementos
+por carácter em vez de nove, e o ITF com dois elementos na moldura de paragem em
+vez de três. Nenhum teste estrutural apanha uma tabela errada — o código
+desenha-se com o aspecto certo. O `tabelas.test.mjs` compara as minhas tabelas
+com as do `python-barcode` (Python puro, com as tabelas no código-fonte em forma
+legível), entrada a entrada, e uma transcrição errada passa a ser um teste
+vermelho.
+
+**E um bug que se repetiu três vezes, em três formatos:** o separador entre
+caracteres. O Code 39, o ITF e o Codabar têm um caractere de início que **acaba
+numa barra**, e o primeiro carácter de dados **começa noutra**. Sem um espaço
+entre eles, as duas somam-se numa barra larga a mais. O código tem o aspecto
+certo e o leitor não lê nada. Nenhum teste estrutural o apanha, porque o erro
+não é uma tabela errada — é uma montagem errada com a tabela certa.
 
 Nota prática: o `>` do Windows PowerShell 5.1 produz UTF-16, e um JSON escrito
 assim não é lido pelo Python. Por isso o gerador escreve o ficheiro ele próprio e
@@ -237,7 +258,7 @@ transparente. Só um teste que leia as paragens do `linear-gradient` é que o v�
 pontos do gradiente"*. O brilho do Luna passou a ser uma linha de 1 px no topo do
 botão em vez de um fundo mais claro: mesma personagem, texto legível.
 
-Dois testes estruturaiswentam além do contraste:
+Dois testes estruturais vão além do contraste:
 
 - *"a forma não depende do modo"* — se a forma estivesse dentro dos blocos de
   modo, mudar de claro para escuro mudaria o raio e a fonte, e o Windows 95
@@ -254,15 +275,31 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 ## Testes
 
 ```bash
-# 126 testes: encoder + payloads + temas + simbologias + os 10 vetores da spec
+# As tabelas de referência, que o teste de comparação usa
+python -m pip install python-barcode   # só para os testes
+python web/tests/extrair-tabelas.py
+
+# 151 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?
 node web/tests/cross-check.mjs
 python web/tests/descodificar.py
+
+# os códigos de barras
+node web/tests/gerar-lineares.mjs
+python web/tests/descodificar-lineares.py
+
+# o FrameQR: o logótipo que a aplicação recomenda, lido por leitor independente
+node web/tests/gerar-frameqr.mjs
+python web/tests/descodificar-frameqr.py
+
+# e a medição que diz até onde o logótipo pode ir (é lento; só quando mexeres nos limites)
+node web/tests/varredura-frameqr.mjs
+python web/tests/analisar-frameqr.py
 ```
 
-O segundo par é o que apanha bugs reais. Were 29 matrizes — versões 1 a 39,
+O segundo par é o que apanha bugs reais. São 29 matrizes — versões 1 a 39,
 1500 bytes de payload, acentos, emoji, caracteres de controlo, iCalendar e
 vCard — e confirma que um leitor independente devolve o texto original.
 
@@ -270,6 +307,14 @@ vCard — e confirma que um leitor independente devolve o texto original.
 > a máscara 4 com `x` e `y` trocados (a única assimétrica das oito) e as
 > posições dos padrões de alinhamento erradas a partir da versão 7. Os QR
 > resultantes até "pareciam" certos.
+
+**E o `frameqr.js` tem o seu próprio, porque o problema dele é numérico.** A
+percentagem de correcção de erros da norma (4% a L, 24% a H) parece responder a
+"quanto logótipo cabe" e está errada por um factor de 4 a 6: é de *codewords
+errados* e só vale com eles espalhados por vários blocos, e um QR pequeno tem
+poucos. `analisar-frameqr.py` mede o limite verdadeiro, e foi essa medição que
+fixou os valores de `PERCENTAGEM_SEGURA`. A não ser que a meças outra vez, não
+voltes a pôr a percentagem da norma.
 
 ---
 
