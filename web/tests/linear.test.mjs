@@ -24,14 +24,17 @@ const EXEMPLOS = {
   ean8: '9638507',
   upca: '03600029145',
   code128: 'MAST-2024-0001',
+  code39: 'ABC-1234',
+  itf14: '1234567890123',
+  codabar: '12345678',
 };
 
 // --- O registo --------------------------------------------------------------
 
-test('as quatro simbologias estão registadas, com ids válidos', () => {
+test('as sete simbologias estão registadas, com ids válidos', () => {
   assert.deepEqual(
     SIMBOLOGIAS.map((s) => s.id),
-    ['ean13', 'ean8', 'upca', 'code128'],
+    ['ean13', 'ean8', 'upca', 'code128', 'code39', 'itf14', 'codabar'],
   );
 
   for (const s of SIMBOLOGIAS) {
@@ -90,6 +93,24 @@ test('o Code 128 recusa o que não é ASCII, e diz o que usar em vez disso', () 
   } catch (erro) {
     assert.match(erro.message, /QR/);
   }
+});
+
+test('o Code 39 recusa minúsculas sem as engolir em silencio', () => {
+  // Aceita minusculas e passa a maiusculas, que e o que o formato quer. O que
+  // nao pode e converter em silencio algo que nao existe.
+  assert.equal(codificar('code39', 'abc-1234').legenda, 'ABC-1234-');
+  assert.throws(() => codificar('code39', 'Á'), /Code 39 não tem/);
+  assert.throws(() => codificar('code39', '*'), /asterisco/);
+  // A mensagem aponta para o Code 128, que leva qualquer caractere.
+  assert.throws(() => codificar('code39', 'á'), /Code 128/);
+});
+
+test('o Codabar recusa letras, e o ITF-14 recusa o numero errado de dígitos', () => {
+  assert.throws(() => codificar('codabar', 'ABC'), /Codabar não tem/);
+  assert.throws(() => codificar('codabar', 'A123'), /Codabar não tem/);
+  assert.throws(() => codificar('itf14', '12345'), /Recebeste 5/);
+  // O ITF-14 tem sempre 14 digitos: 13 de dados e o de controlo.
+  assert.equal(codificar('itf14', '1234567890123').legenda.length, 14);
 });
 
 test('o Code 128 aceita tudo o que é ASCII imprimível', () => {

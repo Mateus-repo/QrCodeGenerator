@@ -269,3 +269,5 @@ export function upcA(valor) {
     gruposLegenda: gruposDaLegenda(codigo.guards, data + String(controlo)),
   };
 }
+
+export { L, R, GUARDA_INICIO, GUARDA_CENTRO, GUARDA_FIM };

@@ -82,6 +82,9 @@
               <option value="ean8">EAN-8</option>
               <option value="upca">UPC-A</option>
               <option value="code128">Code 128</option>
+              <option value="code39">Code 39</option>
+              <option value="itf14">ITF-14</option>
+              <option value="codabar">Codabar</option>
             </optgroup>
           </select>
         </div>
@@ -155,6 +158,21 @@
             <p class="ajuda" id="ajuda-margem">
               A norma do QR pede 4. Só mexa se souber o que está a fazer.
             </p>
+          </div>
+
+          <div class="campo" id="campo-frame">
+            <label for="frame">
+              <input id="frame" type="checkbox" />
+              Reservar um quadrado no centro (FrameQR)
+            </label>
+            <p class="ajuda">
+              Apaga os módulos do meio para lá pôr um logótipo. O conteúdo
+              continua a ler-se: é a correcção de erros que reconstrói o que
+              foi apagado.
+            </p>
+            <label for="frame-tamanho" class="sub-etiqueta">Lado do logótipo (módulos)</label>
+            <input id="frame-tamanho" type="range" min="0" max="20" step="1" value="0" />
+            <p class="ajuda" id="ajuda-frame"></p>
           </div>
         </details>
       </section>

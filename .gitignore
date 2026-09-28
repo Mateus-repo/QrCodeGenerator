@@ -56,6 +56,9 @@ node_modules/
 
 ## Web
 web/.crosscheck/
+web/tests/.lineares.json
+web/tests/.tabelas.json
+web/tests/.frameqr.json
 web/dist/
 
 ## Editores

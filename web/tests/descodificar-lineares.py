@@ -117,6 +117,12 @@ def main() -> int:
         # ZXing escolhe o EAN-13.
         aceitas = {caso["esperado"]}
         formatos_aceites = {caso["formato"]}
+
+        # O ITF-14 e lido como ITF. A unica diferenca entre os dois e a
+        # moldura de paragem, e o ZXing nao distingue os formatos.
+        if caso["formato"] == "ITF14":
+            formatos_aceites.add("ITF")
+
         if caso["formato"] == "UPCA":
             aceitas.add("0" + caso["esperado"])
             formatos_aceites.add("EAN13")

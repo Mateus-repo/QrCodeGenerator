@@ -25,6 +25,9 @@ import { fileURLToPath } from 'node:url';
 
 import { ean13, ean8, upcA, digitoDeControlo } from '../symbologies/upcean.js';
 import { code128 } from '../symbologies/code128.js';
+import { code39 } from '../symbologies/code39.js';
+import { itf, itf14 } from '../symbologies/itf.js';
+import { codabar } from '../symbologies/codabar.js';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const SAIDA = join(AQUI, '.lineares.json');
@@ -72,8 +75,24 @@ const CASOS = [
 
   // Code 39. O ZXing devolve o texto sem o digito de controlo, por isso o
   // esperado e o que foi escrito e nao o que foi codificado.
+  { fn: code39, entrada: 'ABC-1234', esperado: 'ABC-1234-', formato: 'Code39', modulos: 0 },
+  { fn: code39, entrada: 'CODE39', esperado: 'CODE39W', formato: 'Code39', modulos: 0 },
+  { fn: code39, entrada: 'A1 $/+.%', esperado: 'A1 $/+.%X', formato: 'Code39', modulos: 0 },
+  { fn: code39, entrada: '0', esperado: '00', formato: 'Code39', modulos: 0 },
 
+  // ITF. Exige um numero par de digitos, porque os le aos pares.
+  { fn: itf, entrada: '1234', esperado: '1234', formato: 'ITF', modulos: 0 },
+  { fn: itf, entrada: '00123456', esperado: '00123456', formato: 'ITF', modulos: 0 },
 
+  // ITF-14, o das caixas. Treze digitos de dados, o ultimo calcula-se.
+  { fn: itf14, entrada: '1234567890123', esperado: '12345678901231', formato: 'ITF14', modulos: 0 },
+  { fn: itf14, entrada: '0000000000000', esperado: '00000000000000', formato: 'ITF14', modulos: 0 },
+
+  // Codabar. O inicio e a paragem sao A, B, C ou D e nao entram nos dados, e
+  // o espaco tambem nao e um caracter deste codigo. O leitor devolve-os: e
+  // precisamente para dizer quem leu que eles existem.
+  { fn: (v) => codabar(v, { inicio: 'A', paragem: 'B' }), entrada: '12345678', esperado: 'A12345678B', codificado: '12345678', formato: 'Codabar', modulos: 0 },
+  { fn: (v) => codabar(v, { inicio: 'C', paragem: 'D' }), entrada: '1-2$/+.', esperado: 'C1-2$/+.D', codificado: '1-2$/+.', formato: 'Codabar', modulos: 0 },
 ];
 
 const casos = CASOS.map((caso, i) => {

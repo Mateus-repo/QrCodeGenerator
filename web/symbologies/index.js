@@ -12,9 +12,15 @@
 
 import { ean13, ean8, upcA } from './upcean.js';
 import { code128 } from './code128.js';
+import { code39 } from './code39.js';
+import { itf, itf14 } from './itf.js';
+import { codabar } from './codabar.js';
 
 export { ean13, ean8, upcA } from './upcean.js';
 export { code128 } from './code128.js';
+export { code39 } from './code39.js';
+export { itf, itf14 } from './itf.js';
+export { codabar } from './codabar.js';
 
 /**
  * Altura da barra em modulos, por simbologia.
@@ -29,6 +35,10 @@ const ALTURA_PADRAO = {
   'EAN-8': 62,
   'UPC-A': 68,
   'Code 128': 60,
+  'Code 39': 55,
+  'ITF': 50,
+  'ITF-14': 50,
+  Codabar: 50,
 };
 
 /**
@@ -116,6 +126,76 @@ export const SIMBOLOGIAS = [
       return texto;
     },
     encode: code128,
+  },
+  {
+    id: 'code39',
+    symbology: 'Code 39',
+    rotulo: 'Code 39',
+    grupo: 'INDUSTRIA',
+    descricao: '43 caracteres, só de um lado. Automóveis e defesa.',
+    campo: { key: 'valor', label: 'Conteúdo', placeholder: 'ABC-1234', dica: 'Maiúsculas, números, e - . $ / + % e espaço. O dígito de controlo é acrescentado.' },
+    validar(valor) {
+      const texto = String(valor).toUpperCase();
+      if (texto.length === 0) throw new Error('Code 39: escreve alguma coisa para codificar.');
+      const admitidos = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%';
+      for (const c of texto) {
+        if (c === '*') {
+          throw new Error(
+            'Code 39: o asterisco é o início e a paragem, e não pode estar nos dados.',
+          );
+        }
+        if (!admitidos.includes(c)) {
+          throw new Error(
+            `Code 39 não tem "${c}". Só leva maiúsculas, números, e - . $ / + % e espaço. ` +
+              'Para minúsculas ou acentos, use Code 128.',
+          );
+        }
+      }
+      return texto;
+    },
+    encode: code39,
+  },
+  {
+    id: 'itf14',
+    symbology: 'ITF-14',
+    rotulo: 'ITF-14',
+    grupo: 'LOGISTICA',
+    descricao: 'Caixas de cartão. Imprime-se no próprio cartão canelado, sem etiqueta.',
+    campo: { key: 'valor', label: 'Código', placeholder: '1234567890123', dica: '13 dígitos. O último é calculado.' },
+    validar(valor) {
+      const limpo = String(valor).replace(/[\s-]/g, '');
+      if (limpo.length !== 13) {
+        throw new Error(
+          `ITF-14 tem 14 dígitos, dos quais 13 de dados. Recebeste ${limpo.length}. ` +
+            'O último, o de controlo, calcula-se.',
+        );
+      }
+      return limpo;
+    },
+    encode: itf14,
+  },
+  {
+    id: 'codabar',
+    symbology: 'Codabar',
+    rotulo: 'Codabar',
+    grupo: 'INDUSTRIA',
+    descricao: 'Bancos de sangue, arquivos, etiquetas de laboratório. Os caracteres de início e paragem dizem quem leu.',
+    campo: { key: 'valor', label: 'Conteúdo', placeholder: '12345678', dica: '0-9 e - $ / : + . — sem espaços e sem letras.' },
+    validar(valor) {
+      const texto = String(valor);
+      if (texto.length === 0) throw new Error('Codabar: escreve alguma coisa para codificar.');
+      const admitidos = '0123456789-$/:+.';
+      for (const c of texto.toUpperCase()) {
+        if (!admitidos.includes(c)) {
+          throw new Error(
+            `Codabar não tem "${c}". Só leva 0-9 e - $ / : + . — ` +
+              'não tem letras nem espaços. Para texto, use Code 128.',
+          );
+        }
+      }
+      return texto.toUpperCase();
+    },
+    encode: codabar,
   },
 ];
 
