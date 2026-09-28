@@ -20,6 +20,7 @@
 
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
+import { aplicarFrame, modulosMaximos } from './frameqr.js';
 import { ligarSeletores } from './themes.js';
 import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
 import { desenhar as desenharLinear, paraSvg as linearParaSvg, dimensoes } from './symbologies/linear.js';
@@ -44,6 +45,10 @@ const dom = {
   ajudaTamanho: el('ajuda-tamanho'),
   margem: el('margem'),
   ajudaMargem: el('ajuda-margem'),
+  campoFrame: el('campo-frame'),
+  frame: el('frame'),
+  frameTamanho: el('frame-tamanho'),
+  ajudaFrame: el('ajuda-frame'),
   payload: el('payload'),
   contagem: el('contagem'),
   btnPng: el('btn-png'),
@@ -57,6 +62,14 @@ const state = {
   fields: {},
   payload: '',
   valido: false,
+  /**
+   * A matriz do QR como foi desenhada, com a zona do logotipo ja apagada.
+   *
+   * Vive aqui para o SVG sair igual ao PNG. Se cada um voltasse a codificar o
+   * payload, o PNG tinha o logotipo e o SVG nao — dois ficheiros com o mesmo
+   * nome e conteudos diferentes, sem nenhum aviso.
+   */
+  qr: null,
   /**
    * O codigo de barras codificado, quando o formato e 1D.
    *
@@ -205,6 +218,11 @@ function alternarFormato() {
   dom.margem.max = qr ? '8' : '20';
   if (!qr) dom.margem.value = '10';
 
+  // O quadrado do logótipo é um conceito do QR. Num código de barras não há
+  // correção de erros que reconstrua o que se apaga, e o resultado seria um
+  // código com um buraco no meio que ninguém lê.
+  dom.campoFrame.hidden = !qr;
+
   dom.vazio.textContent = qr
     ? 'Preenche o conteúdo para o QR code aparecer aqui.'
     : 'Preenche o código para as barras aparecerem aqui.';
@@ -262,11 +280,64 @@ function atualizar() {
     // matriz. Com `ceil` o resultado nunca fica abaixo do tamanho pedido —
     // arredondar para baixo dava 456 px quando se pediu 512.
     const info = encode(payload, { ecl });
+
+    /*
+     * O quadrado do logótipo, se estiver ligado.
+     *
+     * O limite vem de `modulosMaximos`, que é medido com o ZXing e não deduzido
+     * da percentagem teórica da norma — a teórica é 4 a 6 vezes o que um QR
+     * pequeno aguenta, e usá-la dá logótipos que às vezes leem. O pior
+     * resultado possível, porque o defeito só aparece no cartão impresso.
+     *
+     * E a matriz apagada é que vai para o desenho, por isso `draw` e `toSvg`
+     * recebem `qr`: sem isso voltavam a codificar o texto de novo e a zona
+     * desaparecia, sem dar erro nenhum.
+     */
+    let codigo = info;
+    let zona = null;
+
+    if (dom.frame.checked) {
+      const maximo = modulosMaximos(info.size, ecl);
+      const pedido = Math.min(Number(dom.frameTamanho.value) || 0, maximo);
+
+      if (pedido > 0) {
+        codigo = aplicarFrame(info, { modulos: pedido });
+        zona = codigo.zona;
+      }
+    }
+
+    // O cursor fica sempre no maior valor que ainda lê. Se o texto é grande e
+    // a matriz sai pequena, o logótipo disponível é menor — e um cursor acima
+    // do limite seria uma promessa que o leitor não cumpre.
+    const maximoFrame = modulosMaximos(info.size, ecl);
+    dom.frameTamanho.max = String(maximoFrame);
+    if (Number(dom.frameTamanho.value) > maximoFrame) {
+      dom.frameTamanho.value = String(maximoFrame);
+    }
+
+    /*
+     * A mensagem diz o que fazer quando não cabe, e não só que não cabe.
+     *
+     * Com ECC L ou M num QR pequeno o limite é mesmo zero módulos, e "acima
+     * disso a correcção de erros já não chega" deixa o utilizador a achar que
+     * é um problema da aplicação. Não é: é a correcção de erros que tem de
+     * reconstruir a zona, e num QR de 29x29 a nível M não chega para nada.
+     * A saída é subir o nível, e é isso que se lhe diz.
+     */
+    dom.ajudaFrame.textContent = !dom.frame.checked
+      ? ''
+      : maximoFrame === 0
+        ? `Neste código não cabe um logótipo com ECC ${ecl}: a correção de ` +
+          'erros não tem módulos a mais para reconstruir a zona. Suba para Q ou H.'
+        : `Até ${maximoFrame} módulos de lado com ECC ${ecl} neste código. ` +
+          'Acima disso a correção de erros já não chega.';
+
     const scale = Math.max(1, Math.ceil(targetPx / (info.size + border * 2)));
 
-    draw(dom.canvas, payload, { ecl, border, scale });
+    draw(dom.canvas, payload, { ecl, border, scale, qr: codigo });
 
     state.payload = payload;
+    state.qr = codigo;
     state.valido = true;
     dom.erro.hidden = true;
     dom.vazio.hidden = true;
@@ -274,7 +345,10 @@ function atualizar() {
     dom.payload.textContent = payload;
     dom.contagem.textContent =
       `${info.size}×${info.size} módulos · versão ${info.version} · ` +
-      `${usados} de ${limite} bytes (ECC ${ecl})`;
+      `${usados} de ${limite} bytes (ECC ${ecl})` +
+      (zona
+        ? ` · ${codigo.apagados} módulos apagados para o logótipo (${codigo.percentagem.toFixed(1)}%)`
+        : '');
   } catch (exception) {
     mostrarErro(exception.message || 'Não foi possível gerar o QR code.');
   }
@@ -412,7 +486,18 @@ function guardarSvg() {
     return;
   }
 
-  const svg = toSvg(state.payload, { ecl: dom.ecc.value, border: opcoes().border });
+  /*
+   * A mesma matriz que está no canvas, e não o payload outra vez.
+   *
+   * Sem isto, o PNG saía com o logótipo e o SVG saía sem ele — dois ficheiros
+   * diferentes com o mesmo nome, e nenhum aviso. Guardar o `qr` em `state` é o
+   * que garante que os dois são o mesmo código.
+   */
+  const svg = toSvg(state.payload, {
+    ecl: dom.ecc.value,
+    border: opcoes().border,
+    qr: state.qr,
+  });
   guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
 }
 
@@ -495,6 +580,16 @@ function arranque() {
   for (const control of [dom.ecc, dom.tamanho, dom.margem]) {
     control.addEventListener('change', atualizar);
   }
+
+  /*
+   * O `input` e nao o `change`: o cursor do logótipo arrasta-se, e com o
+   * `change` o código só se redesenhava no fim. Para um utilizador a arrastar
+   * um cursor isso é o código a ficar congelado enquanto se mexe, e a largura
+   * das barras de tools não justifica o custo — apagar módulos é barato, e
+   * `aplicarFrame` só percorre a zona.
+   */
+  dom.frame.addEventListener('change', atualizar);
+  dom.frameTamanho.addEventListener('input', atualizar);
 
   dom.btnPng.addEventListener('click', guardarPng);
   dom.btnSvg.addEventListener('click', guardarSvg);

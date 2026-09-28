@@ -61,8 +61,15 @@ function dataCodewords(version, ecl) {
  * A fórmula parece arbitrária mas tem de sair certa: para a versão 7 dá
  * 6, 22, 38 (passo 16) e para a 40 dá 6, 30, 58, 86, 114, 142, 170. A versão
  * 32 é o único caso especial, com passo 26 e um primeiro intervalo maior.
+ *
+ * **Exportada porque o FrameQR precisa dela.** A posição dos padrões de
+ * alinhamento aparece em dois sítios — em quem escreve os módulos e em quem
+ * decide o que se pode apagar. Duplicar a regra de 6 em 6 com as excepções
+ * dá a lista errada: a versão 2 devolvia doze centros onde há um, e o
+ * FrameQR protegia módulos que eram dados e apagava o padrão que era
+ * funcional. Uma fonte, uma regra.
  */
-function alignmentPositions(version) {
+export function alignmentPositions(version) {
   if (version === 1) return [];
 
   const numAlign = Math.floor(version / 7) + 2;
@@ -474,16 +481,30 @@ export function encode(text, options = {}) {
   qr.applyMask(bestMask);
   qr.drawFormatBits(bestMask);
 
-  return { size: qr.size, version, mask: bestMask, modules: qr.modules };
+  /*
+   * O `ecl` volta com o resto, e não é um detalhe. O FrameQR precisa dele para
+   * saber quanto da área pode apagar com segurança, e sem esta propriedade
+   * `aplicarFrame` assumia o nível M para todos — e um QR com 30% de correcção
+   * era limitado como se fosse de 15%.
+   */
+  return { size: qr.size, version, ecl, mask: bestMask, modules: qr.modules };
 }
 
 /** Capacidade máxima em modo byte, por nível de correção. */
 export const MAX_BYTES = { L: 2953, M: 2331, Q: 1663, H: 1273 };
 
-/** Desenha num canvas, com a zona silenciosa de 4 módulos que a norma exige. */
+/**
+ * Desenha num canvas, com a zona silenciosa de 4 módulos que a norma exige.
+ *
+ * Aceita uma matriz já feita em `options.qr`, e é o que permite ao FrameQR
+ * desenhar o código com a zona do logótipo já apagada. Sem isso, esta função
+ * voltava a codificar o texto e a zone apagada desaparecia — e o pior era
+ * isso não dar erro nenhum: saía um QR normal que lia o texto certo e não
+ * tinha logótipo nenhum.
+ */
 export function draw(canvas, text, options = {}) {
   const { scale = 8, border = 4, dark = '#000000', light = '#ffffff', ecl = 'M' } = options;
-  const qr = encode(text, { ecl });
+  const qr = options.qr ?? encode(text, { ecl });
 
   const context = canvas.getContext('2d', { willReadFrequently: false });
   const pixels = (qr.size + border * 2) * scale;
@@ -506,10 +527,14 @@ export function draw(canvas, text, options = {}) {
   return qr;
 }
 
-/** SVG do QR — escala sem perda e ficheiro minúsculo. */
+/**
+ * SVG do QR — escala sem perda e ficheiro minúsculo.
+ *
+ * Aceita uma matriz já feita em `options.qr`, pelo mesmo motivo que `draw`.
+ */
 export function toSvg(text, options = {}) {
   const { border = 4, dark = '#000000', light = '#ffffff', ecl = 'M' } = options;
-  const qr = encode(text, { ecl });
+  const qr = options.qr ?? encode(text, { ecl });
   const dimension = qr.size + border * 2;
 
   const parts = [];
