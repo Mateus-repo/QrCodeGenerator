@@ -1,2 +1,12 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# PowerShell
+#
+# O Windows PowerShell 5.1 le um .ps1 sem BOM como ANSI, e os acentos
+# Portugal passam a "Ãº" no terminal. Os .ps1 por isso sao gravados em
+# UTF-8 com BOM.
+#
+# O git nao remove o BOM: foi verificado com um clone limpo, sem
+# qualquer regra para .ps1, e os tres bytes EF BB BF chegam intactos ao
+# clone. Nao ha nada a desactivar aqui.
