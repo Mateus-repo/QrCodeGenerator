@@ -7,11 +7,11 @@ regras** partilhado.
 |---|---|---|---|
 | [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 54 testes · Lighthouse 100/100/100 |
 | [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 137 testes |
+| [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 119 testes |
 | [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ PIX · 108 testes |
-| [`java/desktop-javafx`](java/desktop-javafx) | App desktop | Java 21 / JavaFX / ZXing | ⬜ por fazer |
 | [`kotlin/android`](kotlin/android) | App Android | Kotlin / Compose / ZXing | ⬜ por fazer |
 
-**299 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
+**418 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
 um leitor independente (ZXing).
 
 ---
@@ -45,6 +45,14 @@ cd python
 pip install -r requirements.txt
 python cli/qrcli.py pix --key 529.982.247-25 --name "Ana Silva" \
     --city "Belo Horizonte" --amount 25,75 -o pix.png
+```
+
+**Quero uma app de desktop que corra no Windows, Mac e Linux**
+
+```bash
+cd java
+./build.sh app          # interface gráfica
+./build.sh package      # instalador nativo do sistema
 ```
 
 O guia completo, com **como partilhar cada uma**, está em
@@ -95,8 +103,8 @@ estrutural via**. Os QR saíam visualmente perfeitos e ninguém os conseguia ler
 
 | Estado | Tipos |
 |---|---|
-| ✅ nas três stacks | Link, Texto, Email, Telefone, SMS, WhatsApp, Evento, Localização, WiFi, VCard |
-| ✅ nas três stacks | **PIX** (BR Code) — com leitura, validação de chave e reparação de CRC |
+| ✅ em todas as stacks | Link, Texto, Email, Telefone, SMS, WhatsApp, Evento, Localização, WiFi, VCard |
+| ✅ em todas as stacks | **PIX** (BR Code) — com leitura, validação de chave e reparação de CRC |
 | ⬜ a seguir | Crypto, GS1, Redes sociais, Deep link, PDF, Cupão, MeCard, Fidelidade |
 | ⬜ stretch | Códigos de barras, Data Matrix, PDF417, Aztec, QR dinâmico |
 
@@ -111,6 +119,7 @@ Detalhes e armadilhas de cada um: [`docs/TIPOS-QR.md`](docs/TIPOS-QR.md).
 
 ```bash
 cd csharp && dotnet test                          # 137
+cd java && ./build.sh test                        # 119
 cd python && python -m pytest tests -q            # 108
 node --test "web/tests/*.test.mjs"                #  54
 

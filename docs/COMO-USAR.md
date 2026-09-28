@@ -13,7 +13,8 @@ manual.
 | Um ficheiro para enviar a alguém por email | **Site**, botão *Guardar PNG* |
 | Usar sem internet, ou com um ecrã sujo | **Site** servido + instalado como app |
 | Um programa Windows para usar todos os dias | **App C#** |
-| Gerar QR em série, a partir de um ficheiro | **CLI Python** |
+| Um programa para Windows, Mac **e** Linux | **App Java** — o mesmo código, três instaladores |
+| Gerar QR em série, a partir de um script | **CLI** — Python ou Java, qual preferir |
 | Construir outra coisa em cima disto | **Biblioteca Python** |
 | Mandar para telemóvel | Qualquer uma, o PNG vai por WhatsApp/email |
 
@@ -138,7 +139,84 @@ em *Opções*, porque na app há espaço.
 
 ---
 
-# 3. Python
+# 3. Java — a app multiplataforma
+
+Corre em **Windows, macOS e Linux** a partir do mesmo código, e o `jpackage`
+gera o instalador nativo de cada sistema.
+
+## Instalar e correr
+
+Requisito: um **JDK 21**. Nada de mais.
+
+```bash
+cd java
+./build.sh app        # interface gráfica
+```
+
+O script descarrega sozinho o ZXing, o Gson, o JUnit e o SDK do JavaFX para
+`~/.m2/qrcodegen`. Precisa de `curl` e `unzip`.
+
+No Windows, o script é um bash — usa o Git Bash, o WSL, ou qualquer terminal
+com bash. Só `javac`/`java` é preciso; o resto é o script.
+
+## Fazer o instalador
+
+```bash
+cd java
+./build.sh package
+```
+
+| Sistema | Sai | Precisa de |
+|---|---|---|
+| Windows | `.msi` e `.exe` | [wiX Toolset](https://wixtoolset.org/) |
+| macOS | `.dmg` e `.pkg` | Xcode Command Line Tools |
+| Linux | `.deb` | `fakeroot` e `dpkg-deb` |
+
+Sai em `java/desktop-javafx/dist/`.
+
+**Como partilhar:** anexa o instalador a um [GitHub Release](../../README.md).
+Quem o instala recebe um ícone no menu de applications e não precisa de Java
+instalado — o `jpackage` embute o runtime.
+
+**Ressalva honesta:** o `jpackage` só gera o instalador **no sistema de
+destino**. O `.msi` faz-se no Windows, o `.dmg` no macOS. Não é
+cross-compilação — é uma imposição da Oracle. Para uma pasta que corra em
+qualquer lado sem instalar nada, usa `./build.sh package --type app-image` e
+manda a pasta que sai (tem de ser descompactada no destino).
+
+## Linha de comandos
+
+Não precisa de JavaFX nem de ecrã — corre num servidor.
+
+```bash
+cd java
+./build.sh run pix --key 529.982.247-25 --name "Ana Silva" \
+    --city "Belo Horizonte" --amount 25,75 -o pix.png
+
+./build.sh run pix-leer "00020126...63041D3D"
+./build.sh run fix-crc  "00020126...63040000"
+./build.sh run --help
+```
+
+Códigos de saída: `0` sucesso · `1` erro de validação · `2` CRC inválido.
+
+## Testes
+
+```bash
+cd java && ./build.sh test
+```
+
+119 testes. Incluem dois que são sobre **portabilidade** e que valem a pena ler:
+
+- `crcNaoDependeDoLocale` — muda o locale do sistema para grego, turco e
+  alemão e confirma que o payload não se mexe. Em grego e turco,
+  `toUpperCase()` sem locale produz caracteres diferentes.
+- `payloadNaoDependeDoFimDeLinha` — o payload do evento não pode levar
+  quebras de linha do sistema operativo. Era um bug real na versão C# original.
+
+---
+
+# 4. Python
 
 Duas coisas: uma biblioteca e uma linha de comandos. Não há interface
 gráfica ainda.
@@ -213,11 +291,14 @@ Erros: `PixKeyError` (chave inválida), `PixValidationError` (campo em falta),
 
 ---
 
-# 4. Desenvolvedores — os testes
+# 5. Desenvolvedores — os testes
 
 ```bash
 # C# — 137 testes
 cd csharp && dotnet test
+
+# Java — 119 testes
+cd java && ./build.sh test
 
 # Python — 108 testes
 cd python && python -m pytest tests -q
@@ -230,21 +311,21 @@ node web/tests/cross-check.mjs
 python web/tests/descodificar.py
 ```
 
-Os três primeiros verificam o **payload** (a string). O quarto gera as
-imagens e confirma que um leitor independente devolve o texto certo.
+Os primeiros verificam o **payload** (a string). O do web gera as imagens e
+confirma que um leitor independente devolve o texto certo.
 
-Ao mexer em `pix.py` / `pix.js` / `Pix.cs`, regerar a spec:
+Ao mexer em `pix.py` / `pix.js` / `Pix.cs` / `Pix.java`, regerar a spec:
 
 ```bash
 python spec/gerar-vectors.py
 ```
 
-Depois correr os testes das três stacks. Se alguma falhar, as duas versões
-divergiram.
+Depois correr os testes de todas as stacks. Se alguma falhar, as versões
+divergiram — e a spec diz qual é a string certa.
 
 ---
 
-# 5. Privacidade
+# 6. Privacidade
 
 - Nada sai do dispositivo, em nenhuma das apps. Não há analytics nem CDN.
 - Um QR de WiFi, VCard ou PIX **contém os dados**. Quem fotografa tem acesso.
@@ -255,7 +336,7 @@ divergiram.
 
 ---
 
-# 6. Dúvidas frequentes
+# 7. Dúvidas frequentes
 
 **O QR não lê no telemóvel.**
 Faltam normalmente duas coisas: a zona branca à volta (4 módulos, a "margem") e

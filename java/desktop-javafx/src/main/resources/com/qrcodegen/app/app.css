@@ -1,0 +1,30 @@
+/*
+ * Estilo da aplicação.
+ *
+ * Sem cores escritas à mão para fundos e texto: o JavaFX segue o tema do
+ * sistema operativo, e o mesmo código fica claro no Windows e escuro no macOS.
+ * Só as cores de erro e de destaque são nossas, e ambas passam no contraste
+ * sobre qualquer tema.
+ */
+
+.title {
+    -fx-font-size: 1.5em;
+    -fx-font-weight: bold;
+}
+
+.error {
+    -fx-text-fill: #b3261e;
+    -fx-background-color: derive(#b3261e, 92%);
+    -fx-background-radius: 6;
+    -fx-padding: 8 10 8 10;
+}
+
+.info {
+    -fx-text-fill: -fx-text-base-color;
+    -fx-opacity: 0.7;
+    -fx-font-size: 0.9em;
+}
+
+.text-area {
+    -fx-font-family: monospace;
+}

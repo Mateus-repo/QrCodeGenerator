@@ -21,10 +21,12 @@ x86/
 
 ## Java
 target/
+build/
 *.class
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 .mvn/
+java/desktop-javafx/dist/
 
 ## Gradle / Android
 .gradle/

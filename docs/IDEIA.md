@@ -15,17 +15,18 @@
 
 ## 1. Onde estamos hoje
 
-**Três stacks completas**, com os mesmos 11 tipos e os mesmos payloads,
+**Quatro stacks completas**, com os mesmos 11 tipos e os mesmos payloads,
 verificadas contra a mesma spec partilhada.
 
 | Stack | O que é | Estado |
 |---|---|---|
 | `web` | PWA + encoder QR próprio, zero dependências | ✅ 54 testes · Lighthouse 100/100/100 |
 | `csharp` | App Windows + `core` sem dependências | ✅ 137 testes |
+| `java` | App desktop **multiplataforma** + `core` | ✅ 119 testes |
 | `python` | Biblioteca + CLI | ✅ 108 testes |
 
 ```
-299 testes no total, mais 29 matrizes de QR confirmadas por leitura com o ZXing
+418 testes no total, mais 29 matrizes de QR confirmadas por leitura com o ZXing
 ```
 
 O que já está resolvido:
@@ -33,13 +34,15 @@ O que já está resolvido:
 - **Spec formalizada** em `docs/TIPOS-QR.md` e `spec/vectors.json`.
 - **Os 7 bugs do antigo `QrService.cs` corrigidos**, cada um com teste.
 - **PIX** implementado e validado contra o exemplo oficial do Banco Central.
-- **Três clientes concordam byte a byte** nos vetores da spec.
+- **Quatro clientes concordam byte a byte** nos vetores da spec.
 - **Paridade testada em dois níveis**: o payload (string a string) e a imagem
   (gerar PNG e descodificar com um leitor independente).
+- **A app Java corre no mesmo código em Windows, macOS e Linux**, com
+  instalador nativo de cada um.
 
 O que **não** existe ainda:
 
-- Java e Kotlin (pastas com README, vazias de propósito).
+- Kotlin/Android (pasta com README, vazia de propósito).
 - GUI em Python (`python/gui/`).
 - Os 10 tipos antigos ainda não estão portados para Python.
 - Sem estilo, sem logo, sem geração em lote, sem leitor de QR.
@@ -283,11 +286,15 @@ Porque primeiro: sem isto, as 5 stacks divergem e não há como saber qual está
 - [x] 137 testes, incluindo leitura do PNG com o ZXing
 - [ ] Export SVG/PDF
 
-### Fase 4 — Java desktop
-- [ ] Maven/Gradle, Java 21, JavaFX
-- [ ] `Payloads.java` espelhando a spec
-- [ ] `QrView.java` com cache/animação (as bibliotecas nativas dão zoom suave)
-- [ ] `jpackage` para gerar `.exe` e `.dmg` a partir do mesmo código
+### Fase 4 — Java desktop ✅
+- [x] Java 21 + JavaFX, sem Maven nem Gradle (dois diretórios e um JDK)
+- [x] `core` sem dependências, espelhando o `csharp/core`
+- [x] `QrPayloadBuilder` / `QrValidator` / `Pix` com os mesmos payloads
+- [x] 119 testes, incluindo dois de portabilidade (locale e fim de linha)
+- [x] `build.sh` a compilar, testar e correr, em Windows/macOS/Linux
+- [x] `jpackage` para `.msi`/`.exe`, `.dmg`/`.pkg` e `.deb`
+- [ ] Geração em lote a partir de CSV
+- [ ] Leitura de QR pela câmara (o ZXing tem, mas a app ainda não usa)
 
 ### Fase 5 — Kotlin / Android
 - [ ] Compose com a mesma estrutura de ecrãs
@@ -330,9 +337,15 @@ Estado atual:
 |---|---|---|---|
 | Python | ✅ 108 testes | ✅ zxing-cpp | `python -m pytest tests -q` |
 | C# | ✅ 137 testes | ✅ ZXing.Net | `dotnet test` |
+| Java | ✅ 119 testes | ⚠️ ZXing gera e lê (mesma biblioteca) | `java/build.sh test` |
 | Web | ✅ 54 testes | ✅ 29 matrizes, zxing-cpp | `node --test` + `descodificar.py` |
-| Java | ⬜ | ⬜ | — |
 | Kotlin | ⬜ | ⬜ | — |
+
+A ressalva em Java: o `RenderTests` gera e lê com o mesmo ZXing, o que é mais
+fraco — um erro comum aos dois passava despercebido. Para compensar, o PNG
+gerado pela CLI do Java foi verificado à mão com o `zxing-cpp` do Python, e
+confirma que devolve o payload. Quando houver CI, o mesmo ficheiro de spec pode
+servir de teste de integração.
 
 Falta um `spec/verificar-paridade.sh` que corra as stacks e imprima uma tabela
 ✅/❌ por vetor. Por agora corre-se cada uma à parte.

@@ -5,12 +5,12 @@
 >
 > Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
-**Estado:** 3 stacks completas (web, C#, Python), 11 tipos, 299 testes. A spec do
-PIX está validada contra o exemplo oficial do Banco Central e os 7 bugs do
-`QrService.cs` original estão corrigidos com teste de regressão.
+**Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos, 418 testes. A
+spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
+bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
-O que bloqueia: **Python só tem PIX** — é a maior lacuna de paridade. Java e
-Kotlin não existem. Não há CI.
+O que bloqueia: **Python só tem PIX** — é a maior lacuna de paridade, numa das
+stacks que se chamava de referência. Kotlin não existe. Não há CI.
 
 ---
 
@@ -121,7 +121,7 @@ qualquer código novo:
 1. python/qrcode_core   → ✅ PIX pronto. FALTA os 10 tipos existentes  ← aqui
 2. web/                 → ✅ PWA + encoder próprio + ficheiro único
 3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
-4. java/desktop-javafx  → Payloads.java espelhado + jpackage
+4. java/                → ✅ core + app + CLI + jpackage, 119 testes
 5. kotlin/android       → Compose + scan de câmara
 6. extras               → lote, leitor, simbologias, PDF
 ```
@@ -140,22 +140,29 @@ referência, o que é uma incoerência que vale resolver.
 - [x] `docs/TIPOS-QR.md` com o PIX completo e os 10 tipos descritos
 - [x] `spec/vectors.json` com 10 casos de PIX, verdes e descodificados
 - [x] `QrService.cs` sem os 7 bugs, com teste de regressão para cada um
-- [x] `verificar-paridade` a correr em 3 stacks (C#, Python e web) com ✅
+- [x] `verificar-paridade` a correr em 4 stacks (C#, Java, Python e web) com ✅
 - [x] Encoder de QR do site verificado por leitura com o ZXing (29 matrizes)
 - [x] `docs/COMO-USAR.md` — como usar e como partilhar cada app
-- [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python e web)
+- [x] Java: 4.ª stack completa, com `jpackage` para os três sistemas
+- [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python)
 - [ ] Respostas ao BLOQUEIO 4 registadas em `IDEIA.md` secção 9
 
 ## Dívidas conhecidas
 
 Coisas que ficaram por fazer e que se notam:
 
-- [ ] **Python só tem PIX.** Os 10 tipos antigos estão no C# e no site, mas não
-      na biblioteca Python. É a maior lacuna de paridade.
-- [ ] **Java e Kotlin não existem.** As pastas têm README, nada mais.
+- [ ] **Python só tem PIX.** Os 10 tipos antigos estão no C#, no Java e no
+      site, mas não na biblioteca Python. É a maior lacuna de paridade — e
+      apesar de ser a implementação de referência.
+- [ ] **Kotlin/Android não existe.** A pasta tem README, nada mais.
 - [ ] **Sem GUI em Python.** `python/gui/` está vazio.
 - [ ] **Sem CI.** Os testes correm à mão, uma stack de cada vez. Um
       `verificar-paridade.sh` juntava tudo.
+- [ ] **O teste de nível 2 do Java é mais fraco.** Gera e lê com o mesmo ZXing.
+      O PNG foi verificado à mão com o `zxing-cpp` do Python, mas isso não
+      está automatizado.
+- [ ] **`jpackage` só corre no SO de destino.** O `.msi` faz-se no Windows, o
+      `.dmg` no macOS. Documentado, mas é uma limitação real.
 - [ ] **`assets/icon-192.png` e `icon-512.png` não existem** — estão
       declarados no manifesto mas nunca gerados. Num PWA instalável no telemóvel
       isso nota-se.
