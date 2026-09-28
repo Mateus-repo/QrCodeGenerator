@@ -112,8 +112,8 @@ qualquer código novo:
 
 ```
 1. python/qrcode_core   → ✅ PIX pronto. Falta os 10 tipos existentes
-2. web/                 → espelha pix.py em JS + PWA
-3. csharp/              → core separado de WinForms, tipos novos, 7 bugs
+2. web/                 → ✅ PWA + encoder próprio + ficheiro único
+3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
 4. java/desktop-javafx  → Payloads.java espelhado + jpackage
 5. kotlin/android       → Compose + scan de câmara
 6. extras               → lote, leitor, simbologias, PDF/SVG
@@ -128,6 +128,7 @@ Cada passo só avança quando os vectors passam nessa stack.
 - [x] `docs/TIPOS-QR.md` com o PIX completo e os 10 tipos descritos
 - [x] `spec/vectors.json` com 10 casos de PIX, verdes e descodificados
 - [x] `QrService.cs` sem os 7 bugs, com teste de regressão para cada um
-- [x] `verificar-paridade` a correr em 2 stacks (C# e Python) com ✅
-- [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python)
+- [x] `verificar-paridade` a correr em 3 stacks (C#, Python e web) com ✅
+- [x] Encoder de QR do site verificado por leitura com o ZXing (29 matrizes)
+- [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python e web)
 - [ ] Respostas ao BLOQUEIO 4 registadas em `IDEIA.md` secção 9

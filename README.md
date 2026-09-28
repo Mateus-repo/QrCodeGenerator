@@ -5,9 +5,9 @@ regras** partilhado.
 
 | Pasta | O que é | Stack | Estado |
 |---|---|---|---|
+| [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos, 54 testes, Lighthouse 100/100/100 |
 | [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms / QRCoder | ✅ 11 tipos, 137 testes, 0 bugs |
-| [`python`](python) | **Implementação de referência** | Python / segno / Pillow | ✅ PIX pronto, 108 testes |
-| [`web`](web) | Site (PWA) | HTML + ES modules | ⬜ por fazer |
+| [`python`](python) | Biblioteca + CLI de referência | Python / segno / Pillow | ✅ PIX, 108 testes |
 | [`java/desktop-javafx`](java/desktop-javafx) | App desktop | Java 21 / JavaFX / ZXing | ⬜ por fazer |
 | [`kotlin/android`](kotlin/android) | App Android | Kotlin / Compose / ZXing | ⬜ por fazer |
 
@@ -49,27 +49,27 @@ string original. Um payload válido que ninguém consegue ler também é um bug.
 
 | Estado | Tipos |
 |---|---|
-| ✅ C# e Python | Link, Texto, Email, Telefone, SMS, WhatsApp, Evento, Localização, WiFi, VCard |
-| ✅ C# e Python | **PIX** (BR Code) — com leitura, validação de chave e reparação de CRC |
-| ⬜ A seguir | Crypto, GS1, Redes sociais, Deep link, PDF, Cupão, MeCard, Bluetooth, Fidelidade |
-| ⬜ Stretch | Códigos de barras, Data Matrix, PDF417, Aztec, QR dinâmico |
+| ✅ nas três stacks | Link, Texto, Email, Telefone, SMS, WhatsApp, Evento, Localização, WiFi, VCard |
+| ✅ nas três stacks | **PIX** (BR Code) — com leitura, validação de chave e reparação de CRC |
 
 Detalhes e armadilhas de cada um: [`docs/TIPOS-QR.md`](docs/TIPOS-QR.md).
 
 ## Começar
 
 ```bash
+# Site — abre em qualquer PC, Mac, Linux ou telemóvel
+node web/tools/bundle.mjs          # gera web/dist/qrcode-generator.html
+cd web && python -m http.server 8777
+
 # C# (Windows) — a app
 cd csharp
 dotnet test
 dotnet run --project desktop-winforms -c Release
 
-# Python (referência) — a forma mais rápida de ver o que existe
+# Python (referência)
 cd python
 pip install -r requirements.txt
 python -m pytest tests -q
-python cli/qrcli.py pix --key 529.982.247-25 --name "Ana Silva" \
-    --city "Belo Horizonte" --amount 25,75 -o pix.png
 ```
 
 ## Regras do repositório
@@ -80,10 +80,14 @@ python cli/qrcli.py pix --key 529.982.247-25 --name "Ana Silva" \
    outro lado primeiro.
 3. **Divergência é bug.** Se duas stacks geram strings diferentes para os mesmos
    campos, uma delas está errada.
-4. **Payloads com acento: normaliza.** Vários leitores e bancos corrompem ou
+4. **Um payload legível não basta.** Cada stack tem de passar por um teste que
+   gera a imagem e a **descodifica com um leitor independente** (ZXing.Net,
+   zxing-cpp). Foi assim que apareceram dois bugs no encoder de QR do site que
+   nenhuma asserção estrutural via.
+5. **Payloads com acento: normaliza.** Vários leitores e bancos corrompem ou
    recusam. O comprimento é contado em ASCII.
-5. **O `.gitignore` exclui artefactos grandes** (exe, APK, ZIP). Releases vão
-   para o GitHub Releases.
+6. **O `.gitignore` exclui artefactos grandes** (exe, APK, ZIP, bundles).
+   Releases vão para o GitHub Releases.
 
 ## Licença
 

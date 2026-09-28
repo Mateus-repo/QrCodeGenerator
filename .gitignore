@@ -48,10 +48,13 @@ venv/
 .coverage
 htmlcov/
 
-## Node (site, se um dia levar build)
+## Node (site)
 node_modules/
 .vite/
-dist-web/
+
+## Web
+web/.crosscheck/
+web/dist/
 
 ## Editores
 *.swp

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gerador de QR codes</title>
+    <meta name="description" content="Gera QR codes de 11 tipos, incluindo PIX. Funciona offline, no telemóvel e no computador, sem instalar nada." />
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <a class="skip" href="#conteudo">Saltar para o conteúdo</a>
+
+    <header class="topo">
+      <h1>Gerador de QR codes</h1>
+      <p class="sub">Tudo corre no teu dispositivo. Nada é enviado para lado nenhum.</p>
+    </header>
+
+    <main id="conteudo">
+      <!-- Coluna do formulário -->
+      <section class="painel painel-formulario" aria-label="Conteúdo do QR code">
+        <div class="campo">
+          <label for="categoria">Tipo de conteúdo</label>
+          <select id="categoria"></select>
+        </div>
+
+        <form id="formulario" novalidate>
+          <div id="campos" class="campos"></div>
+        </form>
+
+        <details class="opcoes">
+          <summary>Opções</summary>
+
+          <div class="campo">
+            <label for="ecc">Correção de erros</label>
+            <select id="ecc">
+              <option value="L">L — mais conteúdo, menos robustez</option>
+              <option value="M" selected>M — equilibrado (recomendado)</option>
+              <option value="Q">Q — mais robustez</option>
+              <option value="H">H — máximo, para imprimir</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="tamanho">Tamanho em píxeis</label>
+            <select id="tamanho">
+              <option value="256">256</option>
+              <option value="512" selected>512</option>
+              <option value="1024">1024</option>
+              <option value="2048">2048</option>
+            </select>
+          </div>
+
+          <div class="campo">
+            <label for="margem">Margem (módulos)</label>
+            <input id="margem" type="number" min="0" max="8" step="1" value="4" />
+            <p class="ajuda">A norma pede 4. Só mexa se souber o que está a fazer.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- Coluna do resultado -->
+      <section class="painel painel-resultado" aria-label="Resultado">
+        <div class="previa">
+          <canvas id="canvas" width="512" height="512" role="img" aria-label="Pré-visualização do QR code"></canvas>
+          <p id="vazio" class="vazio">Preenche os campos ao lado para ver o QR code.</p>
+        </div>
+
+        <p id="erro" class="erro" role="alert" hidden></p>
+      </section>
+    </main>
+
+    <section class="acoes" id="acoes" hidden>
+      <button id="btn-png" type="button" class="primario">Guardar PNG</button>
+      <button id="btn-svg" type="button">Guardar SVG</button>
+      <button id="btn-copiar" type="button">Copiar</button>
+      <button id="btn-partilhar" type="button" hidden>Partilhar</button>
+    </section>
+
+    <details class="payload">
+      <summary>Ver o que vai dentro do QR code</summary>
+      <p class="ajuda">
+        Isto é literalmente o que o código contém. Se mandares isto a alguém, estás
+        a mandar-lhe o conteúdo, não um link para o site.
+      </p>
+      <pre id="payload" tabindex="0"></pre>
+      <div class="linha">
+        <button id="btn-copiar-payload" type="button" class="secundario">Copiar conteúdo</button>
+        <span id="contagem" class="ajuda"></span>
+      </div>
+    </details>
+
+    <footer>
+      <p>
+        <a href="https://github.com/">Código aberto</a> · funciona offline · sem
+        dependências
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
