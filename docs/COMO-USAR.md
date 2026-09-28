@@ -43,7 +43,7 @@ público para mandar a quem quiseres.
 node web/tools/bundle.mjs
 ```
 
-Sai `web/dist/qrcode-generator.html` (~69 KB). Dá para mandar por email, pôr
+Sai `web/dist/qrcode-generator.html` (~116 KB). Dá para mandar por email, pôr
 num cartão de memória ou pôr na cloud.
 
 > Porquê as duas formas: módulos ES são bloqueados em `file://` pelo Chrome,
@@ -58,6 +58,35 @@ num cartão de memória ou pôr na cloud.
 4. **Guardar PNG**, **Guardar SVG** ou **Copiar**.
 
 Em *Opções* escolhes o nível de correção de erros, o tamanho e a margem.
+
+### Temas
+
+Em *Opções* tens **Tema** e **Modo**.
+
+**Tema** — o carácter visual:
+
+| | | |
+|---|---|---|
+| Padrão | Windows 11 | Windows 10 |
+| Windows 8 | Windows 7 | Windows XP |
+| Windows 95 | macOS | Ubuntu |
+
+**Modo** — **Sistema**, **Claro** ou **Escuro**. Cada tema tem as duas variantes,
+o que dá 27 combinações. Por exemplo *Windows 95 escuro*: o cinzento da moldura
+3D mantido, o ambiente de trabalho quase preto azulado, os campos pretos — o
+esquema "Dark" que se usava no fim dos anos 90.
+
+**Sistema** segue o que o teu computador disser e muda sozinho se ligares o modo
+escuro com a página aberta. A escolha fica guardada e já está aplicada no
+primeiro carregamento, sem piscar.
+
+> **Nem toda a variante escura existiu.** Windows 7, 8, 10, 11, macOS e Ubuntu
+> têm escuro de origem — no Windows 8, o Metro escuro era o original. O Windows
+> 95 e o Windows XP **não**: nunca houve um 95 nem um Luna escuro da Microsoft.
+> Esses dois são interpretações de temas de terceiros populares na altura.
+
+O QR code **nunca** é tematizado: fica sempre preto sobre branco, em todos os
+temas. Um código tem de se ler, e a impressão não perdoa.
 
 ## Partilhar
 
@@ -303,7 +332,7 @@ cd java && ./build.sh test
 # Python — 108 testes
 cd python && python -m pytest tests -q
 
-# Web — 54 testes
+# Web — 103 testes
 node --test "web/tests/*.test.mjs"
 
 # Web — o teste que importa: o ZXing lê o que gerámos?

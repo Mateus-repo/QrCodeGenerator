@@ -10,6 +10,54 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="themes.css" />
+
+    <!--
+      Aplica o tema guardado antes do primeiro paint. Sem isto a página
+      aparecia no tema padrão e depois saltava para o escolhido — visível
+      como um flash a cada carregamento.
+
+      Repete um bocado de lógica do themes.js, mas esse ficheiro é um módulo ES
+      e por isso é deferido: chega tarde demais. Este snippet é síncrono e corre
+      antes de o browser pintar.
+
+      Tem de resolver o modo "sistema" por si, porque é isto que pinta primeiro.
+      É a única coisa que o CSS não consegue fazer sozinho.
+    -->
+    <script>
+      (function () {
+        try {
+          var guardado = localStorage.getItem('tema-qrcode');
+          if (!guardado) return;
+
+          var partes = guardado.split(':');
+          // O formato antigo guardava só a família: "claro" e "escuro" eram
+          // temas próprios e passaram a ser modos de "padrao".
+          var familia = partes[0];
+          var modo = partes.length > 1 ? partes[1] : null;
+          if (familia === 'claro' || familia === 'escuro') {
+            modo = familia;
+            familia = 'padrao';
+          }
+          if (familia === 'padrao' || familia === '') return;
+
+          if (!modo) modo = 'sistema';
+          if (modo === 'sistema') {
+            modo = window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'escuro'
+              : 'claro';
+          }
+          if (modo !== 'claro' && modo !== 'escuro') modo = 'claro';
+
+          var raiz = document.documentElement;
+          raiz.setAttribute('data-theme', familia);
+          raiz.setAttribute('data-modo', modo);
+        } catch (erro) {
+          /* localStorage bloqueado: o site arranca no tema padrão */
+        }
+      })();
+    </script>
   </head>
 
   <body>
@@ -22,7 +70,7 @@
 
     <main id="conteudo">
       <!-- Coluna do formulário -->
-      <section class="painel painel-formulario" aria-label="Conteúdo do QR code">
+      <section class="painel painel-formulario" data-chrome="Gerador de QR codes" aria-label="Conteúdo do QR code">
         <div class="campo">
           <label for="categoria">Tipo de conteúdo</label>
           <select id="categoria"></select>
@@ -34,6 +82,36 @@
 
         <details class="opcoes">
           <summary>Opções</summary>
+
+          <div class="campo">
+            <label for="tema">Tema</label>
+            <select id="tema"></select>
+
+            <fieldset class="modos" id="tema-modos">
+              <legend>Modo</legend>
+              <div class="segmentos">
+                <label>
+                  <input type="radio" name="tema-modo" value="sistema" checked />
+                  <span>Sistema</span>
+                </label>
+                <label>
+                  <input type="radio" name="tema-modo" value="claro" />
+                  <span>Claro</span>
+                </label>
+                <label>
+                  <input type="radio" name="tema-modo" value="escuro" />
+                  <span>Escuro</span>
+                </label>
+              </div>
+            </fieldset>
+            <div class="amostras" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <p class="ajuda">
+              Cada tema tem variante clara e escura. O modo <strong>Sistema</strong>
+              segue o que o teu computador disser, e muda sozinho se o ligares
+              com a página aberta. O QR code fica sempre preto sobre branco: um
+              código tem de ser legível, e a impressão não perdoa.
+            </p>
+          </div>
 
           <div class="campo">
             <label for="ecc">Correção de erros</label>
@@ -64,7 +142,7 @@
       </section>
 
       <!-- Coluna do resultado -->
-      <section class="painel painel-resultado" aria-label="Resultado">
+      <section class="painel painel-resultado" data-chrome="Pré-visualização" aria-label="Resultado">
         <div class="previa">
           <canvas id="canvas" width="512" height="512" role="img" aria-label="Pré-visualização do QR code"></canvas>
           <p id="vazio" class="vazio">Preenche os campos ao lado para ver o QR code.</p>

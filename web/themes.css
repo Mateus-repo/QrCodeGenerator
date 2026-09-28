@@ -1,0 +1,873 @@
+/*
+ * Temas
+ * =====
+ *
+ * Cada tema é feito de duas peças, e a separação é o que permite dar variante
+ * clara e escura a cada família sem duplicar nada:
+ *
+ *  [data-theme='win95']              -> a FORMA: raio, tipo de letra, molduras
+ *   [data-theme='win95'][data-modo='escuro']  -> a COR
+ *
+ * A forma não tem "modo": o Windows 95 é sempre com a mesma moldura 3D,
+ * tenha a página de fundo clara ou escura. Por isso cada família tem um bloco
+ * de forma e dois de cor, e não quatro.
+ *
+ * As regras que precisam de sobrepor propriedades — `border`, `box-shadow`,
+ * gradientes de botão — não podem ser tokens, porque precisam do `var()` mais
+ * simples possível. Essas cores viram tokens (`--bisel-*`, `--botao-*`) e as
+ * regras ficam escritas uma vez, a pensar nos dois modos.
+ *
+ * Nenhum tema toca no canvas: o QR code fica sempre preto sobre branco, senão
+ * deixa de se ler.
+ *
+ * Os temas retrô são interpretações, não recriações píxel a píxel. Os
+ * recursos originais — as fontes bitmap do Windows 95, o vidro do Aero, a
+ * textura do Luna — são propriedade da Microsoft e da Apple e não são
+ * distribuídos aqui. O que se procura é o *caráter* de cada um.
+ *
+ * Sobre a variante escura de cada família, convém ser honesto:
+ *
+ *   - **Existe de facto no sistema original:** Windows 7 (Basic escuro),
+ *     Windows 8 (o Metro escuro era o original), Windows 10, Windows 11,
+ *     macOS (desde o Mojave) e Ubuntu (a Yaru tem uma variante escura oficial,
+ *     com a berinjela escura #300a24).
+ *   - **É interpretação nossa:** Windows 95 e Windows XP. A Microsoft nunca
+ *     entregou um Windows 95 ou um Luna escuro. O que existe são temas de
+ *     terceiros muito populares nessa altura — o "Dark" do Windows 98, o
+ *     "Roy's Dark Theme" e o "Luna Black" — e é a esse espírito que estes
+ *     blocos recurrem.
+ *
+ * O contraste de todos os pares texto/fundo está verificado por
+ * `tests/themes.test.mjs` (WCAG 2.1, razão mínima 4.5:1) nas 27 combinações.
+ * Se mexer numa cor, corra o teste.
+ */
+
+/* ========================================================================== */
+/* PARTE 1 — FORMA                                                            */
+/* ========================================================================== */
+/*
+ * Coisas que não dependem do modo: o raio dos cantos, o tipo de letra, a
+ * largura da borda, a presença de sombra e de moldura 3D.
+ */
+
+[data-theme='padrao'] {
+  --raio: 10px;
+  --raio-sm: 8px;
+  --borda-largura: 1px;
+  --sombra: none;
+  --fonte: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+}
+
+[data-theme='win11'] {
+  --raio: 8px;
+  --raio-sm: 6px;
+  --borda-largura: 1px;
+  --fonte: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --sombra: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='win10'] {
+  --raio: 4px;
+  --raio-sm: 3px;
+  --borda-largura: 1px;
+  --fonte: 'Segoe UI', 'Segoe UI Variable', system-ui, sans-serif;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* O mais achatado de todos: sem raio, sem sombra, sem moldura. */
+[data-theme='win8'] {
+  --raio: 0;
+  --raio-sm: 0;
+  --borda-largura: 0;
+  --sombra: none;
+  --fonte: 'Segoe UI', 'Segoe UI Variable', system-ui, sans-serif;
+}
+
+[data-theme='win7'] {
+  --raio: 6px;
+  --raio-sm: 4px;
+  --borda-largura: 1px;
+  --fonte: 'Segoe UI', system-ui, Tahoma, sans-serif;
+  --sombra: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme='winxp'] {
+  --raio: 6px;
+  --raio-sm: 5px;
+  --borda-largura: 1px;
+  --fonte: Tahoma, 'Segoe UI', Verdana, sans-serif;
+  --sombra: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='win95'] {
+  --raio: 0;
+  --raio-sm: 0;
+  /* A moldura 3D do Windows 95: luz em cima e à esquerda, sombra em baixo e à
+     direita. Feita com `box-shadow` interno porque `border-style: outset` usa
+     cores que não sabemos controlar. Por isso a largura vai a zero e quem
+     desenha a moldura é a regra do fim do ficheiro. */
+  --borda-largura: 0;
+  --fonte: 'MS Sans Serif', 'Microsoft Sans Serif', Tahoma, Verdana, sans-serif;
+  --sombra: none;
+}
+
+[data-theme='mac'] {
+  --raio: 10px;
+  --raio-sm: 6px;
+  --borda-largura: 1px;
+  --fonte: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  --sombra: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='ubuntu'] {
+  --raio: 4px;
+  --raio-sm: 3px;
+  --borda-largura: 1px;
+  --fonte: Ubuntu, 'Ubuntu Condensed', system-ui, Cantarell, sans-serif;
+  --sombra: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+/* ========================================================================== */
+/* PARTE 2 — COR                                                              */
+/* ========================================================================== */
+/*
+ * Dois blocos por família. Cada um define os treze tokens de cor obrigatórios,
+ * mais os que a família precisa de mais.
+ */
+
+/* ------------------------------------------------------------------------- */
+/* Padrão — as cores do próprio site                                          */
+/* ------------------------------------------------------------------------- */
+
+[data-theme='padrao'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #ffffff;
+  --superficie: #f7f8fa;
+  --borda: #d8dce2;
+  --borda-forte: #a8b0ba;
+  --texto: #15181d;
+  --texto-suave: #4d5560;
+  --texto-fundo: #15181d;
+  --texto-suave-fundo: #4d5560;
+  --primaria: #1a56c4;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdf0ef;
+  --erro-borda: #e5a3a0;
+  --erro-texto: #8c1d18;
+  --foco: #1a56c4;
+  --foco-fundo: #1a56c4;
+}
+
+[data-theme='padrao'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #0e1116;
+  --superficie: #181c23;
+  --borda: #2b313a;
+  --borda-forte: #4b525d;
+  --texto: #eef1f5;
+  --texto-suave: #9aa3b0;
+  --texto-fundo: #eef1f5;
+  --texto-suave-fundo: #9aa3b0;
+  --primaria: #4d8dfa;
+  --primaria-texto: #06101f;
+  --erro-fundo: #2a1416;
+  --erro-borda: #6e2b2b;
+  --erro-texto: #f4b8b5;
+  --foco: #6aa5ff;
+  --foco-fundo: #6aa5ff;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows 11 (Fluent 2)                                                     */
+/* ------------------------------------------------------------------------- */
+/* Tudo mais arredondado e mais macio do que o 10: raio maior, sombra difusa,
+   superfícies translúcidas como o Mica. */
+
+[data-theme='win11'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #f3f3f3;
+  --superficie: rgba(255, 255, 255, 0.78);
+  --borda: rgba(0, 0, 0, 0.09);
+  --borda-forte: rgba(0, 0, 0, 0.2);
+  --texto: #1a1a1a;
+  --texto-suave: #575757;
+  --texto-fundo: #1a1a1a;
+  --texto-suave-fundo: #4a4a4a;
+  --primaria: #0067b8;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdf3f2;
+  --erro-borda: #e0a6a3;
+  --erro-texto: #86201b;
+  --foco: #0067b8;
+  --foco-fundo: #0067b8;
+
+  --botao-fundo: rgba(255, 255, 255, 0.7);
+  --chrome-fundo: rgba(255, 255, 255, 0.5);
+  --chrome-texto: #1a1a1a;
+}
+
+[data-theme='win11'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #202020;
+  --superficie: rgba(255, 255, 255, 0.06);
+  --borda: rgba(255, 255, 255, 0.1);
+  --borda-forte: rgba(255, 255, 255, 0.24);
+  --texto: #f5f5f5;
+  --texto-suave: #b8b8b8;
+  --texto-fundo: #f5f5f5;
+  --texto-suave-fundo: #b0b0b0;
+  /* No escuro o acento do Fluent é bem mais claro: é o que o torna legível
+     sobre fundo escuro sem precisar de ser claro. */
+  --primaria: #4cc2ff;
+  --primaria-texto: #00243a;
+  --erro-fundo: #2a1416;
+  --erro-borda: #7a3232;
+  --erro-texto: #f4b8b5;
+  --foco: #4cc2ff;
+  --foco-fundo: #4cc2ff;
+
+  --botao-fundo: rgba(255, 255, 255, 0.08);
+  --chrome-fundo: #2d2d2d;
+  --chrome-texto: #f5f5f5;
+}
+
+/* O painel do Windows 11 é o Mica: translúcido e desfocado. A cor vem do
+   token --superficie, que é translúcido e por isso tem de ser composto sobre o
+   fundo — o mesmo que a superfície dos outros painéis. */
+[data-theme='win11'] .painel {
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: var(--superficie);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  /* Sem desfoque, o translúcido ficava cinzento sobre cinzento. Dá-se-lhe um
+     fundo opaco — pior, mas legível. */
+  [data-theme='win11'] .painel {
+    background: var(--superficie);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows 10 (Fluent)                                                       */
+/* ------------------------------------------------------------------------- */
+
+[data-theme='win10'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #f3f3f3;
+  --superficie: #ffffff;
+  --borda: #e3e3e3;
+  --borda-forte: #c8c8c8;
+  --texto: #1b1b1b;
+  --texto-suave: #5a5a5a;
+  --texto-fundo: #1b1b1b;
+  --texto-suave-fundo: #4a4a4a;
+  --primaria: #0067b8;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdf3f2;
+  --erro-borda: #e0a6a3;
+  --erro-texto: #86201b;
+  --foco: #0067b8;
+  --foco-fundo: #0067b8;
+
+  --botao-fundo: #fafafa;
+  --botao-hover: #f0f0f0;
+  --chrome-fundo: #0067b8;
+  --chrome-texto: #ffffff;
+}
+
+[data-theme='win10'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #1f1f1f;
+  --superficie: #2b2b2b;
+  --borda: rgba(255, 255, 255, 0.08);
+  --borda-forte: #4a4a4a;
+  --texto: #f0f0f0;
+  --texto-suave: #b0b0b0;
+  --texto-fundo: #f0f0f0;
+  --texto-suave-fundo: #a8a8a8;
+  --primaria: #4cc2ff;
+  --primaria-texto: #00243a;
+  --erro-fundo: #2a1416;
+  --erro-borda: #7a3232;
+  --erro-texto: #f4b8b5;
+  --foco: #4cc2ff;
+  --foco-fundo: #4cc2ff;
+
+  --botao-fundo: #333333;
+  --botao-hover: #3d3d3d;
+  /* A barra de título do Fluent escuro é ela própria escura — o azul de
+     destaque era umpressedor aqui. */
+  --chrome-fundo: #2b2b2b;
+  --chrome-texto: #f0f0f0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows 8 (Metro)                                                         */
+/* ------------------------------------------------------------------------- */
+/* O escuro é o original: o Metro nasceu escuro e o claro é a variante. */
+
+[data-theme='win8'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #1c1c1c;
+  --superficie: #242424;
+  --borda: #333333;
+  --borda-forte: #4d4d4d;
+  --texto: #f0f0f0;
+  --texto-suave: #a6a6a6;
+  --texto-fundo: #f0f0f0;
+  --texto-suave-fundo: #a6a6a6;
+  --primaria: #00bcf2;
+  --primaria-texto: #001318;
+  --erro-fundo: #2a1416;
+  --erro-borda: #7a2b2b;
+  --erro-texto: #f0a8a4;
+  --foco: #00bcf2;
+  --foco-fundo: #00bcf2;
+}
+
+[data-theme='win8'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #e6e6e6;
+  --superficie: #f2f2f2;
+  --borda: #d4d4d4;
+  --borda-forte: #9a9a9a;
+  --texto: #1a1a1a;
+  --texto-suave: #555555;
+  --texto-fundo: #1a1a1a;
+  --texto-suave-fundo: #4a4a4a;
+  --primaria: #0067b8;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdf0ef;
+  --erro-borda: #e0a6a3;
+  --erro-texto: #8c1d18;
+  --foco: #0067b8;
+  --foco-fundo: #0067b8;
+}
+
+[data-theme='win8'] .painel {
+  background: var(--superficie);
+  border: 0;
+}
+
+[data-theme='win8'] button:not(.primario) {
+  background: transparent;
+  border: 1px solid var(--borda-forte);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+}
+
+[data-theme='win8'] button.primario {
+  background: var(--primaria);
+  border-color: var(--primaria);
+}
+
+/* O Metro escrebia tudo em maiúsculas pequenas e largas. */
+[data-theme='win8'] label,
+[data-theme='win8'] .ajuda {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+}
+
+[data-theme='win8'] .topo h1 {
+  font-weight: 300;
+  font-size: 2.1rem;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows 7 (Aero)                                                          */
+/* ------------------------------------------------------------------------- */
+
+[data-theme='win7'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #3d6f9e;
+  --superficie: rgba(255, 255, 255, 0.74);
+  --borda: rgba(255, 255, 255, 0.55);
+  --borda-forte: rgba(255, 255, 255, 0.85);
+  --texto: #16202b;
+  --texto-suave: #3f4d5c;
+  --texto-fundo: #ffffff;
+  --texto-suave-fundo: #ffffff;
+  --primaria: #1668ab;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fbeaea;
+  --erro-borda: #c25a5a;
+  --erro-texto: #7d1d1d;
+  --foco: #1668ab;
+  --foco-fundo: #ffffff;
+
+  --chrome-fundo: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.18) 48%,
+    rgba(0, 0, 0, 0.14) 52%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+  --chrome-texto: #0d1b2a;
+}
+
+[data-theme='win7'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #0f1b26;
+  --superficie: rgba(255, 255, 255, 0.22);
+  --borda: rgba(255, 255, 255, 0.14);
+  --borda-forte: rgba(255, 255, 255, 0.3);
+  --texto: #e8eef4;
+  --texto-suave: #b0c2d2;
+  --texto-fundo: #ffffff;
+  --texto-suave-fundo: #c8d6e2;
+  --primaria: #1a5f9e;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #2a1416;
+  --erro-borda: #7a3232;
+  --erro-texto: #f4b8b5;
+  --foco: #4aa3e8;
+  --foco-fundo: #ffffff;
+
+  --chrome-fundo: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.05) 48%,
+    rgba(0, 0, 0, 0.25) 52%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  --chrome-texto: #eaf2f8;
+}
+
+[data-theme='win7'] .painel {
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  background: var(--superficie);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  [data-theme='win7'] .painel {
+    background: var(--superficie);
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows XP (Luna)                                                         */
+/* ------------------------------------------------------------------------- */
+/*
+ * O escuro não é da Microsoft: o Luna nunca teve variante escura. É uma
+ * interpretação de dois temas de terceiros muito populares na altura — o
+ * "Roy's Dark Theme" e o "Luna Black" — que trocavam o creme do Luna por ardósia
+ * mantendo a forma dos botões e o brilho no topo.
+ */
+
+[data-theme='winxp'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #3a6ea5; /* o azul do tema Luna */
+  --superficie: #ece9d8; /* "ButtonFace" do Windows XP */
+  --borda: #b5b3ac;
+  --borda-forte: #8a8880;
+  --texto: #000000;
+  --texto-suave: #4a4a3c;
+  --texto-fundo: #ffffff; /* o cabeçalho assenta no azul do Luna */
+  --texto-suave-fundo: #ffffff;
+  --primaria: #2f6fbf;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fff4f4;
+  --erro-borda: #d95f5f;
+  --erro-texto: #8a1a1a;
+  --foco: #14406f;
+  --foco-fundo: #ffffff;
+
+  /*
+   * O botão do Luna tinha um brilho no topo que deixava a cor clara. Com texto
+   * branco, essa ponta clara é o pior ponto do gradiente: a 4.5:1 o branco só
+   * se aguenta se nenhuma cor do gradiente passar de luminância 0.183.
+   *
+   * O brilho ficou, mas no `--botao-brilho` — uma linha de 1 px no topo do
+   * botão, em vez de um fundo mais claro. Aella e uma diferença de 1 px, a
+   * legibilidade é a mesma, e o aspeto do Luna está lá na mesma.
+   */
+  --botao-gradiente: linear-gradient(180deg, #fdfdfb 0%, #ece9d8 60%, #d6d2c2 100%);
+  --botao-primario-gradiente: linear-gradient(180deg, #2f6fbf 0%, #2a63ac 55%, #23579b 100%);
+  --botao-primario-borda: #1b4f9c;
+  --botao-brilho: #7fb2e8;
+  --botao-hover-anel: #f0b52a;
+  --chrome-fundo: linear-gradient(180deg, #4a92e8 0%, #1c5fb8 12%, #0a3d8f 88%, #3d8ee0 100%);
+  --chrome-texto: #ffffff;
+}
+
+[data-theme='winxp'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #0d2b4a;
+  --superficie: #2f4257;
+  --borda: #22303f;
+  --borda-forte: #4a5f74;
+  --texto: #eef3f8;
+  --texto-suave: #b3c4d4;
+  --texto-fundo: #ffffff;
+  --texto-suave-fundo: #dbe6f0;
+  --primaria: #1f6fb5;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #3a1e1e;
+  --erro-borda: #7a3a3a;
+  --erro-texto: #f2b3b3;
+  --foco: #6fb2f0;
+  --foco-fundo: #ffffff;
+
+  --botao-gradiente: linear-gradient(180deg, #4a5f74 0%, #35485c 55%, #26374a 100%);
+  --botao-primario-gradiente: linear-gradient(180deg, #1f6fb5 0%, #1a5f9e 55%, #144d80 100%);
+  --botao-primario-borda: #144d80;
+  --botao-brilho: #5fa0dc;
+  --botao-hover-anel: #f0b52a;
+  --chrome-fundo: linear-gradient(180deg, #1a4a7a 0%, #123a5f 15%, #0a2540 85%, #1d5285 100%);
+  --chrome-texto: #ffffff;
+}
+
+/* Os botões do Luna tinham um brilho no topo — claro e escuro. */
+[data-theme='winxp'] button:not(.primario) {
+  background: var(--botao-gradiente);
+}
+
+[data-theme='winxp'] button.primario {
+  background: var(--botao-primario-gradiente);
+  border-color: var(--botao-primario-borda);
+  /* O brilho do Luna, na mesma altura de antes mas como linha de 1 px: a cor de
+     fundo do botão tem de aguentar o texto branco do início ao fim. */
+  border-top-color: var(--botao-brilho);
+}
+
+[data-theme='winxp'] button:not(.primario):hover {
+  box-shadow: inset 0 0 0 1px var(--botao-hover-anel), var(--sombra);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Windows 95                                                                */
+/* ------------------------------------------------------------------------- */
+/*
+ * Também não há Windows 95 escuro original. Quem quisesse um 95 escuro no
+ * fim dos anos 90 instalava o esquema "Dark" do Windows 98, que mantinha o
+ * cinzento médio da moldura e passava o fundo do ambiente de trabalho para
+ * quase-preto azulado. É esse o registo.
+ */
+
+[data-theme='win95'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #008080; /* o azul-petróleo do ambiente de trabalho */
+  --superficie: #c0c0c0; /* "ButtonFace" */
+  --borda: #808080; /* "ButtonShadow" */
+  --borda-forte: #404040; /* "ButtonDkShadow" */
+  --texto: #000000;
+  --texto-suave: #3a3a3a;
+  --texto-fundo: #ffffff; /* o cabeçalho assenta no azul-petróleo */
+  --texto-suave-fundo: #ffffff;
+  --primaria: #000080; /* "ActiveTitle" */
+  --primaria-texto: #ffffff;
+  --erro-fundo: #ffffff;
+  --erro-borda: #ff0000;
+  --erro-texto: #800000;
+  --foco: #000000;
+  --foco-fundo: #ffffff;
+
+  --campo-fundo: #ffffff;
+  --campo-texto: #000000;
+
+  /* As quatro cores da moldura 3D, na ordem em que a regra as usa:
+     sombra exterior, luz interior, sombra interior, luz exterior. */
+  --bisel-sombra: #404040;
+  --bisel-luz: #ffffff;
+  --bisel-sombra2: #808080;
+  --bisel-luz2: #dfdfdf;
+  --bisel-primario-sombra: #000060;
+  --bisel-primario-luz: #1084d0;
+
+  --chrome-fundo: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  --chrome-texto: #ffffff;
+}
+
+[data-theme='win95'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #12242e; /* o ambiente de trabalho, quase-preto azulado */
+  --superficie: #4a4a4a; /* "ButtonFace" no esquema escuro */
+  --borda: #2a2a2a;
+  --borda-forte: #1a1a1a;
+  --texto: #ffffff;
+  --texto-suave: #d0d0d0;
+  --texto-fundo: #ffffff;
+  --texto-suave-fundo: #e0e0e0;
+  --primaria: #3a5fbf;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #1a1a1a;
+  --erro-borda: #ff4444;
+  --erro-texto: #ff9c9c;
+  /* O esquema escuro usava um contorno pontilhado branco, não preto. */
+  --foco: #ffffff;
+  --foco-fundo: #ffffff;
+
+  --campo-fundo: #1a1a1a;
+  --campo-texto: #ffffff;
+
+  /* Na moldura escura a luz é o cinzento claro e a sombra é quase preta: a
+     mesma sculpted edge, invertida. */
+  --bisel-sombra: #1a1a1a;
+  --bisel-luz: #6a6a6a;
+  --bisel-sombra2: #2a2a2a;
+  --bisel-luz2: #7a7a7a;
+  --bisel-primario-sombra: #0d1a4a;
+  --bisel-primario-luz: #6a8fd8;
+
+  --chrome-fundo: linear-gradient(90deg, #0d1a4a 0%, #3a5fbf 100%);
+  --chrome-texto: #ffffff;
+}
+
+/* ------------------------------------------------------------------------- */
+/* macOS                                                                      */
+/* ------------------------------------------------------------------------- */
+
+[data-theme='mac'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #f2f2f7;
+  --superficie: #ffffff;
+  --borda: rgba(0, 0, 0, 0.11);
+  --borda-forte: rgba(0, 0, 0, 0.26);
+  --texto: #1d1d1f;
+  --texto-suave: #66666c;
+  --texto-fundo: #1d1d1f;
+  --texto-suave-fundo: #66666c;
+  --primaria: #0068d6;
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdeded;
+  --erro-borda: #e5b3b3;
+  --erro-texto: #8a1a1a;
+  --foco: #0068d6;
+  --foco-fundo: #0068d6;
+
+  --botao-fundo: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme='mac'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #1e1e1e;
+  --superficie: #2c2c2e;
+  --borda: rgba(255, 255, 255, 0.12);
+  --borda-forte: rgba(255, 255, 255, 0.28);
+  --texto: #f5f5f7;
+  --texto-suave: #a1a1a6;
+  --texto-fundo: #f5f5f7;
+  --texto-suave-fundo: #a1a1a6;
+  --primaria: #3f8ef0;
+  --primaria-texto: #06101f;
+  --erro-fundo: #3a1e1e;
+  --erro-borda: #6b2f2f;
+  --erro-texto: #f2b3b3;
+  --foco: #5aa0f5;
+  --foco-fundo: #5aa0f5;
+
+  --botao-fundo: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='mac'] .painel {
+  backdrop-filter: saturate(1.8) blur(20px);
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.04), var(--sombra);
+}
+
+[data-theme='mac'] button:not(.primario) {
+  background: var(--botao-fundo);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Ubuntu (Yaru)                                                              */
+/* ------------------------------------------------------------------------- */
+/* A Yaru tem mesmo uma variante escura oficial, e ela também é berinjela —
+   só que escura. */
+
+[data-theme='ubuntu'][data-modo='claro'] {
+  color-scheme: light;
+  --fundo: #77216f; /* a berinjela da Yaru */
+  --superficie: #fafafa;
+  --borda: #dcdcdc;
+  --borda-forte: #b4b4b4;
+  --texto: #2c001e; /* quase-preto com um tom de berinjela */
+  --texto-suave: #5a3a55;
+  --texto-fundo: #ffffff; /* o cabeçalho assenta na berinjela */
+  --texto-suave-fundo: #ffffff;
+  --primaria: #c64600; /* laranja Ubuntu, escurecido para o texto branco */
+  --primaria-texto: #ffffff;
+  --erro-fundo: #fdf0ee;
+  --erro-borda: #e0a49e;
+  --erro-texto: #8a1f15;
+  --foco: #77216f;
+  --foco-fundo: #ffffff;
+
+  --chrome-fundo: linear-gradient(180deg, #77216f 0%, #5c1a56 100%);
+  --chrome-texto: #ffffff;
+}
+
+[data-theme='ubuntu'][data-modo='escuro'] {
+  color-scheme: dark;
+  --fundo: #300a24; /* a berinjela escura da Yaru escura */
+  --superficie: #2b2b2b;
+  --borda: #3a3a3a;
+  --borda-forte: #555555;
+  --texto: #ffffff;
+  --texto-suave: #cfc4cd;
+  --texto-fundo: #ffffff;
+  --texto-suave-fundo: #e0d5de;
+  /* Aqui o laranja é que fica claro e o texto do botão é que é escuro. Com
+     texto branco sobre #e95420 a razão fica em 3.6:1 e não passa. */
+  --primaria: #e95420;
+  --primaria-texto: #1c0016;
+  --erro-fundo: #3a1e1e;
+  --erro-borda: #7a3a3a;
+  --erro-texto: #f2b3b3;
+  --foco: #e95420;
+  --foco-fundo: #ffffff;
+
+  --chrome-fundo: linear-gradient(180deg, #3a0f30 0%, #24061c 100%);
+  --chrome-texto: #ffffff;
+}
+
+/*
+ * O Ubuntu põe o laranja nos detalhes, mas nunca no texto do cabeçalho: o
+ * laranja sobre a berinjela dá 1.9:1 e o título deixava de se ler. A cor vem
+ * de --texto-fundo, como em qualquer outro tema.
+ */
+[data-theme='ubuntu'] .acoes .primario {
+  background: var(--primaria);
+}
+
+/* ========================================================================== */
+/* PARTE 3 — REGRAS ESTRUTURAIS                                               */
+/* ========================================================================== */
+/*
+ * Onde é preciso sobrepor `border` ou `box-shadow`, um token não chega. Essas
+ * regras não são de cor: são de forma, e por isso vivem aqui, fora dos blocos
+ * de modo. As cores vêm de tokens, para servirem os dois modos.
+ */
+
+/* --- Botões por família -------------------------------------------------- */
+
+[data-theme='win10'] button:not(.primario) {
+  background: var(--botao-fundo);
+}
+
+[data-theme='win10'] button:not(.primario):hover {
+  background: var(--botao-hover);
+}
+
+[data-theme='win11'] button:not(.primario) {
+  background: var(--botao-fundo);
+}
+
+[data-theme='win11'] button.primario {
+  background: var(--primaria);
+}
+
+/*
+ * `[data-theme='x'] button` tem especificidade 0,1,1 e `button.primario` tem
+ * 0,1: o primeiro ganha. Sem o :not(.primario), estas regras pintavam o botão
+ * "Guardar PNG" com a cor dos secundários e deixavam texto branco sobre
+ * cinza-claro. O Lighthouse apanhou isto.
+ */
+[data-theme='win11'] button:not(.primario),
+[data-theme='win10'] button:not(.primario) {
+  background: var(--botao-fundo);
+}
+
+/* --- Moldura 3D do Windows 95 -------------------------------------------- */
+
+[data-theme='win95'] .painel,
+[data-theme='win95'] button,
+[data-theme='win95'] .opcoes,
+[data-theme='win95'] .payload pre {
+  border: none;
+  box-shadow:
+    inset -1px -1px 0 0 var(--bisel-sombra),
+    inset 1px 1px 0 0 var(--bisel-luz),
+    inset -2px -2px 0 0 var(--bisel-sombra2),
+    inset 2px 2px 0 0 var(--bisel-luz2);
+}
+
+/* Os campos são afundados, não salientes: as luzes trocam de sítio. */
+[data-theme='win95'] input,
+[data-theme='win95'] select,
+[data-theme='win95'] textarea {
+  border: none;
+  background: var(--campo-fundo);
+  color: var(--campo-texto);
+  box-shadow:
+    inset -1px -1px 0 0 var(--bisel-luz),
+    inset 1px 1px 0 0 var(--bisel-sombra),
+    inset -2px -2px 0 0 var(--bisel-luz2),
+    inset 2px 2px 0 0 var(--bisel-sombra2);
+}
+
+[data-theme='win95'] button:active {
+  transform: none;
+  box-shadow:
+    inset 1px 1px 0 0 var(--bisel-sombra),
+    inset -1px -1px 0 0 var(--bisel-luz),
+    inset 2px 2px 0 0 var(--bisel-sombra2);
+}
+
+[data-theme='win95'] button.primario {
+  box-shadow:
+    inset -1px -1px 0 0 var(--bisel-primario-sombra),
+    inset 1px 1px 0 0 var(--bisel-primario-luz),
+    inset -2px -2px 0 0 #1a1a4a,
+    inset 2px 2px 0 0 var(--bisel-luz2);
+}
+
+[data-theme='win95'] :is(button, summary):focus-visible {
+  outline: 1px dotted var(--foco);
+  outline-offset: -4px;
+}
+
+/* ========================================================================== */
+/* PARTE 4 — BARRAS DE TÍTULO                                                 */
+/* ========================================================================== */
+/*
+ * As janelas do Windows XP, 7, 10 e 11 e a barra do Yaru no Ubuntu tinham
+ * título. O macOS não, o Metro do Windows 8 não, e o site padrão também não.
+ *
+ * O CSS não consegue decidir "mostra esta barra se --chrome-fundo não for
+ * none", por isso a regra é declarada aqui, para as famílias que a querem.
+ * Quem acrescentar uma família com barra de título tem de a juntar a esta
+ * lista — e há um teste que falha se se esquecer.
+ */
+[data-theme='win95'] .painel::before,
+[data-theme='winxp'] .painel::before,
+[data-theme='win7'] .painel::before,
+[data-theme='win10'] .painel::before,
+[data-theme='win11'] .painel::before,
+[data-theme='ubuntu'] .painel::before {
+  content: attr(data-chrome);
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--chrome-altura);
+  padding: 0.35rem 0.6rem;
+  background: var(--chrome-fundo);
+  color: var(--chrome-texto);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* O painel tem de ceder o espaço à barra. */
+[data-theme='win95'] .painel,
+[data-theme='winxp'] .painel,
+[data-theme='win7'] .painel,
+[data-theme='win10'] .painel,
+[data-theme='win11'] .painel,
+[data-theme='ubuntu'] .painel {
+  padding-top: calc(var(--chrome-altura) + 0.6rem);
+}
+
+/* O 95 e o XP alinhavam o título à esquerda, com um iconinho ao lado. */
+[data-theme='win95'] .painel::before,
+[data-theme='winxp'] .painel::before {
+  letter-spacing: 0.01em;
+}

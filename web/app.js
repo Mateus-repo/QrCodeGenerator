@@ -20,6 +20,7 @@
 
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
+import { ligarSeletores } from './themes.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -31,6 +32,8 @@ const dom = {
   vazio: el('vazio'),
   erro: el('erro'),
   acoes: el('acoes'),
+  tema: el('tema'),
+  temaModos: el('tema-modos'),
   ecc: el('ecc'),
   tamanho: el('tamanho'),
   margem: el('margem'),
@@ -272,6 +275,7 @@ function registarServiceWorker() {
 }
 
 function arranque() {
+  ligarSeletores(dom.tema, dom.temaModos);
   popularCategorias();
   desenharCampos();
 

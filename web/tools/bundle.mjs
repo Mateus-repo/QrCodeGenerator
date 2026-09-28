@@ -29,8 +29,12 @@ const MODULES = [
   'payloads/normalize.js',
   'payloads/pix.js',
   'payloads/types.js',
+  'themes.js',
   'app.js',
 ];
+
+/** Folhas de estilo, pela ordem em que são ligadas no HTML. */
+const STYLESHEETS = ['styles.css', 'themes.css'];
 
 const IMPORT_RE = /^import\s*\{([^}]*)\}\s*from\s*'([^']+)';?\s*$/gm;
 const NAMESPACE_RE = /^export\s+(function|const|let|class)\s+(\w+)/gm;
@@ -104,13 +108,18 @@ function bundle() {
 
 function html() {
   let pagina = readFileSync(join(web, 'index.html'), 'utf8');
-  const css = readFileSync(join(web, 'styles.css'), 'utf8');
   const js = bundle();
 
-  pagina = pagina.replace(
-    /<link rel="stylesheet" href="styles\.css" \/>/,
-    `<style>\n${css}\n  </style>`,
+  // Todas as folhas de estilo são embutidas, pela ordem do HTML. Os temas têm
+  // de vir depois da base, porque só substituem variáveis.
+  const css = STYLESHEETS.map((file) => `/* ==== ${file} ==== */\n${readFileSync(join(web, file), 'utf8')}`).join(
+    '\n',
   );
+
+  for (const file of STYLESHEETS) {
+    pagina = pagina.replace(new RegExp(`[ \\t]*<link rel="stylesheet" href="${file}" />\\n?`, 'g'), '');
+  }
+  pagina = pagina.replace('</head>', `  <style>\n${css}\n  </style>\n</head>`);
 
   // O ficheiro único não tem manifest nem service worker: não há onde os
   // registar em file://, e um 404 no console não ajuda ninguém.

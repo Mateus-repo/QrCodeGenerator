@@ -1,30 +1,80 @@
 /*
- * Folha de estilo única, sem preprocessador.
+ * Estrutura e contrato de variáveis. A paleta vive em themes.css.
  *
- * Regras de portabilidade que moldaram isto:
+ * Regra de portabilidade que moldou isto:
  *  - nada de unidades exóticas nem de APIs que só existem num browser;
- *  - alvos de toque com no mínimo 44px (mão grossa em ecrã pequeno);
+ *  - alvos de toque com no mínimo 44px (mão grossa, ecrã pequeno);
  *  - `env(safe-area-inset-*)` para o entalhe do iPhone;
- *  - layout em coluna no telemóvel, duas colunas a partir de 860px;
- *  - cores com `prefers-color-scheme`, e contraste verificado nos dois.
+ *  - uma coluna no telemóvel, duas a partir de 860px;
+ *  - os controlos ficam com o aspeto nativo do SO.
+ *
+ * As fontes dos temas retrô NÃO são fornecidas: Tahoma, Segoe UI, MS Sans Serif,
+ * SF Pro e Ubuntu são propriedade dos seus donos. Cada tema pede a sua pelo nome
+ * e, se não estiver instalada, cai na seguinte. Em Linux a maior parte não
+ * existe — é por isso que cada tema define uma pilha, não uma fonte só.
  */
 
 :root {
   color-scheme: light dark;
 
+  /* Cores — substituídas por tema */
   --fundo: #ffffff;
   --superficie: #f9fafb;
   --borda: #d1d5db;
+  --borda-forte: #9ca3af;
   --texto: #111827;
   --texto-suave: #4b5563;
+
+  /*
+   * Texto que assenta diretamente no fundo da página, e não numa superfície.
+   * Existe porque alguns temas têm fundo escuro (a berinjela do Ubuntu, o
+   * azul do Windows 95) onde o --texto normal ficaria ilegível. Sem este token
+   * separado, o cabeçalho do Ubuntu ficava a 1.98:1 — praticamente invisível.
+   */
+  --texto-fundo: #111827;
+  --texto-suave-fundo: #4d5560;
+
   --primaria: #1d4ed8;
   --primaria-texto: #ffffff;
   --erro-fundo: #fef2f2;
   --erro-borda: #fca5a5;
   --erro-texto: #991b1b;
   --foco: #1d4ed8;
+  --foco-fundo: #1d4ed8;
 
+  /*
+   * Cor dos campos de texto. Aponta para a superfície por omissão, e por isso
+   * segue o tema sozinho — mas um tema pode dar-lhe outra.
+   *
+   * Superfície e não fundo, porque um campo de texto é uma superfície: no Aero
+   * claro o fundo da página é o azul do ambiente de trabalho, e o texto escuro
+   * sobre ele dava 3.11:1. Um formulário tem de se ler.
+   *
+   * O Windows 95 escuro precisa de mais: a página é quase preta, mas os campos
+   * continuam pretos com a moldura cinzenta em volta, como nos esquemas escuros
+   * do Windows 98. Para isso o tema define os dois tokens à mão.
+   */
+  --campo-fundo: var(--superficie);
+  --campo-texto: var(--texto);
+
+  /* Forma — substituídas por tema */
   --raio: 10px;
+  --raio-sm: 8px;
+  --borda-largura: 1px;
+  --sombra: none;
+  --fonte: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+
+  /* Botões dos que têm cor própria por tema (Fluent, macOS). */
+  --botao-fundo: var(--superficie);
+  --botao-hover: var(--superficie);
+
+  /* Barra de título decorativa (temas retrô). none = não mostra. */
+  --chrome: none;
+  --chrome-fundo: linear-gradient(#000080, #1084d0);
+  --chrome-texto: #ffffff;
+  --chrome-altura: 1.9rem;
+
+  /* Medidas — iguais em todos os temas */
   --espaco: 1rem;
   --alvo: 44px;
 }
@@ -34,14 +84,18 @@
     --fundo: #111827;
     --superficie: #1f2937;
     --borda: #374151;
+    --borda-forte: #6b7280;
     --texto: #f9fafb;
     --texto-suave: #9ca3af;
-    --primaria: #60a5fa;
-    --primaria-texto: #111827;
+    --texto-fundo: #f9fafb;
+    --texto-suave-fundo: #9ca3af;
+    --primaria: #2563eb;
+    --primaria-texto: #ffffff;
     --erro-fundo: #450a0a;
     --erro-borda: #991b1b;
     --erro-texto: #fecaca;
     --foco: #60a5fa;
+    --foco-fundo: #60a5fa;
   }
 }
 
@@ -54,24 +108,47 @@ body {
   padding: 0 var(--espaco) 3rem;
   padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
   background: var(--fundo);
-  color: var(--texto);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  color: var(--texto-fundo);
+  font-family: var(--fonte);
   font-size: 16px;
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
 }
 
+/* Tudo o que assenta numa superfície usa o --texto normal. */
+.painel,
+.acoes,
+.opcoes,
+.payload,
+footer,
+main {
+  color: var(--texto);
+}
+
+/*
+ * Escondido com clip, nao com left:-9999px: a primeira forma mantem o link
+ * focavel (que e o que se quer) e tira-o do fluxo visual. A segunda tambem, mas
+ * deixava a cor do link por omisser a contraste do auditor.
+ */
 .skip {
   position: absolute;
-  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  background: var(--primaria);
+  color: var(--primaria-texto);
 }
 
 .skip:focus {
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
   left: var(--espaco);
   top: var(--espaco);
   z-index: 10;
-  background: var(--primaria);
-  color: var(--primaria-texto);
   padding: 0.5rem 1rem;
   border-radius: var(--raio);
 }
@@ -89,7 +166,8 @@ body {
 
 .sub {
   margin: 0.25rem 0 0;
-  color: var(--texto-suave);
+  /* Assenta no fundo da pagina, nao numa superficie. */
+  color: var(--texto-suave-fundo);
   font-size: 0.9rem;
 }
 
@@ -108,12 +186,30 @@ main {
   }
 }
 
-.painel {
-  background: var(--superficie);
-  border: 1px solid var(--borda);
-  border-radius: var(--raio);
-  padding: var(--espaco);
+/* Cada painel pode ter barra de título, como as janelas de verdade. */
+.painel-formulario {
+  --titulo-chrome: 'Gerador de QR codes';
 }
+
+.painel-resultado {
+  --titulo-chrome: 'Pré-visualização';
+}
+
+.painel {
+  position: relative;
+  background: var(--superficie);
+  border: var(--borda-largura) solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: var(--espaco);
+  padding-top: calc(var(--espaco) + var(--chrome-altura) * (1 - var(--chrome-fator, 0)));
+}
+
+/*
+ * A barra de titulo de cada painel e desenhada em themes.css, e so nos temas
+ * que a querem. Nao ha forma em CSS de decidir "se --chrome-fundo nao for
+ * none, mostra a barra", por isso os temas que a usam declaram a regra.
+ */
 
 .campo {
   margin-bottom: 0.85rem;
@@ -140,9 +236,10 @@ textarea {
   width: 100%;
   min-height: var(--alvo);
   padding: 0.5rem 0.65rem;
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: var(--campo-fundo);
+  color: var(--campo-texto);
+  border: var(--borda-largura) solid var(--borda);
+  border-radius: var(--raio-sm);
 }
 
 textarea {
@@ -156,12 +253,116 @@ select {
   appearance: auto;
 }
 
+/*
+ * A lista de opcoes e desenhada pelo toolkit do sistema, e nao pelo browser.
+ * Sem estas cores as opcoes herdavam a cor do fundo da pagina — num tema com
+ * fundo escuro (a berinjela do Ubuntu) ficavam ilegiveis.
+ */
+option,
+optgroup {
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+optgroup {
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+/* --- Seletor de modo: claro / escuro / sistema --------------------------- */
+/*
+ * Um botão de cada vez, não um <select>: o modo muda-se muitas vezes — é a
+ * comparação entre as duas variantes de um tema que interessa — e um <select>
+ *custaria abrir, escolher e fechar para cada troca.
+ *
+ * O <input> fica escondido mas focável; o <span> é o que se vê. O estado
+ * marcado usa o irmão a seguir (`input:checked + span`) e não `:has()`,
+ * porque `:has()` é recente e o botão marcado tem de se ver mesmo sem ela.
+ */
+
+.modos {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.modos legend {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.segmentos {
+  display: flex;
+  gap: 0;
+  border: var(--borda-largura) solid var(--borda);
+  border-radius: var(--raio-sm);
+  overflow: hidden;
+  background: var(--campo-fundo);
+}
+
+.segmentos label {
+  flex: 1 1 0;
+  margin: 0;
+  position: relative;
+  cursor: pointer;
+}
+
+.segmentos input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.segmentos span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--alvo);
+  padding: 0.5rem 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--texto);
+  text-align: center;
+  /* A divisória entre segmentos, feita sem bordas para não se nota emThemes
+     que mudam a largura da borda. */
+  box-shadow: inset 1px 0 0 0 var(--borda);
+}
+
+.segmentos label:first-child span {
+  box-shadow: none;
+}
+
+.segmentos input:checked + span {
+  background: var(--primaria);
+  color: var(--primaria-texto);
+  font-weight: 600;
+}
+
+/*
+ * O contorno de foco vai para o rótulo inteiro, não para o <input> escondido:
+ * senão o foco era invisível e o teclado ficava preso numa escolha que não se
+ * via. O `:focus-visible` no <input> chega porque o <span> é irmão dele.
+ */
+.segmentos input:focus-visible + span {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
+.segmentos input:checked:focus-visible + span {
+  outline-color: var(--primaria-texto);
+}
+
 input[type='checkbox'] {
   width: auto;
   min-height: auto;
   margin-right: 0.5rem;
-  /* Chrome/Safari emitem um input menor que o alvo mínimo. */
-  transform: scale(1.15);
+  accent-color: var(--primaria);
 }
 
 .caixa {
@@ -181,6 +382,19 @@ input[type='checkbox'] {
   outline-offset: 1px;
 }
 
+/*
+ * Os controlos que assentam diretamente no fundo da pagina (o <summary> das
+ * opcoes, as ligacoes do rodape) precisam de outra cor de foco.
+ *
+ * Nos temas de fundo escuro - a berinjela do Ubuntu, o azul do Windows 95 -
+ * nenhuma cor unica contrasta com a superficie clara *e* com o fundo escuro ao
+ * mesmo tempo. Daipois dois tokens em vez de um.
+ */
+summary:focus-visible,
+footer a:focus-visible {
+  outline-color: var(--foco-fundo);
+}
+
 .ajuda {
   margin: 0.3rem 0 0;
   font-size: 0.8rem;
@@ -196,13 +410,20 @@ input[type='checkbox'] {
   min-height: 240px;
 }
 
+/*
+ * O canvas é a única coisa que NÃO é temática.
+ *
+ * Um QR code tem de ser módulos escuros sobre fundo claro, com contraste alto.
+ * Tematizá-lo parte-o, e não há como consertar depois de impresso. Por muito
+ * retrô que o tema seja, aqui ficam sempre preto sobre branco.
+ *
+ * O teste `tests/themes.test.mjs` garante que nenhum tema toca nestas cores.
+ */
 canvas {
   max-width: 100%;
   height: auto;
   background: #ffffff;
-  border-radius: 8px;
-  /* Sem `image-rendering: pixelated`: em ecrãs de alta densidade o
-     desenhar à escala native já dá o melhor aspeto. */
+  border-radius: 4px;
 }
 
 .vazio {
@@ -219,7 +440,7 @@ canvas {
   background: var(--erro-fundo);
   border: 1px solid var(--erro-borda);
   color: var(--erro-texto);
-  border-radius: 8px;
+  border-radius: var(--raio-sm);
   font-size: 0.9rem;
 }
 
@@ -236,9 +457,9 @@ canvas {
 button {
   min-height: var(--alvo);
   padding: 0.55rem 1rem;
-  background: var(--fundo);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
+  background: var(--superficie);
+  border: var(--borda-largura) solid var(--borda-forte);
+  border-radius: var(--raio-sm);
   cursor: pointer;
 }
 
@@ -263,6 +484,27 @@ button.secundario {
   font-size: 0.85rem;
 }
 
+/* Amostras do seletor de temas: referenciam as variáveis, por isso mudam
+   sozinhas quando o tema muda — sem nada de JavaScript. */
+.amostras {
+  display: flex;
+  gap: 4px;
+  margin-top: 0.5rem;
+}
+
+.amostras i {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--borda);
+  display: block;
+}
+
+.amostras i:nth-child(1) { background: var(--fundo); }
+.amostras i:nth-child(2) { background: var(--superficie); }
+.amostras i:nth-child(3) { background: var(--primaria); }
+.amostras i:nth-child(4) { background: var(--borda-forte); }
+
 /* Blocos de código e o payload */
 
 .opcoes,
@@ -281,13 +523,26 @@ summary {
   font-size: 0.9rem;
 }
 
+.opcoes,
+.payload {
+  background: var(--superficie);
+  border: var(--borda-largura) solid var(--borda);
+  border-radius: var(--raio);
+  padding: var(--espaco);
+  box-shadow: var(--sombra);
+}
+
 .opcoes > *:not(summary) {
   margin-top: 0.5rem;
 }
 
+.payload > summary {
+  margin-bottom: 0.5rem;
+}
+
 .payload pre {
   background: var(--superficie);
-  border: 1px solid var(--borda);
+  border: var(--borda-largura) solid var(--borda);
   border-radius: var(--raio);
   padding: 0.75rem;
   overflow-x: auto;
@@ -309,7 +564,7 @@ footer {
   max-width: 1100px;
   margin: 2rem auto 0;
   text-align: center;
-  color: var(--texto-suave);
+  color: var(--texto-suave-fundo);
   font-size: 0.8rem;
 }
 
