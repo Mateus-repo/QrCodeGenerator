@@ -173,20 +173,25 @@ Titulo 'Ficheiros a vigiar'
 # Coisas que aparecem na raiz deste repositorio e nao pertencem a nenhuma stack.
 $varridos = $ficheiros | Where-Object { $_ -notmatch '/' }
 
+# Ficheiros que legitimamente vivem na raiz e nao precisam de justificacao.
+$raizConhecida = @('README.md', 'AGENTS.md', 'LICENSE', 'CHANGELOG.md', '.gitignore', '.gitattributes')
+
 if ($varridos) {
     foreach ($ficheiro in $varridos) {
         $suspeito = $false
         $motivo = ''
 
-        if ($ficheiro -eq 'responder.txt') {
-            $suspeito = $true
-            $motivo = 'texto solto de uma resposta de chat, sem ligacao ao codigo'
-        } elseif ($ficheiro -match '\.txt$') {
-            $suspeito = $true
-            $motivo = 'ficheiro .txt na raiz: confirmar que e conteudo e nao rascunho'
-        } elseif ($ficheiro -notmatch '^(README|AGENTS|LICENSE|CHANGELOG)\.md$') {
-            $suspeito = $true
-            $motivo = 'raiz do repositorio: confirmar que e intencional'
+        if ($raizConhecida -notcontains $ficheiro) {
+            if ($ficheiro -eq 'responder.txt') {
+                $suspeito = $true
+                $motivo = 'texto solto de uma resposta de chat, sem ligacao ao codigo'
+            } elseif ($ficheiro -match '\.txt$') {
+                $suspeito = $true
+                $motivo = 'ficheiro .txt na raiz: confirmar que e conteudo e nao rascunho'
+            } else {
+                $suspeito = $true
+                $motivo = 'raiz do repositorio: confirmar que e intencional'
+            }
         }
 
         if ($suspeito) {
