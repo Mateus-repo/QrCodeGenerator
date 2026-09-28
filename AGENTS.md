@@ -1,0 +1,152 @@
+# AGENTS.md
+
+Instruções para agentes que trabalham neste repositório.
+
+## Skills
+
+**Lê as skills antes de começar.** São as instruções que o próprio repositório
+escreveu para si:
+
+| Skill | Para quê |
+|---|---|
+| `auto-commit` | Fazer commit do trabalho com mensagem útil, depois de verificar testes, segredos e ficheiros que não devem entrar. **Lê esta antes de commitar.** |
+| `opencode` | Como configurar o OpenCode: agentes, permissões, plugins, MCP, providers. |
+| `report` | Publicar uma issue no GitHub com diagnósticos. Só quando o pedido for mesmo reportar um bug do OpenCode. |
+
+Carregam-se com a ferramenta `skill`, pelo identificador exato:
+
+```
+skill("auto-commit")
+```
+
+## O repositório
+
+Um gerador de códigos, em cinco linguagens, que têm de produzir **o mesmo
+payload byte a byte**. A regra que governa tudo:
+
+> **Uma spec, cinco clientes.** O que vale é o que está em `docs/TIPOS-QR.md` e
+> `spec/vectors.json`, não o que qualquer uma das apps faz.
+
+Código partilhado entre linguagens não é o objetivo — o QR é um formato
+normalizado, e a regra é verificável, o que permite implementá-lo cinco vezes
+sem divergir.
+
+```
+docs/        TIPOS-QR.md (a spec) · IDEIA.md (roadmap) · TODO.md (o que falta)
+             COMO-USAR.md (como usar e partilhar cada app)
+spec/        vectors.json (vetores partilhados) · gerar-vectors.py (regenera)
+csharp/      .NET 8, sem dependências
+java/        JDK 21 + JavaFX, sem Maven nem Gradle
+python/      a implementação de referência
+web/         HTML/CSS/JS sem framework, sem build, sem dependências
+kotlin/      ainda por fazer
+```
+
+## Regras do repositório
+
+### Idioma
+
+Comentários, documentação, nomes de testes e mensagens de commit em **português
+de Portugal**. Os identificadores de código (variáveis, funções, classes) também.
+English only where the format demands it: the Conventional Commits type prefix,
+and the payload strings themselves, which are wire format.
+
+### Não mexer em ficheiros gerados
+
+- `web/dist/` — o ficheiro único. Gerado por `node web/tools/bundle.mjs`.
+  Não está no git e nunca deve entrar.
+- `spec/vectors.json` — gerado por `python spec/gerar-vectors.py`. Só muda
+  quando muda a implementação de referência, e a alteração de spec e a das
+  cinco stacks vão no mesmo commit.
+
+### A paridade não é negociável
+
+Ao mexer num payload, mexe nos cinco e corrige a spec. Um payload que sai
+diferente num cliente é um bug, mesmo que o teste desse cliente passe.
+
+O `spec/vectors.json` é o arbrito. Se duas implementações discordarem, quem
+está errado é o que não bate com a spec.
+
+Ordem de trabalho ao corrigir um payload:
+
+1. Corrige a spec em `docs/TIPOS-QR.md`.
+2. `python spec/gerar-vectors.py` regenera os vetores.
+3. Propaga às cinco stacks.
+4. Corre os testes das cinco.
+
+### Testes
+
+Os testes correm antes de qualquer commit. Só os das stacks tocadas:
+
+| Stack | Comando |
+|---|---|
+| `csharp/` | `cd csharp && dotnet test` |
+| `java/` | `cd java && ./build.sh test` |
+| `python/` | `cd python && python -m pytest tests -q` |
+| `web/` | `node --test "web/tests/*.test.mjs"` |
+
+Em Windows o `./build.sh` é `C:\Program Files\Git\bin\bash.exe build.sh test`.
+
+O teste que apanha mais bugs é o de nível 2, no qual se **gera a imagem e
+descodifica-a com um leitor independente** (ZXing). Os testes estruturais
+passam com bugs que só se veem na leitura: a máscara 4 com `x` e `y` trocados
+e as posições dos padrões de alinhamento erradas a partir da versão 7 produziam
+QR que "pareciam" certos.
+
+```powershell
+node web/tests/cross-check.mjs
+python web/tests/descodificar.py
+```
+
+Quando escrevas um encoder novo, escreve o teste de leitura ao mesmo tempo. Um
+encoder que só passa nos testes próprios não está verificado.
+
+### O QR code é sempre preto sobre branco
+
+Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há
+como consertar depois de impresso. No cliente web isto é fixo no CSS e há um
+teste que falha se algum tema tocar nas cores do canvas.
+
+### Documentação
+
+`docs/` e os READMEs por pasta mantêm-se actualizados **na mesma alteração** que
+o código que descrevem. Não é trabalho para o fim: se a mudança altera o
+comportamento, a documentação muda com ela, no mesmo commit.
+
+`docs/TODO.md` é a lista do que falta. Se a tua tarefa for um item desse
+ficheiro, risca-o.
+
+## Commitar
+
+Lê a skill `auto-commit` antes de commitar. Em resumo:
+
+```powershell
+powershell -NoProfile -File .opencode/skills/auto-commit/scripts/preflight.ps1
+```
+
+O script diz o que mudou, avisa sobre segredos, assinala ficheiros que não
+devem entrar na raiz, e indica que stacks foram tocadas para saber que testes
+correr.
+
+Depois:
+
+- Um assunto por commit. Se o bloco de trabalho tem 3 assuntos, são 3 commits.
+- Conventional Commits, com o **assunto em português**: `fix(pix): não destruía
+  nomes com espaço no BR Code`. O prefixo de tipo fica em inglês porque é o que
+  as ferramentas leem.
+- O corpo explica o **porquê**. O diff já diz o quê.
+- **Nunca `git push`.** O commit é local; publicar é uma acção separada, pedida
+  à parte.
+
+## Coisas que já trippedaste, para não repetir
+
+- **O `localStorage` do tema guarda `familia:modo`.** Ao mudar de formato,
+  ler o valor antigo tem de continuar a funcionar.
+- **Os acentos em `.ps1` exigem UTF-8 com BOM.** O Windows PowerShell 5.1 lê
+  scripts sem BOM como ANSI e escreve `Ãº` no terminal.
+- **Módulos ES são bloqueados em `file://` pelo Chrome.** Daí existirem duas
+  formas de servir o cliente web.
+- **`jpackage` só compila no SO de destino.** Um instalador para Windows só sai
+  em Windows.
+- **A lista de tipos do cliente web e a da spec têm de bater.** Está no
+  `tests/themes.test.mjs` e nos testes de payload.
