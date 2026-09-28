@@ -66,21 +66,30 @@ const GUARDA_FIM = '101';
 /**
  * Digito de controlo EAN/UPC.
  *
- * A regra: a partir da esquerda, os digitos em posicao impar pesam 1 e os
- * pares pesam 3. Soma-se, e o digito e o que falta para a soma dar multiplos
- * de dez.
+ * A regra, sem ambiguidades: **o digito mais a direita dos dados pesa 3**, e a
+ * partir dai alterna 3, 1, 3, 1... para a esquerda. A soma tem de dar multiplos
+ * de dez, e o digito e o que falta.
  *
- *   400638133393 -> 4*1 + 0*3 + 0*1 + 6*3 + 3*1 + 8*3 + 1*1 + 3*3 + 3*1 + 3*3 + 9*1 + 3*3
- *                 = 4+0+0+18+3+24+1+9+3+9+9+9 = 89 -> 1
+ * Comecar pela esquerda em vez disso e o erro classico, porque o peso depende
+ * do numero de digitos de dados:
  *
- * O peso alterna a partir da esquerda porque o EAN-13 tem 13 digitos (impar) e
- * o UPC-A tem 12 (par). Sao a mesma conta.
+ *   EAN-13, 12 dados: o 12o (o ultimo) pesa 3, logo o 1o pesa 1.
+ *   UPC-A,  11 dados: o 11o (o ultimo) pesa 3, logo o 1o pesa 3.
+ *
+ * Os dois comecam a contar de um sitio diferente, e usar a mesma regra para os
+ * dois da um digito de controlo errado no UPC-A — que e o numero impresso por
+ * baixo do codigo e o que o leitor devolve.
+ *
+ *   400638133393 -> 4*1+0*3+0*1+6*3+3*1+8*3+1*1+3*3+3*1+3*3+9*1+3*3 = 89 -> 1
+ *   03600029145  -> 0*3+3*1+6*3+0*1+0*3+0*1+2*3+9*1+1*3+4*1+5*3 = 58 -> 2
  */
 export function digitoDeControlo(digitos) {
   let soma = 0;
   for (let i = 0; i < digitos.length; i++) {
     const d = Number(digitos[i]);
-    soma += i % 2 === 0 ? d : d * 3;
+    // Quantos digitos ha a direita deste. Zero = e o ultimo, e pesa 3.
+    const distancia = digitos.length - 1 - i;
+    soma += distancia % 2 === 0 ? d * 3 : d;
   }
   return (10 - (soma % 10)) % 10;
 }
@@ -180,15 +189,22 @@ export function ean8(valor) {
  * diferenca no texto e que o zero nao se imprime.
  */
 export function upcA(valor) {
-  let d = digitosDe(valor, 11, 'UPC-A');
-  d += String(digitoDeControlo(d));
+  const data = digitosDe(valor, 11, 'UPC-A');
+  const controlo = digitoDeControlo(data);
 
-  const codigo = ean13('0' + d);
+  // O zero vai antes dos 11 digitos de dados, e nao depois do digito de
+  // controlo: e o EAN-13 que calcula o digito de controlo dos seus 12.
+  //
+  // O resultado e o mesmo que o do UPC-A. No UPC-A (12 digitos) os pesos
+  // comecam em 3 a partir da esquerda; no EAN-13 (13 digitos) comecam em 1, e
+  // o primeiro digito e o zero que acabamos de prepor, que nao pesa nada. Os
+  // 12 seguintes ficam com 3, 1, 3, 1... — exatamente a mesma conta.
+  const codigo = ean13('0' + data);
 
   return {
     symbology: 'UPC-A',
     modules: codigo.modules,
     guards: codigo.guards,
-    caption: d,
+    caption: data + String(controlo),
   };
 }

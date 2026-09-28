@@ -5,7 +5,8 @@
 >
 > Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
-**Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos, 418 testes. A
+**Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR + 4 simbologias
+de codigos de barras, 467 testes. A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
@@ -115,6 +116,76 @@ qualquer código novo:
 
 ---
 
+## BLOQUEIO 6 — Simbologias (começado no cliente web)
+
+Mais do que QR code. Os 1D lineares e os 2D matriciais, cada um com o seu
+encoder, e todos verificados pelo ZXing antes de entrarem.
+
+**O que está feito e verificado** (18 casos, todos lidos por leitor independente):
+
+- [x] EAN-13 — `web/symbologies/upcean.js`
+- [x] EAN-8
+- [x] UPC-A
+- [x] Code 128, com escolha automática de conjunto — `web/symbologies/code128.js`
+- [x] Harness de nível 2 para lineares: `web/tests/gerar-lineares.mjs` +
+      `web/tests/descodificar-lineares.py`
+
+**Fica de fora, e porquê.** Isto é o ponto importante desta secção: quatro
+encoders foram escritos e **não passaram na leitura**, por isso não estão no
+repositório.
+
+- [ ] **Code 39** — a tabela tem 43 entradas de nove elementos (cinco barras,
+      quatro espaços, três largos). Escrita de memória saiu com doze
+      elementos por carácter, e a segunda tentativa, já pela regra 2-de-5 da
+      especificação, esbarrou nos caracteres finais (`-`, `.`, espaço, `*`,
+      `$`, `/`, `+`, `%`), que não seguem a regra: têm as cinco barras
+      estreitas e três espaços largos, ao contrário dos outros 35. Precisa da
+      tabela completa da ISO/IEC 16388, não de dedução.
+- [ ] **ITF e ITF-14** — a tabela dos dez dígitos está certa, e o formato é
+      simples. O que falta é acertar a moldura: a razão larga/estreita tem de
+      ser igual na moldura e nos dados (o leitor mede-a na moldura), e a
+      moldura de início não pode ter barra larga. Duas correções feitas e ainda
+      não leu — falta perceber qual das duas o leitor está a recusar.
+- [ ] **Codabar** — mesma situação: a estrutura de sete elementos é conhecida,
+      a tabela dos dezassete caracteres não.
+- [ ] **UPC-E** — deixado de fora do `upcean.js` de propósito. A tabela de
+      paridade depende do dígito de controlo do UPC-A expandido, e escrevê-la
+      de memória é a forma rápida de entregar códigos que não passam em
+      leitor nenhum. Entra com a ISO/IEC 6120 à mão.
+- [ ] **Code 93** — ainda nem tentado.
+- [ ] **GS1 DataBar** (Omni, Expanded, Limited) — o mais difícil dos 1D.
+
+**2D matriciais**, por ordem de dificuldade. Todos são verificáveis pelo ZXing,
+que já os lê: Data Matrix, Aztec, PDF417, Micro QR, rMQR.
+
+- [ ] **FrameQR** — não é uma simbologia nova, é um pós-processamento sobre o QR
+      que já existe: um rectangle branco no centro para caber um logótipo. É o
+      mais barato de todos e vale ser o primeiro.
+- [ ] Data Matrix (ECC200)
+- [ ] Aztec
+- [ ] PDF417
+- [ ] Micro QR (M1–M4) — estrutura completamente diferente: um só padrão de
+      alinhamento, e máscaras e máscaras de dados próprias
+- [ ] rMQR —矩形, com reflexão. Especificação de 2022.
+
+**E três coisas da lista que não são código:**
+
+- [ ] **iQR Code** — propriedade da Denso Wave, e a especificação não é
+      publicada. Não é implementável com rigor. Dizer não é a resposta errada.
+- [ ] **SQRC** — a parte encriptada exige AES *e* um modelo de distribuição de
+      chaves que não é nosso para decidir. O contentor é possível; o segredo não
+      sem o utilizador dizer como é que a chave chega ao leitor.
+- [ ] **QR dinâmico** — aponta para um URL curto de redirecção que só um servidor
+      pode servir. Uma app que corre toda no dispositivo, sem contas nem
+      servidor, não tem como fazer isto. E os "scan analytics" são tracking de
+      pessoas.
+
+**Regra que rege esta secção:** um encoder só entra no repositório depois de o
+ZXing devolver a string certa. Não há "quase". O motivo está em cima — quatro
+encoders pareceram certos durante a escrita e não eram.
+
+---
+
 ## Ordem de implementação
 
 ```
@@ -123,7 +194,7 @@ qualquer código novo:
 3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
 4. java/                → ✅ core + app + CLI + jpackage, 119 testes
 5. kotlin/android       → Compose + scan de câmara
-6. extras               → lote, leitor, simbologias, PDF
+6. extras               → ✅ 4 simbologias 1D (ver BLOQUEIO 6) · falta 2D e PDF
 ```
 
 Cada passo só avança quando os vetores passam nessa stack.

@@ -338,6 +338,10 @@ node --test "web/tests/*.test.mjs"
 # Web — o teste que importa: o ZXing lê o que gerámos?
 node web/tests/cross-check.mjs
 python web/tests/descodificar.py
+
+# Web — o mesmo para os códigos de barras
+node web/tests/gerar-lineares.mjs
+python web/tests/descodificar-lineares.py
 ```
 
 Os primeiros verificam o **payload** (a string). O do web gera as imagens e

@@ -51,6 +51,9 @@ web/
 ├── themes.js             famílias, modos, persistência, sem flash
 ├── app.js                estado, formulários, exportação
 ├── qrcode.js             encoder QR (ISO/IEC 18004), sem dependências
+├── symbologies/
+│   ├── upcean.js         EAN-13, EAN-8, UPC-A
+│   └── code128.js        Code 128, com escolha automática de conjunto
 ├── payloads/
 │   ├── types.js          payload e validação dos 11 tipos
 │   ├── pix.js            PIX / BR Code
@@ -66,7 +69,57 @@ web/
 
 ---
 
-## Temas
+## Simbologias
+
+Não é só QR code. Cada simbologia tem o seu encoder, escrito à mão e sem
+dependências, como o do QR.
+
+| Simbologia | Ficheiro | Para quê |
+|---|---|---|
+| QR Code | `qrcode.js` | o de sempre, versões 1–40 |
+| EAN-13 | `symbologies/upcean.js` | produto de supermercado |
+| EAN-8 | `symbologies/upcean.js` | embalagens pequenas |
+| UPC-A | `symbologies/upcean.js` | o equivalente norte-americano do EAN-13 |
+| Code 128 | `symbologies/code128.js` | etiquetas de encomenda |
+
+O Code 128 escolhe sozinho o conjunto de caracteres (A, B ou C) e muda a meio
+quando compensa — é isso que o torna compacto, e é o que o torna difícil: os
+três conjuntos partilham parte dos valores, por isso o encoder tem de emitir um
+carácter *de cada vez que muda*. Sem isso o código desenha-se perfeito, o leitor
+lê, e devolve caracteres completamente errados. Foi o primeiro bug desta fase, e
+só apareceu quando um leitor leu o que o encoder dizia estar certo.
+
+### A regra de entrada
+
+> **Um encoder só entra no repositório depois de o ZXing devolver a string
+> certa. Não há "quase".**
+
+Quatro encoders foram escritos nesta fase e não passaram na leitura, e por isso
+**não estão no repositório**: Code 39, ITF/ITF-14, Codabar e UPC-E. As razões
+estão em `docs/TODO.md`, no BLOQUEIO 6.
+
+Isto não é rigor a mais. Um código de barras com a estrutura toda correcta e um
+dígito na posição errada desenha-se com o aspecto perfeito, e o único sinal é o
+leitor dizer outra coisa. Nenhum teste estrutural o apanha — é o mesmo que
+apanhou a máscara 4 do QR, com `x` e `y` trocados.
+
+### O teste
+
+```bash
+node web/tests/gerar-lineares.mjs         # escreve as matrizes
+python web/tests/descodificar-lineares.py # o ZXing lê e compara
+```
+
+O gerador corre uma verificação interna antes de gerar imagem (número de
+dígitos, número de módulos, se começa e acaba como deve), e depois o ZXing
+desenha e lê a partir das matrizes que o encoder devolveu. É o mesmo esquema do
+`cross-check.mjs` dos QR, para os lineares.
+
+Nota prática: o `>` do Windows PowerShell 5.1 produz UTF-16, e um JSON escrito
+assim não é lido pelo Python. Por isso o gerador escreve o ficheiro ele próprio e
+não pela saída standard.
+
+---
 
 Nove famílias, cada uma com variante clara e escura — 27 combinações. Em
 *Opções → Tema* escolhes a família, e no botão ao lado o modo:

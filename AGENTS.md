@@ -96,10 +96,21 @@ QR que "pareciam" certos.
 ```powershell
 node web/tests/cross-check.mjs
 python web/tests/descodificar.py
+
+# O mesmo, para os códigos de barras
+node web/tests/gerar-lineares.mjs
+python web/tests/descodificar-lineares.py
 ```
 
 Quando escrevas um encoder novo, escreve o teste de leitura ao mesmo tempo. Um
 encoder que só passa nos testes próprios não está verificado.
+
+**Um encoder só entra no repositório depois de o ZXing devolver a string certa.**
+Não há "quase". Na fase dos códigos de barras, quatro encoders pareceram certos
+durante a escrita e não eram: o Code 39 com doze elementos por carácter em vez
+de nove, e o Code 128 sem os caracteres de troca de conjunto — que se desenha
+perfeito e devolve `ABC,3` em vez de `ABC123`. Ambos só apareceram na leitura.
+O que ficou de fora, e porquê, está em `docs/TODO.md` no BLOQUEIO 6.
 
 ### O QR code é sempre preto sobre branco
 
