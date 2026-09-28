@@ -52,12 +52,33 @@ num cartão de memória ou pôr na cloud.
 
 ## Usar
 
-1. Escolhe o **tipo de conteúdo** no menu.
-2. Preenche os campos. A imagem atualiza a cada tecla.
-3. Se aparecer um erro em vermelho, diz o que falta — nunca é genérico.
-4. **Guardar PNG**, **Guardar SVG** ou **Copiar**.
+1. Escolhe o **Formato**: QR Code (2D), ou uma das quatro simbologias 1D.
+2. Se for QR, escolhe o **tipo de conteúdo** e preenche os campos. Se for 1D,
+   escreve o valor — o número de dígitos é validado à medida que escreves.
+3. A imagem atualiza a cada tecla.
+4. Se aparecer um erro em vermelho, diz o que falta — nunca é genérico.
+5. **Guardar PNG**, **Guardar SVG** ou **Copiar**.
 
-Em *Opções* escolhes o nível de correção de erros, o tamanho e a margem.
+Em *Opções* escolhes o nível de correção de erros, o tamanho e a margem. A
+correção de erros só aparece no QR: um código de barras não a tem.
+
+### Códigos de barras
+
+| Formato | Aceita | Para quê |
+|---|---|---|
+| EAN-13 | 12 ou 13 dígitos | produto de supermercado |
+| EAN-8 | 7 ou 8 dígitos | embalagens pequenas |
+| UPC-A | 11 ou 12 dígitos | o equivalente norte-americano do EAN-13 |
+| Code 128 | qualquer ASCII | etiquetas de encomenda |
+
+O último dígito dos três primeiros é **calculado** — escreve só os primeiros e
+o site acrescenta o de controlo. O Code 128 escolhe sozinho a codificação mais
+compacta.
+
+O ficheiro exportado diz o que é (`codigo-ean13.png`, não `qrcode-link.png`).
+
+A margem muda de valor: 4 módulos no QR, 10 nos códigos de barras, que é o que a
+ISO/IEC 15420 pede para um 1D.
 
 ### Temas
 

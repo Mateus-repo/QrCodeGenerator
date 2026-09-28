@@ -64,6 +64,57 @@ const GUARDA_CENTRO = '01010';
 const GUARDA_FIM = '101';
 
 /**
+ * Onde vao os grupos de digitos impressos por baixo do codigo.
+ *
+ * Nao e um detalhe estetico. Numa etiqueta real os digitos nao estao todos
+ * centrados: estao **debaixo das barras que os codificam**, e as barras-guarda
+ * descem entre os grupos para os separar. E o que permite a quem le confirmar o
+ * numero a olho, e o que distingue uma etiqueta de EAN de um codigo com uma
+ * linha de texto por baixo.
+ *
+ * Cada grupo traz o **intervalo exato de modulos** que ocupa, e nao um centro.
+ * Com um centro o desenho teria de adivinhar as fronteiras pelas guardas, e é
+ * facil errar: as guardas do EAN-13 estao em 0, 45, 50 e 95, e quem Divide a
+ * soma dos dois do meio fica com 47.5 — que e a guarda central, o unico sitio
+ * onde nao ha digito nenhum. O resultado era uma etiqueta com o numero da
+ * direita impresso e o da esquerda em branco.
+ *
+ * Por isso quem sabe isto e a simbologia, e o desenho so obedece.
+ */
+function gruposDaLegenda(guardas, d, { digitoFora = null, porMetade = 6 } = {}) {
+  const [inicioGuarda, fimEsquerda, inicioDireita, fimDireita] = guardas;
+  const grupos = [];
+
+  /*
+   * O primeiro digito do EAN-13 e impresso **antes** da guarda inicial, no
+   * canto. E a unica forma de ter 13 digitos com os 12 codificados, porque o
+   * primeiro e o que escolhe a paridade dos seis seguintes e nao e codificado.
+   *
+   * E tem consequencia na contagem: os dois grupos de baixo comecam no indice
+   * 1, nao no 0. Sem isso o grupo da direita saia com sete digitos em vez de
+   * seis, e a etiqueta mostrava um numero que nao era o codificado.
+   */
+  const inicio = digitoFora === null ? 0 : 1;
+  if (digitoFora !== null) {
+    // O intervalo e negativo porque nao ha barras la: o digito vive na margem.
+    grupos.push({ texto: digitoFora, inicio: -1, fim: 0 });
+  }
+
+  grupos.push({
+    texto: d.slice(inicio, inicio + porMetade),
+    inicio: inicioGuarda,
+    fim: fimEsquerda,
+  });
+  grupos.push({
+    texto: d.slice(inicio + porMetade),
+    inicio: inicioDireita,
+    fim: fimDireita,
+  });
+
+  return grupos;
+}
+
+/**
  * Digito de controlo EAN/UPC.
  *
  * A regra, sem ambiguidades: **o digito mais a direita dos dados pesa 3**, e a
@@ -151,6 +202,7 @@ export function ean13(valor) {
     caption: d,
     /** O primeiro digito e impresso a esquerda da barra de guarda, como manda a norma. */
     prefix: d[0],
+    gruposLegenda: gruposDaLegenda(guardas, d, { digitoFora: d[0] }),
   };
 }
 
@@ -179,6 +231,9 @@ export function ean8(valor) {
     modules: modulos,
     guards: guardas,
     caption: d,
+    // O EAN-8 nao tem digito fora da guarda: os oito estao codificados, quatro
+    // de cada lado da guarda central.
+    gruposLegenda: gruposDaLegenda(guardas, d, { porMetade: 4 }),
   };
 }
 
@@ -206,5 +261,11 @@ export function upcA(valor) {
     modules: codigo.modules,
     guards: codigo.guards,
     caption: data + String(controlo),
+    /*
+     * A matriz e a do EAN-13, mas o zero inicial nao se imprime: o UPC-A tem
+     * 12 digitos e todos cabem nos dois grupos de seis. Por isso a legenda nao
+     * tem o digito fora da guarda, ao contrario do EAN-13.
+     */
+    gruposLegenda: gruposDaLegenda(codigo.guards, data + String(controlo)),
   };
 }

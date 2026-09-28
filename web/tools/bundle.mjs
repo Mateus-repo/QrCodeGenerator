@@ -25,6 +25,10 @@ const out = join(web, 'dist');
 /** Ordem de dependências: um módulo só pode vir depois de quem importa. */
 const MODULES = [
   'qrcode.js',
+  'symbologies/upcean.js',
+  'symbologies/code128.js',
+  'symbologies/index.js',
+  'symbologies/linear.js',
   'payloads/text.js',
   'payloads/normalize.js',
   'payloads/pix.js',

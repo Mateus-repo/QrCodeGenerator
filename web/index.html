@@ -70,8 +70,23 @@
 
     <main id="conteudo">
       <!-- Coluna do formulário -->
-      <section class="painel painel-formulario" data-chrome="Gerador de QR codes" aria-label="Conteúdo do QR code">
+      <section class="painel painel-formulario" data-chrome="Gerador de códigos" aria-label="Conteúdo do código">
         <div class="campo">
+          <label for="formato">Formato</label>
+          <select id="formato">
+            <optgroup label="BIDIMENSIONAL (2D)">
+              <option value="qr">QR Code</option>
+            </optgroup>
+            <optgroup label="LINEAR (1D)">
+              <option value="ean13">EAN-13</option>
+              <option value="ean8">EAN-8</option>
+              <option value="upca">UPC-A</option>
+              <option value="code128">Code 128</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="campo" id="campo-categoria">
           <label for="categoria">Tipo de conteúdo</label>
           <select id="categoria"></select>
         </div>
@@ -113,7 +128,7 @@
             </p>
           </div>
 
-          <div class="campo">
+          <div class="campo" id="campo-ecc">
             <label for="ecc">Correção de erros</label>
             <select id="ecc">
               <option value="L">L — mais conteúdo, menos robustez</option>
@@ -131,12 +146,15 @@
               <option value="1024">1024</option>
               <option value="2048">2048</option>
             </select>
+            <p class="ajuda" id="ajuda-tamanho"></p>
           </div>
 
           <div class="campo">
             <label for="margem">Margem (módulos)</label>
             <input id="margem" type="number" min="0" max="8" step="1" value="4" />
-            <p class="ajuda">A norma pede 4. Só mexa se souber o que está a fazer.</p>
+            <p class="ajuda" id="ajuda-margem">
+              A norma do QR pede 4. Só mexa se souber o que está a fazer.
+            </p>
           </div>
         </details>
       </section>

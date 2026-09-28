@@ -21,10 +21,14 @@
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
 import { ligarSeletores } from './themes.js';
+import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
+import { desenhar as desenharLinear, paraSvg as linearParaSvg, dimensoes } from './symbologies/linear.js';
 
 const el = (id) => document.getElementById(id);
 
 const dom = {
+  formato: el('formato'),
+  campoCategoria: el('campo-categoria'),
   categoria: el('categoria'),
   campos: el('campos'),
   formulario: el('formulario'),
@@ -34,9 +38,12 @@ const dom = {
   acoes: el('acoes'),
   tema: el('tema'),
   temaModos: el('tema-modos'),
+  campoEcc: el('campo-ecc'),
   ecc: el('ecc'),
   tamanho: el('tamanho'),
+  ajudaTamanho: el('ajuda-tamanho'),
   margem: el('margem'),
+  ajudaMargem: el('ajuda-margem'),
   payload: el('payload'),
   contagem: el('contagem'),
   btnPng: el('btn-png'),
@@ -50,7 +57,23 @@ const state = {
   fields: {},
   payload: '',
   valido: false,
+  /**
+   * O codigo de barras codificado, quando o formato e 1D.
+   *
+   * Vive ao lado do `payload` em vez de o substituir porque sao coisas
+   * diferentes: o payload e o texto que o QR leva dentro, e o codigo de barras
+   * e a sequencia de barras ja desenhada. O que se copia e o valor que o
+   * utilizador escreveu, e o que se exporta e a imagem — que e o unico sitio
+   * onde os dois se cruzam.
+   */
+  codigo: null,
 };
+
+/** O formato escolhido: 2D (QR) ou 1D (código de barras). */
+const ehQr = () => dom.formato.value === 'qr';
+
+/** A simbologia 1D escolhida, se for o caso. */
+const simbologiaActual = () => (ehQr() ? null : simbologiaPorId(dom.formato.value));
 
 // --- Formulário ------------------------------------------------------------
 
@@ -64,46 +87,130 @@ function popularCategorias() {
 }
 
 function desenharCampos() {
-  const category = CATEGORIES.find((c) => c.id === dom.categoria.value);
   dom.campos.textContent = '';
+
+  if (!ehQr()) {
+    desenharCamposLineares();
+    return;
+  }
+
+  const category = CATEGORIES.find((c) => c.id === dom.categoria.value);
   state.fields = emptyFields(dom.categoria.value);
 
   for (const field of category.fields) {
-    const div = document.createElement('div');
-    div.className = 'campo';
-
-    if (field.type === 'checkbox') {
-      const caixa = document.createElement('div');
-      caixa.className = 'caixa';
-
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.id = `campo-${field.key}`;
-      input.addEventListener('change', atualizar);
-
-      const label = document.createElement('label');
-      label.htmlFor = input.id;
-      label.textContent = field.label;
-
-      caixa.append(input, label);
-      div.append(caixa);
-    } else {
-      const input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
-      input.id = `campo-${field.key}`;
-      if (field.type && !['textarea', 'checkbox'].includes(field.type)) input.type = field.type;
-      if (field.placeholder) input.placeholder = field.placeholder;
-      input.value = state.fields[field.key] ?? '';
-      input.addEventListener('input', atualizar);
-
-      const label = document.createElement('label');
-      label.htmlFor = input.id;
-      label.textContent = field.label;
-
-      div.append(label, input);
-    }
-
-    dom.campos.append(div);
+    dom.campos.append(campoDe(field, state.fields[field.key]));
   }
+}
+
+/**
+ * O formulário de um código de barras: um campo só.
+ *
+ * O campo vem do registo de simbologias, com a sua etiqueta, o seu exemplo e a
+ * sua dica. Nao e preciso escrever duas vezes a mesma coisa — a lista em
+ * `symbologies/index.js` e a fonte unica do que cada simbologia aceita.
+ */
+function desenharCamposLineares() {
+  const simbologia = simbologiaActual();
+  if (simbologia === null) return;
+
+  const div = document.createElement('div');
+  div.className = 'campo';
+
+  const input = document.createElement('input');
+  input.id = `campo-${simbologia.campo.key}`;
+  if (simbologia.campo.placeholder) input.placeholder = simbologia.campo.placeholder;
+  // Teclado numérico no telemóvel: quem está a transcrever um código de uma
+  // embalagem está a usar o dedo, e o teclado completo é lento e propenso a
+  // erros. O Code 128 é a excepção, porque leva letras e símbolos.
+  if (simbologia.id !== 'code128') input.inputMode = 'numeric';
+  input.addEventListener('input', atualizar);
+
+  const label = document.createElement('label');
+  label.htmlFor = input.id;
+  label.textContent = simbologia.campo.label;
+
+  div.append(label, input);
+
+  if (simbologia.campo.dica) {
+    const ajuda = document.createElement('p');
+    ajuda.className = 'ajuda';
+    ajuda.textContent = simbologia.campo.dica;
+    div.append(ajuda);
+  }
+
+  const descricao = document.createElement('p');
+  descricao.className = 'ajuda';
+  descricao.textContent = simbologia.descricao;
+  dom.campos.append(descricao, div);
+}
+
+/** Um campo do formulário, com o valor por omissão. */
+function campoDe(field, valor) {
+  const div = document.createElement('div');
+  div.className = 'campo';
+
+  if (field.type === 'checkbox') {
+    const caixa = document.createElement('div');
+    caixa.className = 'caixa';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = `campo-${field.key}`;
+    input.checked = valor === true;
+    input.addEventListener('change', atualizar);
+
+    const label = document.createElement('label');
+    label.htmlFor = input.id;
+    label.textContent = field.label;
+
+    caixa.append(input, label);
+    div.append(caixa);
+    return div;
+  }
+
+  const input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
+  input.id = `campo-${field.key}`;
+  if (field.type && !['textarea', 'checkbox'].includes(field.type)) input.type = field.type;
+  if (field.placeholder) input.placeholder = field.placeholder;
+  input.value = valor ?? '';
+  input.addEventListener('input', atualizar);
+
+  const label = document.createElement('label');
+  label.htmlFor = input.id;
+  label.textContent = field.label;
+
+  div.append(label, input);
+  return div;
+}
+
+/**
+ * Mostra e esconde o que só faz sentido num dos dois formatos.
+ *
+ * A correção de erros é o caso obvio: é uma propriedade do QR, e um código de
+ * barras não tem. Deixá-la visível e a fingir que funciona é pior do que
+ * escondê-la.
+ */
+function alternarFormato() {
+  const qr = ehQr();
+
+  dom.campoCategoria.hidden = !qr;
+  dom.campoEcc.hidden = !qr;
+
+  dom.ajudaMargem.textContent = qr
+    ? 'A norma do QR pede 4. Só mexa se souber o que está a fazer.'
+    : 'A ISO/IEC 15420 pede 10 módulos. Só mexa se souber o que está a fazer.';
+
+  // A margem do QR vai de 0 a 8; a do código de barras é bem maior, e um
+  // campo que não deixa escrever 10 seria mais uma coisa a explicar.
+  dom.margem.max = qr ? '8' : '20';
+  if (!qr) dom.margem.value = '10';
+
+  dom.vazio.textContent = qr
+    ? 'Preenche o conteúdo para o QR code aparecer aqui.'
+    : 'Preenche o código para as barras aparecerem aqui.';
+
+  desenharCampos();
+  atualizar();
 }
 
 // --- Geração ---------------------------------------------------------------
@@ -117,6 +224,11 @@ function opcoes() {
 }
 
 function atualizar() {
+  if (!ehQr()) {
+    atualizarLinear();
+    return;
+  }
+
   const category = dom.categoria.value;
 
   // Relê os valores do DOM — a fonte da verdade é o que o utilizador escreveu.
@@ -168,20 +280,102 @@ function atualizar() {
   }
 }
 
-function mostrarErro(mensagem) {
+/**
+ * O caminho dos códigos de barras.
+ *
+ * Não é o do QR com outros valores: um código de barras não tem payload, não
+ * tem versão, não tem correção de erros e não tem limite de bytes. Tem um valor
+ * e uma simbologia, e a validação é da própria simbologia — está no registo em
+ * `symbologies/index.js`, e é lá que vive a regra do número de dígitos.
+ */
+function atualizarLinear() {
+  const simbologia = simbologiaActual();
+  if (simbologia === null) {
+    mostrarErro('Formato desconhecido.');
+    return;
+  }
+
+  const input = document.getElementById(`campo-${simbologia.campo.key}`);
+  const valor = input ? input.value : '';
+  state.fields = { [simbologia.campo.key]: valor };
+
+  if (valor.trim() === '') {
+    // Um campo vazio não é um erro: é o estado inicial. O aviso a vermelho de
+    // "escreve alguma coisa" em cima de um formulário em branco é apenas ruído.
+    mostrarErro(null, 'Preenche o código para o ver aqui.');
+    return;
+  }
+
+  try {
+    const codigo = codificarLinear(dom.formato.value, valor);
+
+    const targetPx = Math.max(64, Number(dom.tamanho.value) || 512);
+    const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 10));
+
+    /*
+     * A escala é calculada a partir do tamanho pedido e da largura que a
+     * simbologia vai ter. `ceil` garante que nunca fica abaixo do pedido —
+     * arredondar para baixo dava 508 px quando se pediu 512, e o utilizador
+     * fica com uma imagem que não pediu.
+     */
+    const larguraModulos = codigo.modules.length + margem * 2;
+    const escala = Math.max(1, Math.ceil(targetPx / larguraModulos));
+    const comLegenda = dom.margem.dataset.legenda !== 'off';
+
+    const d = desenharLinear(dom.canvas, codigo, { escala, margem, comLegenda });
+
+    state.codigo = codigo;
+    state.payload = codigo.legenda;
+    state.valido = true;
+    dom.erro.hidden = true;
+    dom.vazio.hidden = true;
+    dom.acoes.hidden = false;
+    dom.payload.textContent = codigo.legenda;
+    dom.contagem.textContent =
+      `${simbologia.rotulo} · ${codigo.modules.length} módulos · ` +
+      `${d.pxLargura}×${d.pxAltura} px · escala ${escala} px/módulo`;
+    dom.ajudaTamanho.textContent =
+      'A altura segue a proporção que o leitor aguenta, e é por isso que a ' +
+      'imagem não fica quadrada.';
+  } catch (exception) {
+    mostrarErro(exception.message || 'Não foi possível gerar o código de barras.');
+  }
+}
+
+/**
+ * Mostra o estado de erro, ou o estado inicial quando não há erro nenhum.
+ *
+ * `mensagem === null` não é um erro: é o formulário ainda vazio. A diferença
+ * importa, porque pintar de vermelho um campo em branco que o utilizador ainda
+ * não preencheu é ruído — e obriga a leitura de ecrã a anunciar um erro que
+ * não existe.
+ */
+function mostrarErro(mensagem, textoVazio) {
   state.valido = false;
-  dom.erro.textContent = mensagem;
-  dom.erro.hidden = false;
-  dom.vazio.hidden = false;
+  state.codigo = null;
   dom.acoes.hidden = true;
   dom.payload.textContent = '';
   dom.contagem.textContent = '';
+
+  if (mensagem) {
+    dom.erro.textContent = mensagem;
+    dom.erro.hidden = false;
+    dom.vazio.hidden = true;
+    return;
+  }
+
+  dom.erro.hidden = true;
+  dom.vazio.textContent = textoVazio ?? 'Preenche o conteúdo para o QR code aparecer aqui.';
+  dom.vazio.hidden = false;
 }
 
 // --- Guardar, copiar, partilhar -------------------------------------------
 
 function nomeFicheiro(extensao) {
-  return `qrcode-${dom.categoria.value}.${extensao}`;
+  // O nome do ficheiro diz o que foi gerado. Um `qrcode-pix.png` que é na
+  // verdade um EAN-13 obriga a abrir o ficheiro para saber o que é.
+  const nome = ehQr() ? `qrcode-${dom.categoria.value}` : `codigo-${dom.formato.value}`;
+  return `${nome}.${extensao}`;
 }
 
 function guardar(blob, filename) {
@@ -206,6 +400,18 @@ function guardarPng() {
 
 function guardarSvg() {
   if (!state.valido) return;
+
+  if (!ehQr()) {
+    const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 10));
+    const escala = Math.max(
+      1,
+      Math.ceil(Math.max(64, Number(dom.tamanho.value) || 512) / (state.codigo.modules.length + margem * 2)),
+    );
+    const svg = linearParaSvg(state.codigo, { escala, margem });
+    guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
+    return;
+  }
+
   const svg = toSvg(state.payload, { ecl: dom.ecc.value, border: opcoes().border });
   guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
 }
@@ -278,6 +484,8 @@ function arranque() {
   ligarSeletores(dom.tema, dom.temaModos);
   popularCategorias();
   desenharCampos();
+
+  dom.formato.addEventListener('change', alternarFormato);
 
   dom.categoria.addEventListener('change', () => {
     desenharCampos();

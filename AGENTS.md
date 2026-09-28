@@ -112,6 +112,12 @@ de nove, e o Code 128 sem os caracteres de troca de conjunto — que se desenha
 perfeito e devolve `ABC,3` em vez de `ABC123`. Ambos só apareceram na leitura.
 O que ficou de fora, e porquê, está em `docs/TODO.md` no BLOQUEIO 6.
 
+**E um terceiro nível, que é o que apanha o que os outros dois não apanham:** os
+ficheiros que o browser exporta, lidos pelo ZXing. A legenda do EAN-13 estava
+cortada dos dois lados — o código varria bem, os dois níveis de teste passavam,
+e a etiqueta é que não se lia. Se mexeres no desenho de um código, exporta pelo
+browser e manda o ficheiro ao leitor.
+
 ### O QR code é sempre preto sobre branco
 
 Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há

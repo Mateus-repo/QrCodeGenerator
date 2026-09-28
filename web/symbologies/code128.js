@@ -209,6 +209,12 @@ export function code128(valor, opcoes = {}) {
      */
     guards: [],
     caption: texto,
+    /*
+     * A legenda do Code 128 e uma linha só, centrada. Nao ha digitos por baixo
+     * de grupos de barras como no EAN, porque o Code 128 pode codificar
+     * qualquer texto e nao ha posicao "certa" para uma letra.
+     */
+    gruposLegenda: [{ texto, inicio: 0, fim: modulos.length }],
     valores: todos,
     verificacao,
     conjunto: forcado ?? conjuntoInicial(texto),

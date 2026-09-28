@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos · ✅ 103 testes · ✅ 9 temas × 3 modos · ✅ encodererificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + 4 simbologias 1D · ✅ 126 testes · ✅ 9 temas × 3 modos · ✅ encodererificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -29,7 +29,7 @@ Instalável como app (PWA): funciona offline depois da primeira visita.
 
 ```bash
 node web/tools/bundle.mjs
-# -> web/dist/qrcode-generator.html   (~116 KB)
+# -> web/dist/qrcode-generator.html   (~157 KB)
 ```
 
 Abre com duplo clique, de `file://`, em qualquer sistema operativo. Dá para
@@ -53,7 +53,9 @@ web/
 ├── qrcode.js             encoder QR (ISO/IEC 18004), sem dependências
 ├── symbologies/
 │   ├── upcean.js         EAN-13, EAN-8, UPC-A
-│   └── code128.js        Code 128, com escolha automática de conjunto
+│   ├── code128.js        Code 128, com escolha automática de conjunto
+│   ├── index.js          registo: validação e altura por simbologia
+│   └── linear.js         desenho em canvas e SVG, com a legenda
 ├── payloads/
 │   ├── types.js          payload e validação dos 11 tipos
 │   ├── pix.js            PIX / BR Code
@@ -71,8 +73,7 @@ web/
 
 ## Simbologias
 
-Não é só QR code. Cada simbologia tem o seu encoder, escrito à mão e sem
-dependências, como o do QR.
+Não é só QR code. O seletor **Formato** tem um grupo 2D e um grupo 1D.
 
 | Simbologia | Ficheiro | Para quê |
 |---|---|---|
@@ -89,6 +90,27 @@ carácter *de cada vez que muda*. Sem isso o código desenha-se perfeito, o leit
 lê, e devolve caracteres completamente errados. Foi o primeiro bug desta fase, e
 só apareceu quando um leitor leu o que o encoder dizia estar certo.
 
+### Por que é que um código de barras não passa pelo caminho do QR
+
+Não é o QR com outros valores. Um código de barras:
+
+- **não tem payload** — tem um valor e uma simbologia, e a validação é da
+  própria simbologia (quantos dígitos, que caracteres);
+- **não tem versão nem correção de erros** — a opção desaparece em vez de
+  ficar visível a fingir;
+- **não tem limite de bytes** — o limite é o número de dígitos;
+- **não é quadrado** — a altura segue a proporção que um leitor de mão aguenta
+  (cerca de 3:1 no EAN, 3:1 a 5:1 no Code 128), e vem de um valor por
+  simbologia, não da largura. Derivar a altura da largura dava um código
+  achatado que ninguém lê.
+
+A legenda também não é uma linha centrada. Os dígitos vão **debaixo das barras
+que os codificam** e as guardas descem entre os grupos, que é como uma etiqueta
+de EAN se parece. Quem decide isso é a simbologia, em `gruposLegenda`, com o
+**intervalo exacto de módulos** — porque o desenho, a tentar adivinhar as
+fronteiras pelas guardas, descobre o centro da guarda central, que é o único
+sítio onde não há dígito nenhum.
+
 ### A regra de entrada
 
 > **Um encoder só entra no repositório depois de o ZXing devolver a string
@@ -103,17 +125,24 @@ dígito na posição errada desenha-se com o aspecto perfeito, e o único sinal 
 leitor dizer outra coisa. Nenhum teste estrutural o apanha — é o mesmo que
 apanhou a máscara 4 do QR, com `x` e `y` trocados.
 
-### O teste
+### Os testes
 
 ```bash
+node --test "web/tests/*.test.mjs"     # inclui tests/linear.test.mjs
 node web/tests/gerar-lineares.mjs         # escreve as matrizes
 python web/tests/descodificar-lineares.py # o ZXing lê e compara
 ```
 
-O gerador corre uma verificação interna antes de gerar imagem (número de
-dígitos, número de módulos, se começa e acaba como deve), e depois o ZXing
-desenha e lê a partir das matrizes que o encoder devolveu. É o mesmo esquema do
-`cross-check.mjs` dos QR, para os lineares.
+`linear.test.mjs` é nível 1: confere as dimensões, o número de barras por módulo
+escuro, que o SVG e o canvas concordam, e que a legenda concatenada dá o número
+completo. `descodificar-lineares.py` é nível 2: desenha e deixa o ZXing ler.
+
+E houve uma verificação a que nenhum dos dois chega, que vale registar: **os PNG
+exportados pelo browser, lidos pelo ZXing.** Foi assim que apareceu o bug da
+legenda cortada — o tipo de letra só sabia crescer, e um texto de 13 dígitos
+saía cortado dos dois lados. Os testes de nível 1 e 2 passavam: o código estava
+correto, a etiqueta é que não se lia. Os quatro PNG exportados pela interface
+agora voltam a número certo.
 
 Nota prática: o `>` do Windows PowerShell 5.1 produz UTF-16, e um JSON escrito
 assim não é lido pelo Python. Por isso o gerador escreve o ficheiro ele próprio e
@@ -225,7 +254,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 ## Testes
 
 ```bash
-# 103 testes: encoder + payloads + temas + os 10 vetores da spec partilhada
+# 126 testes: encoder + payloads + temas + simbologias + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?
@@ -281,6 +310,7 @@ consequentes:
 | Módulos ES | sim, **+** ficheiro único | ESM é limpo mas o Chrome bloqueia `file://`; o ficheiro único cobre esse caso |
 | Tipos de letra | `system-ui` | o que o SO já tem; aspeto nativo em todas as plataformas |
 | Aspeto dos controlos | nativo | o `<select>` desenha a seta do SO; substituir dava aspeto falso em Linux e Android |
+| Formato | QR (2D) e 4 simbologias 1D | um código de barras não é um QR com outros valores: não tem payload, nem versão, nem ECC |
 | Tema | 9 famílias × 3 modos | cada família tem clara e escura; o modo `sistema` segue o SO e muda com ele |
 | Forma vs. cor | dois atributos, `data-theme` e `data-modo` | a forma não tem modo — o Windows 95 escuro é o Windows 95 |
 | Cores dos temas | verificadas, não estimadas | contraste WCAG AA em todos os pares e em todos os pontos dos gradientes, por teste |
