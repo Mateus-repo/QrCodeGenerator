@@ -349,11 +349,38 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       para todas as versões, o que é conservador nos QR grandes. A conta certa é
       em codewords: quantos o bloco aguenta estragar, e não que percentagem de
       área. Deixa o logótipo maior no H sem perder a garantia.
-- [ ] **rMQR Code** — ISO/IEC 23941 (2022). A especificação é **paga** (CHF 204
-      na ISO), mas as tabelas que interessam são públicas: as 32 versões com os
-      seus codewords, os comprimentos do indicador de contagem por versão, a
-      máscara (`(i/2 + j/3) mod 9 = 0`) e a informação de formato. E há
-      implementações abertas da ISO. Viável.
+- [ ] **rMQR Code** — ISO/IEC 23941 (2022), o QR **rectangular**. A especificação
+      é **paga** (CHF 204 na ISO), mas as tabelas não são, e a procura já está
+      feita.
+
+      > **As tabelas estão feitas e verificadas** — `web/symbologies/rmqr-tabelas.js`,
+      > gerado por `web/tests/gerar-tabela-rmqr.py` a partir do **zxing-cpp 3.1.1**,
+      > que é também quem escreve. Três tabelas: os **32 símbolos** com os centros
+      > de alinhamento (que são **só colunas** — é a diferença para o QR) e os
+      > blocos de correcção de M e H; os **bits do indicador de caracteres**, que
+      > são 32 por modo e não três grupos como no QR; e os **tamanhos**, que são
+      > só a soma e servem de nome (`R7x43` = 43 de lado por 7 de alto).
+      >
+      > O gerador verifica o que extrai contra o **ZXing**: para nove textos,
+      > o leitor tem de escolher o símbolo que a tabela diz. Daí sai a
+      > propriedade mais estranha do formato — o mesmo conteúdo pode dar um
+      > símbolo estreito e alto ou largo e baixo, porque quem escolhe é a
+      > **área mínima**, não a ordem.
+      >
+      > **Falta a colocação dos dados.** A geometria dos padrões de função
+      > (`buildFunctionPattern`), a máscara (as 7 do QR) e a informação de
+      > formato (6 bits + 12 de BCH, máscara `0x1FAB2`, com a tabela dos 64
+      > padrões) estão todas localizadas. O que não encontrei em fonte acessível
+      > é a **ordem de preenchimento da grelha num rectângulo** — a espiral em
+      > zigue-zague do QR é quadrada, e num rectângulo muda. Sem isso não há
+      > encoder, e sem encoder estas tabelas não servem para nada.
+      >
+      > **Duas armadilhas já encontradas, para quem voltar a isto:** a imagem que
+      > o `zxingcpp` devolve já traz **2 módulos de zona calma** de cada lado —
+      > medir o SVG sem tirar isso dá `31x15` onde o símbolo é `27x11`, e
+      > `31x15` não está em tabela nenhuma. E o rMQR **recusa** o que não cabe,
+      > com a razão; um código truncado leria sem o último carácter e não
+      > avisaria.
 - [ ] **SQRC (Secret Function Equipped QR Code)** — o contentor é especificado
       pela DENSO (AES-128 em dois segmentos, com o ID da chave no primeiro
       byte), e o browser tem AES no Web Crypto sem dependências.
