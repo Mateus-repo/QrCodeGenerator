@@ -59,6 +59,7 @@ web/.crosscheck/
 web/tests/.lineares.json
 web/tests/.tabelas.json
 web/tests/.frameqr.json
+web/tests/.tabelas-pdf417.json
 web/dist/
 
 ## Editores

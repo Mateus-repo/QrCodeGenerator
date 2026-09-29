@@ -140,9 +140,15 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       parte dos produtos.
 - [ ] **Code 93** — mais compacto e mais seguro que o Code 39. Não é um
       Code 39 melhorado: tem dois dígitos de controlo e uma tabela diferente.
-      O `python-barcode` não o tem, por isso a tabela vem de outra fonte.
+      > **Decisão do utilizador: fica para mais tarde.** Anotado, não
+      > esquecido. O motivo de ficar atrás é o de sempre: o `python-barcode`
+      > não o tem, a tabela vem de outra fonte, e é exactamente aí que já me
+      > Parti com o Code 39 e o ITF. Quando houver uma fonte de referência à
+      > mão, entra com o teste de comparação de tabelas como os outros.
 - [ ] **Code 11** — telecomunicações. Formato antigo, três dígitos de
-      controlo. Precisa da especificação.
+      controlo.
+      > **Decisão do utilizador: fica para mais tarde**, pela mesma razão do
+      > Code 93.
 - [ ] **GS1-128** — não é um encoder novo: é Code 128 com o caractere FNC1 no
       início, para os dados de Application Identifier da GS1 (data de
       validade, lote, quantidade). Barato de fazer; falta decidir que campos
@@ -159,7 +165,25 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
 - [ ] **Data Matrix (ECC200)** — o padrão da indústria farmacêutica,
       aeroespacial e de defesa. Pequeno e quadrado, sem os quadrados grandes
       nos cantos. Reed-Solomon sobre GF(256) e cinco modos de codificação
-      (ASCII, C40, Text, EDIFACT, Base256).
+      (ASCII, C40, Text, EDIFACT, Base256). **A ser o primeiro dos 2D**: é o
+      mais usado, e destrava o GS1 DataMatrix, que é só um wrapper.
+- [ ] **PDF417** — empilhado, e o que se vê no verso de cartas de condução e
+      cartões de embarque. O mais usado dos 2D que faltam a seguir o Data
+      Matrix, e o que a lista tinha esquecido.
+      > **Decisão do utilizador: sim, entra.**
+      >
+      > **A referência está encontrada, e é boa.** A tabela são 3 × 930
+      > padrões de 17 módulos — a maior de quantas este repositório tem — e
+      > escrevê-la de memória seria a terceira vez que isso daria errado. O
+      > pacote `pdf417gen` (Python puro, licença MIT) traz a tabela em forma
+      > legível **e traz o PDF da especificação**, o que dá duas fontes
+      > independentes em vez de uma transcrição.
+      >
+      > E há uma propriedade estrutural que se pode verificar sem consultar
+      > ninguém: um cluster do PDF417 tem 17 módulos em 8 elementos (4 barras
+      > e 4 espaços), e a soma das larguras das barras menos a dos espaços é
+      > 0, 3 ou 6 conforme o cluster é o 0, o 3 ou o 6. Isso é um teste de
+      > nível 0 que valida 2790 entradas de uma vez.
 - [ ] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
       cabeçalho FNC1 em ASCII, para rastreabilidade na saúde e na logística.
 - [ ] **Aztec** — bilhetes de comboio e cartões de embarque. Tem um padrão de
@@ -188,10 +212,35 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       implementações abertas da ISO. Viável.
 - [ ] **SQRC (Secret Function Equipped QR Code)** — o contentor é especificado
       pela DENSO (AES-128 em dois segmentos, com o ID da chave no primeiro
-      byte), e o browser tem AES no Web Crypto sem dependências. **Mas**: quem
-      distribui a chave, e como? Um código "secreto" cuja chave vai no mesmo
-      sítio não é secreto. Falta uma decisão sobre o modelo de chaves antes de
-      valer a pena escrever.
+      byte), e o browser tem AES no Web Crypto sem dependências.
+      > **Decisão do utilizador: a chave é gerida pelo próprio utilizador.**
+      > Ele faz a sua chave secreta, faz o seu QR code, e a partir daí é com
+      > ele. Isto resolve a objecção que eu tinha levantado — e tinha razão
+      > em levantar, porque a alternativa (a chave no mesmo sítio) não é
+      > segredo nenhum.
+      >
+      > **O que isso significa em código, e o que não significa:**
+      >
+      > - A aplicação **gera** a chave (ou deriva-a de uma frase que o
+      >   utilizador escreve) e **encripta** o conteúdo. É local, é Web Crypto,
+      >   nada sai do dispositivo sem o utilizador o pedir.
+      > - A chave **não vai no código**, e a aplicação tem de o dizer com todas
+      >   as letras: quem não tiver a chave não lê. Isto tem de estar na
+      >   interface, não num texto de rodapé.
+      > - Guardar a chave no `localStorage` para não a reescrever é
+      >   opcional e tem de ser uma escolha explícita. Uma chave guardada num
+      >   telemóvel partilhado é uma chave que saiu do aparelho.
+      > - **O aviso que não pode faltar:** sem a chave, o conteúdo está perdido
+      >   para sempre. Não há recuperação e não há segunda tentativa. O botão
+      >   que apaga a chave tem de dizer isso antes de apagar.
+      >
+      > **O que este item não vai poder ter, e é melhor-prometer-agora:** a
+      > verificação por leitor independente. O ZXing lê o QR, mas não
+      > desencripta SQRC — não existe um leitor de SQRC no ar tooling de
+      > testes. O que se pode verificar é que o código se lê, que o texto
+      > cifrado tem a estrutura certa e que o nosso próprio descifrador devolve
+      > o original. A interoperabilidade com um leitor DENSO **não fica
+      > verificada**, e há que o dizer em vez de o deixar parecer que sim.
 
 ### E uma que não é código
 
