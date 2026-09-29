@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      O nome da aplicacao, e nao escrito no manifesto.
+
+      **E' uma lista de uma so vez:** o `android:label` do manifesto e o
+      `android:label` da activity apontam ambos para aqui, e um literal
+      escrito duas vezes diverge em silencio — muda-se o nome da pasta e a
+      activity fica com o antigo.
+    -->
+    <string name="app_name">QrCodeGenerator</string>
+</resources>

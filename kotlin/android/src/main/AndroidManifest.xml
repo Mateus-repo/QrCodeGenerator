@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  O manifesto da fase zero.
+
+  **Não pede a câmara.** A `Scanner.kt` do `README.md` ainda não existe, e pedir
+  uma permissão que nada usa é o pior dos dois mundos: o Android Studio mostra um
+  aviso no manifesto, e a loja mostra um pedido de permissão que a app não
+  justifica. A permissão entra **no mesmo commit que o scanner**, e a razão está
+  escrita no `README.md` para quem a acrescentar antes de tempo.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.QrCodeGenerator">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.QrCodeGenerator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

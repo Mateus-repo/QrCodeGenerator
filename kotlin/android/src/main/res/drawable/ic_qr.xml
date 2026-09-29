@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  O QR do icone, desenhado a mao.
+
+  **E' um QR de 21x21 — versao 1 — e esta aqui para documentar que nao e' um
+  desenho de nada.** A forma dos tres cantos e' a que o ZXing exige para localizar
+  o codigo; o interior e' um padrao, e um padrao desenhado a mao que nao seja um
+  QR valido da um icone que a camara nao le. **O icone do site
+  (`web/tools/gerar-icone.mjs`) e' um QR gerado pelo encoder de verdade**, e este
+  devia ser igual — mas a diferenca e' que o encoder ainda nao existe no
+  `:core`, e por isso que fica anotado em vez de copiado a mao.
+
+  **O que falta quando o encoder existir:** gerar este vector a partir de uma
+  matriz de verdade, como o `gerar-icone.mjs` faz, e nao escrever os modulos a
+  mao. Um icone desenhado a mao e' um segundo encoder sem nenhuma verificacao.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="21"
+    android:viewportHeight="21">
+    <path android:fillColor="#000000" android:pathData="M0,0h7v7h-7z M1,1v5h5v-5z M2,2h3v3h-3z" />
+    <path android:fillColor="#000000" android:pathData="M14,0h7v7h-7z M15,1v5h5v-5z M16,2h3v3h-3z" />
+    <path android:fillColor="#000000" android:pathData="M0,14h7v7h-7z M1,15v5h5v-5z M2,16h3v3h-3z" />
+</vector>

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Um tema que so declara o que o Compose precisa.
+
+      **O `Theme.Material3.DayNight.NoActionBar` e' obrigatorio e nao
+      decorativo:** um tema com barra de accao mete uma barra por cima do
+      `setContent`, e o resultado e' um ecra com duas barras e um espacaco
+      wasting no meio. O Compose desenha a sua barra.
+    -->
+    <style name="Theme.QrCodeGenerator" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

@@ -53,14 +53,115 @@ Onze tipos de payload e o PIX, com `QrCategory` a enumerar os onze e
 — `AGENTS.md` é explícito sobre isso, e este módulo não tem nenhuma das outras
 linguagens como referência.
 
-## O que ainda não está
+## A app: fase zero, e o que ela faz e o que ela não faz
 
-- **O encoder de QR.** O core só constrói payloads; não há código de
-  biblioteca. Sem ele não há nível 2 — a verificação por leitura, que é a que
-  apanha o que nenhum teste estrutural vê.
-- **A app Android.** O `README.md` da pasta tem o plano.
-- **A leitura pela câmara.** O ZXing tem um módulo de Android que a faz
-  nativamente, e é a razão de ser desta plataforma.
+`:app` e' uma aplicacao Android que escolhe um dos onze tipos, mostra os campos
+desse tipo e escreve o **payload**. Nao mostra QR, nao le a camara, nao exporta.
+
+**Nao mostrar o QR e' uma decisao, e nao uma falta.** O encoder ainda nao existe
+no `:core`, e um QR gerado por um segundo caminho dentro da app seria um encoder
+sem nenhuma verificacao por leitura — que e' o que a `AGENTS.md` diz que nunca
+entra no repositorio. O que o `:core` sabe garantir e' o payload, e a app mostra
+isso.
+
+### Os onze tipos vem do `enum`, e isso e' a verificacao
+
+O selector e' um `for (c in QrCategory.entries)` e os campos sao um `when`
+**exaustivo, sem `else`**. Um tipo novo da um erro de compilacao, e nao um ecra
+vazio. E' a resposta ao modo de falha que a `AGENTS.md` descreve do GS1-128: onze
+listas de campos escritas a mao teriam onze sitios para um tipo aparecer num e
+noutro, e o sintoma e' um registo sem entrada — invisivel.
+
+## Os dois bugs que so o teste no dispositivo apanhou
+
+Nenhum dos dois apanha um teste, porque **nenhum dos dois e' um bug de payload**.
+Sao bugs de estado, e o payload esta certo em todo o momento — que e' o que os
+faz tao dificeis de ver.
+
+**O `QrFields` era uma classe normal com `var`, e o Compose re-renderiza por
+identidade.** `f.url = "x"` nao cria um objecto novo, o `mutableStateOf` nao ve
+nada, o `OutlinedTextField` fica com `""` para sempre e o teclado e' recusado. **A
+app arrancava, nao rebentava, e a mensagem de validacao aparecia** — parecia que
+funcionava. O sintoma e' que o campo aceita o foco, o teclado sobe, e nao entra
+um unico caracter. So se descobre a escrever. A correccao e' `data class`, para o
+`copy()` criar a identidade nova — e a razao esta escrita no `QrFields` com a
+magnitude do problema, porque nao ha nada que impeca alguem de o voltar a
+transformar numa classe normal.
+
+**O `editar` partia de um `QrFields()` novo em vez de uma copia.** Cada tecla
+cria um objecto com **um** campo preenchido e apaga todos os outros. No `link`
+nunca se viu, porque ha um campo so; no PIX, cada tecla limpava a chave e o nome
+e so o ultimo campo escrito sobrevivia. **Uma app que aceita texto e o perde a
+seguir nao da erro, nao rebenta, e o sintoma e' "a app nao guarda nada"** — que
+e' o que se descobre a preencher um formulario a serio, e nao a olhar para ele.
+
+**A regra que sai disto, e que vale para as outras stacks:** um bug de estado
+nao aparece em nenhum teste que verifique saida, e **uma app que arranca e mostra
+a mensagem certa pode nao fazer nada**. A verificacao que apanhou os dois foi
+escrever num campo e ver o que fica — que e' a razao de o nivel 3 existir no
+site mesmo com o encoder certo, e de nenhum teste de estructura substituir a
+leitura.
+
+## O que foi verificado, e o que nao foi
+
+**Verificado:**
+
+- `gradlew :app:assembleDebug` produz um APK de 9,5 MB, com manifesto, sete
+  `.dex` e `resources.arsc`.
+- Instalado no emulador (`android-37.2`, AVD `Medium_Phone`), lancado, **sem
+  nenhuma excepcao** no `logcat`.
+- Os onze tipos aparecem no selector e cada um desenha os seus campos.
+- Escrever `exemplo.pt` no `link` produz `https://exemplo.pt` — **18
+  caracteres, que e' exactamente o que a spec diz** para `link_sem_esquema`.
+- As mensagens de validacao vem do `:core` e sao as mesmas que as outras cinco
+  stacks mostram: *"Indica um link."*, *"Indica a chave PIX."*, *"CPF/CNPJ
+  invalido (os digitos verificadores nao conferem)."*
+- Com a correccao do `copy()`, os tres campos do PIX **mantem o texto em
+  simultaneo**.
+
+**Nao verificado:** escrever uma chave de PIX **valida** no dispositivo e ver os
+122 bytes do TLV. A automacao por `adb` e' que nao chega la — o `input text` come
+os hifens do UUID e os *backspaces* so apagam para tras do cursor, e o que chegou
+ao campo foi um fragmento de 38 digitos, que a app recusou com a mensagem certa.
+**A logica do PIX esta verificada por dez vectores da spec no mesmo codigo que a
+app chama**; o que falta e' a prova de que o dedo de uma pessoa chega ao teclado
+certo, e essa prova e' uma instrumented test ou um dedo.
+
+## Duas coisas que o tooling obriga a saber, e que a documentacao nao diz
+
+**O `kotlin("android")` ja nao existe no AGP 9.** Desde o 9.0 o suporte do
+Kotlin vem integrado, e declara-lo e' um erro que diz exactamente isso. O do
+Compose fica, e e' separado.
+
+**O `google()` tem de estar em `pluginManagement`, e nao so em `allprojects`.**
+Um resolve *plugins* e o outro resolve *dependencias*, e sem o primeiro a falha
+e' `Plugin [id: 'com.android.application', version: '9.4.1', apply: false] was
+not found` seguida de uma lista de repositorios onde o `google()` nao esta. **A
+lista de "onde procurou" e' a pista**, e a mensagem principal nao e'.
+
+## Gradle, AGP e Kotlin: as versoes que ficam
+
+| | | |
+|---|---|---|
+| Gradle | 9.8.0 | pelo wrapper, em `gradle/wrapper/` |
+| AGP | 9.4.1 | exige Gradle 9.1+ |
+| Kotlin | 2.4.20 | **uma so versao para os dois modulos** |
+| Compose | `kotlin("plugin.compose")` | o compilador do Compose, que tem de casar com o do Kotlin |
+| `compileSdk` | 36 | e nao `android-37.0`, que e' uma previa |
+| `minSdk` | 26 | pelo `java.time`, que so existe como API no 26 |
+
+## O que ainda nao esta
+
+- **O encoder de QR.** Sem ele nao ha nivel 2 — a verificacao por leitura, que
+  e' a que apanha o que nenhum teste estrutural ve. E' a peca que falta, e e' do
+  `:core`.
+- **A leitura pela camara**, e a permissao que vai com ela. O `README.md` de
+  `android/` tem o plano, e a permissao entra **no mesmo commit que o scanner**:
+  pedir uma permissao que nada usa e' o pior dos dois mundos.
+- **A app em si esta em fase zero** — sem QR, sem exportacao, sem partilhar.
+- **A decisao de BLOQUEIO 4**: conta de Play Store ou APK sideload. Muda a
+  assinatura e o keystore, e o `build.gradle.kts` nao tem assinatura de release
+  por causa disso.
 
 ## Os quatro bugs que os vectores apanharam ao escrever isto
 
