@@ -68,8 +68,13 @@ const DO_HTML = [...SELECTOR.matchAll(/<option value="([^"]+)"/g)].map((m) => m[
  * **O proximo formato que aparecer tem de ser posto aqui**, ou o teste diz a
  * verdade e alguem vai corrigir no sitio errado - que e' o registo dos lineares,
  * e que passaria a conter um Data Matrix.
+ *
+ * O **SQRC** entra aqui pelo mesmo motivo: e' um QR com o conteudo cifrado, e o
+ * desenho e' o do QR - nao tem valor de codigo de barras, nao tem validacao de
+ * digitos, e nao tem altura de barra. Punha-lo no registo dos lineares seria
+ * meter um QR la dentro, e o registo nao e' para isso.
  */
-const FORA_DO_REGISTO = new Set(['qr', 'pdf417', 'datamatrix', 'gs1-datamatrix']);
+const FORA_DO_REGISTO = new Set(['qr', 'pdf417', 'datamatrix', 'gs1-datamatrix', 'sqrc']);
 
 /**
  * Os formatos que vivem no selector mas **nao** no registo dos lineares.

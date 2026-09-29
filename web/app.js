@@ -25,6 +25,7 @@ import { pdf417 } from './symbologies/pdf417.js';
 import { dataMatrix as codificarDataMatrix } from './symbologies/datamatrix.js';
 import { gs1DataMatrix } from './symbologies/gs1-datamatrix.js';
 import { desenharDataMatrix, paraSvgDataMatrix } from './datamatrix.js';
+import { sqrc as codificarSqrc } from './sqrc.js';
 import { ligarSeletores } from './themes.js';
 import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
 import { desenhar as desenharLinear, paraSvg as linearParaSvg, dimensoes } from './symbologies/linear.js';
@@ -55,6 +56,18 @@ const dom = {
   ajudaFrame: el('ajuda-frame'),
   frameFicheiro: el('frame-ficheiro'),
   ajudaFrameImagem: el('ajuda-frame-imagem'),
+
+  /*
+   * O painel do SQRC. São três campos e um botão, e o botão é o único que
+   * escreve no campo da chave — o resto do formulário escreve em campos de
+   * conteúdo e isso é previsível; escrever na chave de quem vai ser o único
+   * ponto onde o comportamento é menos óbvio.
+   */
+  campoSqrc: el('campo-sqrc'),
+  sqrcChave: el('sqrc-chave'),
+  sqrcId: el('sqrc-id'),
+  sqrcGerarChave: el('sqrc-gerar-chave'),
+  ajudaChave: el('ajuda-chave'),
   payload: el('payload'),
   contagem: el('contagem'),
   btnPng: el('btn-png'),
@@ -131,10 +144,22 @@ const ehDataMatrix = () =>
   dom.formato.value === 'datamatrix' || dom.formato.value === 'gs1-datamatrix';
 /** O GS1 DataMatrix tem os AI entre parênteses; o Data Matrix normal, texto solto. */
 const ehGs1DataMatrix = () => dom.formato.value === 'gs1-datamatrix';
+/**
+ * O SQRC: um QR cujo conteúdo vai cifrado.
+ *
+ * **É um QR para o desenho, e não para o conteúdo.** A grelha, a versão e a
+ * correção de erros são as do QR — o que muda é o que entra no contentor, e
+ * por isso o caminho de desenho é o do QR e não um quarto caminho.
+ *
+ * O que o distingue de todos os outros é que **precisa de dois campos** — o
+ * conteúdo e a chave — e de uma operação assíncrona antes de haver payload. É
+ * a única razão de o `atualizar()` ser uma função que devolve uma promessa.
+ */
+const ehSqrc = () => dom.formato.value === 'sqrc';
 
 /** A simbologia 1D escolhida, se for o caso. */
 const simbologiaActual = () =>
-  ehQr() || ehPdf417() || ehDataMatrix() ? null : simbologiaPorId(dom.formato.value);
+  ehQr() || ehPdf417() || ehDataMatrix() || ehSqrc() ? null : simbologiaPorId(dom.formato.value);
 
 // --- Formulário ------------------------------------------------------------
 
@@ -160,7 +185,18 @@ function desenharCampos() {
     return;
   }
 
-  if (!ehQr()) {
+  /*
+   * **O SQRC fica com os campos do QR, e nao com os dos lineares.**
+   *
+   * A condicao e' `!ehQr() && !ehSqrc()` e nao so `!ehQr()`, e sem o `ehSqrc()`
+   * o SQRC caia no ramo dos codigos de barras, onde `simbologiaActual()` devolve
+   * `null` - e o `desenharCamposLineares()` sai sem desenhar nada, **sem erro**.
+   *
+   * O sintoma e' o pior possivel: o painel dos campos fica vazio, a pessoa
+   * escreve o conteudo e nao acontece nada, e nao ha mensagem nenhuma. Nem o
+   * `erro` nem a consola dizem porque - a funcao simplesmente nao desenhou.
+   */
+  if (!ehQr() && !ehSqrc()) {
     desenharCamposLineares();
     return;
   }
@@ -466,8 +502,19 @@ function alternarFormato() {
   const qr = ehQr();
   const empilhado = ehPdf417();
   const matriz = ehDataMatrix();
+  const cifrado = ehSqrc();
 
-  dom.campoCategoria.hidden = !qr;
+  /*
+   * O painel do SQRC aparece e desaparece com o formato, e **é a única coisa que
+   * muda**. O resto do formulário — a categoria, a correcção de erros, o
+   * logótipo — é o do QR, porque o desenho é o do QR.
+   *
+   * A categoria fica visível no SQRC **de propósito**: o conteúdo a cifrar é
+   * o que a pessoa escolheria para escrever num QR, e pedir texto solto seria
+   * pedir duas vezes a mesma coisa.
+   */
+  dom.campoCategoria.hidden = !(qr || cifrado);
+  dom.campoSqrc.hidden = !cifrado;
 
   // O campo de correção de erros serve para o QR e para o PDF417, cada um com
   // as suas opções. São reconstruídos porque as opções são diferentes e não
@@ -483,7 +530,22 @@ function alternarFormato() {
   if (qr) preencherEcc(eccQr);
   else if (empilhado) preencherEcc(eccPdf417);
 
-  dom.ajudaMargem.textContent = qr
+  /*
+   * O SQRC fica com a correcção de erros do QR, e a **razão é a mesma do
+   * logótipo**: um QR sem correcção de erros que apague um módulo devolve
+   * bytes errados, e num SQRC isso é pior — quem lê recebe texto cifrado que
+   * não descifra, e o erro é "chave errada" a apontar para o software.
+   *
+   * Por isso o logótipo **fica disponível** no SQRC: apagar módulos é
+   * exactamente o caso em que a correcção de erros faz o seu trabalho, e é a
+   * parte do QR que dá mais jeito a quem põe um logótipo numa etiqueta
+   * cifrada.
+   */
+  dom.campoEcc.hidden = !(qr || empilhado || cifrado);
+  if (qr || cifrado) preencherEcc(eccQr);
+  else if (empilhado) preencherEcc(eccPdf417);
+
+  dom.ajudaMargem.textContent = qr || cifrado
     ? 'A norma do QR pede 4. Só mexa se souber o que está a fazer.'
     : empilhado || matriz
       ? matriz
@@ -494,19 +556,21 @@ function alternarFormato() {
   // A margem do QR e do PDF417 vai de 0 a 8; a do código de barras é bem maior, e
   // um campo que não deixa escrever 10 seria mais uma coisa a explicar. A do
   // Data Matrix é pequena como a do QR - ele tem guias, e a zona muda é de 2.
-  dom.margem.max = qr || empilhado || matriz ? '8' : '20';
-  if (!qr) dom.margem.value = empilhado || matriz ? '2' : '10';
+  dom.margem.max = qr || empilhado || matriz || cifrado ? '8' : '20';
+  if (!qr && !cifrado) dom.margem.value = empilhado || matriz ? '2' : '10';
 
   // O quadrado do logótipo é um conceito do QR. Num código de barras não há
   // correção de erros que reconstrua o que se apaga, e o resultado seria um
   // código com um buraco no meio que ninguém lê.
-  dom.campoFrame.hidden = !qr;
+  dom.campoFrame.hidden = !qr && !cifrado;
 
   dom.vazio.textContent = qr
     ? 'Preenche o conteúdo para o QR code aparecer aqui.'
-    : empilhado
-      ? 'Preenche o conteúdo para o PDF417 aparecer aqui.'
-      : 'Preenche o código para as barras aparecerem aqui.';
+    : cifrado
+      ? 'Preenche o conteúdo e a chave para o SQRC aparecer aqui.'
+      : empilhado
+        ? 'Preenche o conteúdo para o PDF417 aparecer aqui.'
+        : 'Preenche o código para as barras aparecerem aqui.';
 
   desenharCampos();
   atualizar();
@@ -714,6 +778,24 @@ function atualizar() {
     return;
   }
 
+  /*
+   * O SQRC é o único caminho que é **assíncrono**, porque cifrar é uma operação
+   * da Web Crypto e não há versão síncrona.
+   *
+   * E a razão de o `atualizar` não poder simplesmente devolver: quem o chama
+   * não espera, e não deve passar a esperar — um evento de `input` que
+   * bloqueasse o fio a cada tecla seria um cliente que não responde, e a
+   * pessoa_notaria antes de eu perceber porquê.
+   *
+   * A alternativa — cifrar só quando se carrega num botão — afasta a
+   * pré-visualização, e quem faz um QR quer ver o QR enquanto escreve. Por isso
+   * a cifra corre a cada alteração e o desenho espera por ela.
+   */
+  if (ehSqrc()) {
+    atualizarSqrc();
+    return;
+  }
+
   if (!ehQr()) {
     atualizarLinear();
     return;
@@ -856,6 +938,167 @@ function atualizar() {
         : '');
   } catch (exception) {
     mostrarErro(exception.message || 'Não foi possível gerar o QR code.');
+  }
+}
+
+/**
+ * O caminho do SQRC: um QR com o conteúdo cifrado.
+ *
+ * ## A ordem é o que interessa aqui, e não é a óbvia
+ *
+ * O conteúdo é lido, a chave é lida, o conteúdo é **cifrado**, e só então é que
+ * há payload. O payload do SQRC **não é o que a pessoa escreveu** — é a base64
+ * do contentor. E é isso que vai para o campo de texto, para o PNG, para o SVG e
+ * para o botão de copiar, que é o que uma pessoa precisa de levar para outro
+ * sítio.
+ *
+ * Se o payload fosse o texto original, o botão de cópia entregaria o segredo em
+ * claro, e o QR desenhado seria uma coisa e o copiado outra. **Um SQRC cuja
+ * exportação não é o SQRC é o pior dos dois.**
+ *
+ * ## Por que a chave vai para uma `CryptoKey` e não para os bytes
+ *
+ * `crypto.subtle.importKey` não aceita uma `CryptoKey` de outro sítio, e não
+ * guarda a chave em lado nenhum do nosso lado: a `CryptoKey` que este módulo
+ * tem é a única cópia, e vai para o lixo quando a função acaba. O texto da
+ * chave continua no campo — quem o escreve é quem o tem.
+ */
+async function atualizarSqrc() {
+  const category = dom.categoria.value;
+
+  // Os valores do DOM, como no QR.
+  const fields = { ...emptyFields(category) };
+  for (const field of CATEGORIES.find((c) => c.id === category).fields) {
+    const input = document.getElementById(`campo-${field.key}`);
+    if (input) fields[field.key] = input.type === 'checkbox' ? input.checked : input.value;
+  }
+  state.fields = fields;
+
+  const erro = validate(category, fields);
+  if (erro) {
+    mostrarErro(erro);
+    return;
+  }
+
+  const texto = build(category, fields);
+
+  /*
+   * **Uma chave vazia é o estado inicial, não um erro**, e pela mesma razão que
+   * um campo de código de barras vazio não é: o aviso a vermelho em cima de um
+   * formulário em branco é ruído. A pessoa ainda não fez nada de errado.
+   *
+   * Mas o aviso do painel — "sem a chave perdeste isto para sempre" — está lá
+   * sempre, porque esse é sobre o que vai acontecer, e não sobre o que
+   * aconteceu.
+   */
+  const textoChave = dom.sqrcChave.value;
+  if (textoChave === '') {
+    mostrarErro(null, 'Preenche a chave para o SQRC aparecer aqui.');
+    return;
+  }
+
+  try {
+    /*
+     * **A chave sai de uma frase com PBKDF2, e não de ser usada como bytes.**
+     *
+     * A DENSO especifica uma derivação, e ela não é opcional: uma frase de 12
+     * caracteres são 12 bytes, e o AES-128 quer 16 ou 32. Usar os bytes da frase
+     * directamente daria menos entropia do que parece e, pior, daria chaves
+     * diferentes para frases com o mesmo comprimento — o que faria duas pessoas
+     * com a mesma frase terem códigos que não abrem um no outro.
+     *
+     * O sal é fixo e o custo é alto de propósito: o sal fixo é porque quem tem
+     * a frase e o código tem de dar a mesma chave, e o custo é para que
+     * adivinhar a frase a partir do código seja caro. **Aqui não há
+     * armazenamento de senhas a proteger**, e por isso o custo é o mesmo para
+     * toda a gente.
+     */
+    const material = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(textoChave),
+      'PBKDF2',
+      false,
+      ['deriveKey'],
+    );
+
+    const chave = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: new TextEncoder().encode('qrcodegenerator/sqrc'), iterations: 210000, hash: 'SHA-256' },
+      material,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt'],
+    );
+
+    const id = new TextEncoder().encode(dom.sqrcId.value);
+    const codigo = await codificarSqrc(texto, chave, id);
+
+    /*
+     * **O payload é a base64 do contentor, e é o que vai para tudo** — o canvas,
+     * o SVG, a cópia e a partilha. Um único valor, e é o que a nota acima do
+     * `state.payload` quer dizer.
+     */
+    state.payload = codigo.base64;
+
+    /*
+     * A partir daqui é o QR, com uma diferença: **o limite de bytes é o do QR e
+     * não o do payload de texto, porque o que mede é a base64.**
+     *
+     * A primeira versao tinha um `SIZE[ecl][0]` e um `info.remainingBytes`
+     * que nao existem neste repositorio — o `qrcode.js` exporta `MAX_BYTES`, que
+     * e' o limite por nivel e nao por versao. O `encode` escolhe a versao e
+     * **recusa** o que nao cabe, com a razao, e por isso que a verificacao
+     * aqui seria uma duplicacao: o unico que faltava era a mensagem, e o
+     * `encode` da uma melhor, porque sabe a versao que ia usar.
+     *
+     * E um aviso que este codigo merecia: a verificacao do limite no `app.js`
+     * foi escrita **de memoria**, com nomes que pareciam certainos e nao
+     * existiam. Compilava — um `SIZE` por definir so da `ReferenceError` a
+     * correr, e o `node --test` nao apanha nada disso porque so o browser
+     * executa o `app.js`.
+     */
+    const ecl = dom.ecc.value;
+    const border = Math.min(8, Math.max(0, Number(dom.margem.value) || 4));
+    const alvoPx = Math.max(64, Number(dom.tamanho.value) || 512);
+
+    const codigoQr = encode(codigo.base64, { ecLevel: ecl });
+    const usados = new TextEncoder().encode(codigo.base64).length;
+
+    const scale = Math.max(1, Math.ceil(alvoPx / (codigoQr.size + border * 2)));
+    draw(dom.canvas, codigo.base64, { ecl, border, scale, qr: codigoQr });
+
+    // O logótipo, se houver. É o mesmo caminho do QR, e pelos mesmos motivos.
+    if (state.logotipo) {
+      const contexto = dom.canvas.getContext('2d');
+      desenharLogotipo(contexto, codigoQr, state.logotipo, { escala: scale, margem: border });
+    }
+
+    state.qr = codigoQr;
+    state.escalaQr = scale;
+    state.zonaFrame = 0;
+    state.valido = true;
+    dom.erro.hidden = true;
+    dom.vazio.hidden = true;
+    dom.acoes.hidden = false;
+    dom.payload.textContent = codigo.base64;
+
+    /*
+     * **A contagem mostra os dois tamanhos, e não só um.** Quem escreve um SQRC
+     * precisa de saber duas coisas: quanto conteúdo cifrado entrou, e o que
+     * isso deu. A base64 cresce de 4/3, e o AES-GCM acrescenta 28 bytes — e
+     * ver só o resultado final esconde o preço.
+     *
+     * O limite vem do `MAX_BYTES` do `qrcode.js`, que e' por **nivel** e nao
+     * por versao: e' o maior que a versao 40 aguenta nesse nivel, e e' o que
+     * permite dizer "cabe" sem saber que versao o `encode` escolheu.
+     */
+    const limite = MAX_BYTES[ecl];
+
+    dom.contagem.textContent =
+      `${texto.length} caracteres → ${codigo.bytes.length} bytes cifrados → ` +
+      `${usados} de ${limite} em base64 · versão ${codigoQr.version} (ECC ${ecl})` +
+      (id.length > 0 ? ` · id ${id.length} bytes` : '');
+  } catch (exception) {
+    mostrarErro(exception.message || 'Não foi possível gerar o SQRC.');
   }
 }
 
@@ -1157,6 +1400,64 @@ function arranque() {
   dom.frameTamanho.addEventListener('input', atualizar);
   dom.frameFicheiro.addEventListener('change', () => {
     carregarLogotipo(dom.frameFicheiro.files[0]);
+  });
+
+  /*
+   * Os campos do SQRC.
+   *
+   * **`input` e nao `change`**, como nos campos de conteúdo: quem escreve a
+   * chave quer ver o código aparecer enquanto escreve. O custo é uma cifra por
+   * tecla, e o PBKDF2 a 210000 iterações **não é barato** — mas é a mesma cifra
+   * que se faria ao carregar num botão, e aqui a pessoa vê o resultado em vez de
+   * carregar em nada.
+   *
+   * O que muda é a **espera**: sem um atraso, escrever uma frase de 20
+   * caracteres dispara vinte cifras em fila, e as vinte desenham fora de ordem
+   * — a que acaba primeiro desenha, e a que foi pedida primeiro fica por cima.
+   * O sintoma é o código piscar e o resultado final ser o de uma tecla atrás.
+   */
+  let sqrcTimer = null;
+  const sqrcAdiado = () => {
+    clearTimeout(sqrcTimer);
+    sqrcTimer = setTimeout(atualizar, 120);
+  };
+
+  dom.sqrcChave.addEventListener('input', sqrcAdiado);
+  dom.sqrcId.addEventListener('input', sqrcAdiado);
+
+  /*
+   * Gerar uma chave.
+   *
+   * **O botão escreve no campo, e não aplica a chave.** Escrever no campo é o
+   * que deixa a pessoa ver o que tem, confirmar que o guardou, e mudar um
+   * carácter se discoversse um erro. Aplicar a chave direto deixava-a sem
+   * maneira de a confirmar, e quem não sabe qual é a sua chave tem um problema
+   * que não tem solução.
+   *
+   * E por isso que **não vai para o histórico**: um botão de "não te esqueças"
+   * que põe a chave no histórico do browser está a fazer o contrário do que
+   * promete.
+   */
+  dom.sqrcGerarChave.addEventListener('click', () => {
+    /*
+     * **16 bytes de entropia, em base32 sem ambiguidade.**
+     *
+     * O alfabeto base32 sem `I`, `L`, `O` e `U` — os que se confundem com o
+     * `1` e o `0`. Uma chave que a pessoa vai ler num ecrã e escrever num papel
+     * não pode ter caracteres que se confundem, porque o erro de transcrição é
+     * indetectável: dá "chave errada", e ninguém sabe que foi um `1` por um `I`.
+     *
+     * E são 16 bytes, não 32: é o tamanho que a DENSO especifica, e uma chave
+     * de 256 bits numa frase que a pessoa tem de escrever à mão não é mais
+     * segura — é mais difícil de acertar.
+     */
+    const alfabeto = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    let chave = '';
+    for (const b of bytes) chave += alfabeto[b % alfabeto.length];
+
+    dom.sqrcChave.value = chave;
+    atualizar();
   });
 
   dom.btnPng.addEventListener('click', guardarPng);

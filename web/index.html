@@ -79,6 +79,7 @@
               <option value="pdf417">PDF417 (empilhado)</option>
               <option value="datamatrix">Data Matrix</option>
               <option value="gs1-datamatrix">GS1 DataMatrix</option>
+              <option value="sqrc">SQRC (conteúdo cifrado)</option>
             </optgroup>
             <optgroup label="LINEAR (1D)">
               <option value="ean13">EAN-13</option>
@@ -185,6 +186,54 @@
               Sem ficheiro, fica só o quadrado apagado — que é o que o
               FieldQR está feito para: os dados dentro dele são reconstruídos
               pela correcção de erros.
+            </p>
+          </div>
+
+          <!--
+            O painel do SQRC.
+
+            **O aviso de baixo não é um extra, é a parte de que o utilizador mais
+            precisa**, e é a razão de o SQRC ser uma decisão e não uma
+            functionality. A chave vive com a pessoa: sem ela o conteúdo está
+            perdido para sempre, não escondido. Um produto que guardasse a chave
+            no servidor poderia sempre mostrar o conteúdo a alguém, e esse é o
+            poder que aqui não existe.
+
+            Por isso o aviso está no ecrã, e não num texto de rodapé, e por isso
+            o botão de gerar não apaga nada: a chave sai do campo quando a pessoa
+            a apaga, e quem a apaga é quem decide.
+          -->
+          <div class="campo" id="campo-sqrc">
+            <p class="aviso-sqrc">
+              <strong>A chave é tua e só tua.</strong> Sem a chave, este conteúdo
+              está perdido para sempre — não há recuperação e não há segunda
+              tentativa. A chave não é guardada em lado nenhum: nem no servidor,
+              nem neste dispositivo, nem no histórico do browser. Sai do campo
+              abaixo quando sais desta página, e é por isso.
+            </p>
+
+            <label for="sqrc-chave">A tua chave</label>
+            <textarea
+              id="sqrc-chave"
+              rows="2"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="escreve a tua chave aqui, ou deixa o botão gerar uma"
+            ></textarea>
+            <p class="ajuda" id="ajuda-chave">
+              Qualquer texto serve. A mesma chave tem de ler o código — uma
+              diferença de um carácter, e o código não abre.
+            </p>
+            <button type="button" id="sqrc-gerar-chave" class="botao-secundario">
+              Gerar uma chave aleatória
+            </button>
+
+            <label for="sqrc-id" class="sub-etiqueta">Identificador da chave (opcional)</label>
+            <input id="sqrc-id" type="text" autocomplete="off" placeholder="ex.: armazem-A/2026" />
+            <p class="ajuda">
+              Para ter vários SQRC com chaves diferentes no mesmo sítio, e saber
+              de que chave é cada um sem abrir nenhum. Os bytes deste campo vão
+              no código, e quem o ler vê-os — não é segredo.
             </p>
           </div>
         </details>

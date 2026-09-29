@@ -59,6 +59,7 @@ const RECURSOS = [
   './app.js',
   './qrcode.js',
   './frameqr.js',
+  './sqrc.js',
   './datamatrix.js',
   './themes.js',
   './payloads/types.js',

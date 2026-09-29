@@ -444,6 +444,52 @@ canvas {
   font-size: 0.9rem;
 }
 
+/*
+ * O aviso do SQRC.
+ *
+ * **Nao e' um `.erro`, e a diferenca e' a raza de existir.** Um `.erro` e' uma
+ * coisa que correu mal e que a pessoa pode corrigir. Isto e' uma condicao de uso
+ * que vai estar sempre la enquanto o formato estiver escolhido, e que nao se
+ * resolve: e' o preco de usar SQRC.
+ *
+ * Por isso nao e' vermelho. Um aviso vermelho que nunca desaparece e' um erro
+ * que a pessoa se habitua a ignorar, e a razao de o aviso ter de se ler e' a
+ * mesma de o botão de gerar dizer o que vai acontecer.
+ *
+ * Usa as cores de fundo e de texto do painel, com uma borda a mais, para ficar
+ * visivel sem gritar.
+ */
+.aviso-sqrc {
+  margin: 0 0 0.9rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--campo-fundo);
+  border: var(--borda-largura) solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.aviso-sqrc strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+/*
+ * O botao de gerar a chave.
+ *
+ * **Nao e' o botao principal, e a razao e' o mesmo aviso.** Gerar uma chave e'
+ * um atalho; a pessoa pode escrever a sua, e quem sabe o que esta a fazer
+ * prefere. Um botao com o mesmo aspecto do de gerar o QR diria "esta e' a via
+ * recomendada", e nao e'.
+ */
+.botao-secundario {
+  margin-top: 0.5rem;
+  min-height: auto;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  background: transparent;
+}
+
 /* Botões */
 
 .acoes {

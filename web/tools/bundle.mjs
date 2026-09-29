@@ -43,6 +43,7 @@ const MODULES = [
   'qrcode.js',
   'frameqr.js',
   'datamatrix.js',
+  'sqrc.js',
   'symbologies/upcean.js',
   'symbologies/code128.js',
   'symbologies/code39.js',
@@ -113,7 +114,23 @@ const STYLESHEETS = ['styles.css', 'themes.css'];
  */
 const IMPORT_RE = /^import\s*\{([^}]*)\}\s*from\s*'([^']+)';?\s*$/gm;
 const REEXPORT_RE = /^export\s*\{([^}]*)\}\s*from\s*'([^']+)';?\s*$/gm;
-const NAMESPACE_RE = /^export\s+(function|const|let|class)\s+(\w+)/gm;
+/**
+ * `export function`, `export const` e companhia.
+ *
+ * **O `async` faz parte do padrao, e a primeira versao esquecia-se dele.** Com
+ * `(function|const|let|class)`, um `export async function sqrc(...)` nao era
+ * reconhecido: o `export` e o `async` ficavam no corpo do IIFE e o `async`
+ * aparecia no ficheiro gerado como `async function` sem exportacao nenhuma.
+ *
+ * O sintoma e' um `SyntaxError: Unexpected identifier` a meio do ficheiro, numa
+ * linha a mais de mil, sem nada que aponte para a origem — que e' um
+ * `export async` num modulo de um `import` de um ficheiro que ninguem abre
+ * durante o desenvolvimento.
+ *
+ * O mesmo vale para `export class`, que e' outra forma de declaracao que este
+ * repositorio usa e que o padrao ja cobria.
+ */
+const NAMESPACE_RE = /^export\s+(async\s+function|function|const|let|class)\s+(\w+)/gm;
 
 /**
  * `export { a as b };` — a lista de exportação sem `from`.
