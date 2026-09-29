@@ -412,6 +412,26 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > cifrado tem a estrutura certa e que o nosso próprio descifrador devolve
       > o original. A interoperabilidade com um leitor DENSO **não fica
       > verificada**, e há que o dizer em vez de o deixar parecer que sim.
+      >
+      > **A cifra está feita** — `web/sqrc.js`, com AES-GCM na Web Crypto e sem
+      > dependências. Sete casos vão de ponta a ponta pelo ZXing com os bytes
+      > intactos, e o round-trip do descifrador está verificado com acentos,
+      > emoji, CJK e conteúdo vazio.
+      >
+      > **E a propriedade que substitui a leitura de SQRC é mais forte do que
+      > parecia, e valeu a pena descobrir.** Não se descifra — mas o ZXing tem de
+      > devolver **exactamente** a base64 que lhe foi dada, e um byte a mais ou a
+      > menos **não dá erro nenhum**: o QR desenha-se, lê-se, e parece estar
+      > tudo bem. A falha só apareceria a quem tentasse descifrar, com o erro de
+      > "chave errada" — a apontar para o software e não para o código. Por isso
+      > o nível 2 compara a base64 caractere a caractere, e não texto: o
+      > atributo `text` do ZXing **assume ISO-8859-1 sem ECI**, que num
+      > formato binário dá sempre o resultado errado.
+      >
+      > **Falta a interface.** O módulo existe e está testado, mas **não está
+      > ligado ao cliente** — o aviso de "sem a chave perdeste isto para sempre"
+      > ainda não está em lado nenhum do ecrã, e é a parte de que o utilizador
+      > mais precisa.
 
 ### E uma que não é código
 
