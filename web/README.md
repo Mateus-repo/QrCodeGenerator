@@ -5,13 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ⚠️ 11 tipos de QR + FrameQR (incompleto) + PDF417 + Data Matrix + 7 simbologias 1D · ✅ 171 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
-
-> **O FrameQR está pela metade.** O cursor que escolhe o tamanho do quadrado
-> existe e está verificado; **meter a imagem dentro não existe**. Não há upload,
-> e logo não há limite de píxeis nem o aviso que o acompanha. É a diferença
-> entre um logótipo e um buraco, e está escrito na secção do FrameQR do
-> [`../docs/TODO.md`](../docs/TODO.md).
+**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 7 simbologias 1D · ✅ 171 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -92,6 +86,7 @@ Não é só QR code. O seletor **Formato** tem um grupo 2D e um grupo 1D.
 |---|---|---|
 | QR Code | `qrcode.js` | o de sempre, versões 1–40 |
 | Data Matrix | `symbologies/datamatrix.js` | etiquetas de ampola, chip, peça |
+| FrameQR | `frameqr.js` | QR com uma imagem no meio, e o limite em píxeis que ela deve ter |
 | EAN-13 | `symbologies/upcean.js` | produto de supermercado |
 | EAN-8 | `symbologies/upcean.js` | embalagens pequenas |
 | UPC-A | `symbologies/upcean.js` | o equivalente norte-americano do EAN-13 |

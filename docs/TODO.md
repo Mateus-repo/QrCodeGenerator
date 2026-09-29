@@ -263,38 +263,30 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       apagados. Tem 12 testes de estrutura e os **oito logótipos que a aplicação
       recomenda foram lidos por leitor independente** — mais o PNG que o browser
       exportou.
-      > **Está pela metade, e a falta é a óbvia.** O que existe é o cursor que
-      > escolhe o tamanho do quadrado. Não há forma de meter uma imagem lá
-      > dentro, e um cursor sozinho não faz um logótipo — faz um buraco.
+      > **Feito, e com a imagem.** O upload está ligado, a caixa é calculada a
+      > partir da escala, e o ficheiro exportado pelo browser foi lido por um
+      > leitor independente.
       >
-      > **O que falta, e porquê cada parte importa:**
+      > **O número que se mostra ao utilizador tem duas faces, e a segunda é a
+      > importante.** A caixa é N×N **módulos**, que é `N × escala` em
+      > **píxeis** — e a escala muda com o tamanho pedido e com a versão do QR.
+      > Com 512 px e um logótipo de 5 módulos, a caixa é 60×60; a 2048 px, é
+      > 250×250. Um número fixo seria uma mentira em metade dos casos.
       >
-      > 1. **Upload da imagem.** Um `<input type="file">` que aceite imagens, com
-      >    pré-visualização e botão para tirar. A imagem é desenhada por cima
-      >    do quadrado apagado, centrada, a preservar a proporção.
-      > 2. **O limite em píxeis, e dizer qual é.** O que interessa ao
-      >    utilizador não é o número de módulos, é o número de **píxeis que a
-      >    imagem pode ter** — e esse número depende da escala, que muda com o
-      >    tamanho pedido e com a versão do QR.
-      > 3. **A escala tem de mudar a mensagem.** Com o tamanho em 512 px e um
-      >    logótipo de 5 módulos, cada módulo tem 12 px e a imagem útil tem
-      >    60×60. A 2048 px, o mesmo logótipo dá 250×250. Uma mensagem fixa
-      >    seria uma mentira em metade dos casos.
-      > 4. **Avisar dos dois lados do limite.** Uma imagem **menor** do que o
-      >    limite é esticada e fica a serrilhada; uma muito **maior** é
-      >    reduzida e perde detalhe sem o utilizador dar por isso. Os dois
-      >    casos merecem uma linha cada, porque as correções são diferentes.
-      > 5. **O SVG tem de levar a imagem também.** Se o PNG sair com o logótipo e
-      >    o SVG sem ele, voltamos a ter dois ficheiros com o mesmo nome e
-      >    conteúdos diferentes — que é o bug que já aconteceu uma vez e que
-      >    custou tempo.
+      > E **acima** do ideal não há problema nenhum: o browser reduz bem, e um
+      > módulo é o menor elemento do código, por isso ampliar mais só repete
+      > pixels. Dizer que há um máximo seria inventar uma restrição que não
+      > existe. O aviso é só para **baixo** — aí a imagem é esticada e o
+      > logotipo fica a serrilhado, o que numa etiqueta pequena se vê a um
+      > metro.
       >
-      > **O número que há que mostrar, em duas formas.** O ideal é N×N
-      > **módulos** — a partir daí já não há mais resolução a ganhar, porque um
-      >    módulo é o menor elemento do código — e isso traduz-se em
-      > N×escala × N×escala **píxeis** na imagem que sai. O browser reduz bem
-      >    de uma imagem grande, por isso acima do ideal não é erro; abaixo é
-      >    que se perde. Dizer os dois é mais útil do que dizer um só.
+      > **Um bug que só o ficheiro exportado apanhou:** o logotipo saiu 4
+      > módulos à esquerda. A zona apagada é dada em coordenadas do *código* e o
+      > canvas desenha a partir da *margem* — são a mesma grelha com origens
+      > diferentes. O QR não mudou, por isso **continuava a ler**: o teste de
+      > leitura passava, o SVG tinha o mesmo erro, e o único sintoma era um
+      > logotipo torto. Nenhum teste estrutural o apanha, porque o código
+      > estava certo.
 - [ ] **Afinar o limite do logótipo por versão.** Hoje a mesma percentagem vale
       para todas as versões, o que é conservador nos QR grandes. A conta certa é
       em codewords: quantos o bloco aguenta estragar, e não que percentagem de

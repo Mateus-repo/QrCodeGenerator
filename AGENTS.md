@@ -152,13 +152,19 @@ nada de parcial, nada de "está quase certo". E um `frameqr.js` sem
 `descodificar-frameqr.py` a dizer que os logótipos recomendados leem-se é
 código não verificado, por muito que passe nos testes de estrutura.
 
-**E uma feature que se dá por feita e não está:** o `frameqr.js` tem o cursor
-que escolhe o tamanho do quadrado, e **não tem forma de meter uma imagem lá
-dentro**. É a diferença entre um logótipo e um buraco. Quando mexeres nisso,
-lembra-te de que o limite útil da imagem é em **píxeis e depende da escala** —
-que muda com o tamanho pedido e com a versão do QR — e de que essa mudança tem
-de aparecer ao utilizador. Um número fixo seria uma mentira em metade dos casos.
-Está escrito por extenso no `TODO.md`, na secção do FrameQR.
+**E uma armadilha que é mais do que parece:** a zona apagada do FrameQR é dada
+em coordenadas do *código*, e o canvas desenha a partir da *margem*. São a mesma
+grelha com origens diferentes. O logotipo saiu 4 módulos à esquerda, o QR
+**continuou a ler** — nenhum teste falhou, porque o código estava certo — e o
+único sintoma era um desenho torto. É a razão de o nível 3 existir mesmo quando
+o encoder não mudou: o que se exporta tem de se ler **e** estar no sítio.
+
+**E sobre o limite em píxeis do logotipo:** não é um número fixo, depende da
+escala, e a escala muda com o tamanho pedido e com a versão do QR. A mensagem
+tem de dizer a caixa nos dois termos — N×N **módulos** e N×escala **píxeis** —
+e o aviso é só para a imagem **pequena**: acima do ideal o browser reduz sem
+perda visível, e dizer que há um máximo seria inventar uma restrição que não
+existe.
 
 **E um ficheiro exportado tem de sair igual ao que está no ecrã.** Aconteceu
 com o QR com logótipo — o PNG saía com o logótipo e o SVG sem ele, dois ficheiros
