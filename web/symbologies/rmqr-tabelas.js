@@ -24,7 +24,10 @@
  * Os nomes sao `R<altura>x<largura>`, tirados do comentario da fonte - o
  * codigo nao os tem estruturados. O `gerar-tabela-rmqr.py` veifica que o
  * nome bate com o tamanho, que e' o que impede a lista de trocar de
- * sentido em silencio.
+ * sentido em silencio, e escreve-o como **campo** e nao so como
+ * comentario: um `nome` que so existe no comentario obriga quem verifica
+ * a ler o ficheiro inteiro, e um `nome: undefined` numa tabela gerada
+ * passa em silencio se o esperado tambem for `undefined`.
  *
  * A segunda parte, os bits do indicador de caracteres, vem do
  * `QRCodecMode.cpp` do mesmo repositorio, com a citacao
@@ -34,7 +37,7 @@
 /** Os 32 simbolos, por versao. A versao 1 e' o menor. */
 export const SIMBOLOS = [
   {
-    // R7x43
+    nome: 'R7x43',
     versao: 1,
     largura: 43,
     altura: 7,
@@ -43,7 +46,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 10, blocos: [[1, 3]] },
   },
   {
-    // R7x59
+    nome: 'R7x59',
     versao: 2,
     largura: 59,
     altura: 7,
@@ -52,7 +55,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 14, blocos: [[1, 7]] },
   },
   {
-    // R7x77
+    nome: 'R7x77',
     versao: 3,
     largura: 77,
     altura: 7,
@@ -61,7 +64,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[1, 10]] },
   },
   {
-    // R7x99
+    nome: 'R7x99',
     versao: 4,
     largura: 99,
     altura: 7,
@@ -70,7 +73,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 30, blocos: [[1, 14]] },
   },
   {
-    // R7x139
+    nome: 'R7x139',
     versao: 5,
     largura: 139,
     altura: 7,
@@ -79,7 +82,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[2, 12]] },
   },
   {
-    // R9x43
+    nome: 'R9x43',
     versao: 6,
     largura: 43,
     altura: 9,
@@ -88,7 +91,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 14, blocos: [[1, 7]] },
   },
   {
-    // R9x59
+    nome: 'R9x59',
     versao: 7,
     largura: 59,
     altura: 9,
@@ -97,7 +100,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[1, 11]] },
   },
   {
-    // R9x77
+    nome: 'R9x77',
     versao: 8,
     largura: 77,
     altura: 9,
@@ -106,7 +109,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 16, blocos: [[1, 8], [1, 9]] },
   },
   {
-    // R9x99
+    nome: 'R9x99',
     versao: 9,
     largura: 99,
     altura: 9,
@@ -115,7 +118,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[2, 11]] },
   },
   {
-    // R9x139
+    nome: 'R9x139',
     versao: 10,
     largura: 139,
     altura: 9,
@@ -124,7 +127,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[3, 11]] },
   },
   {
-    // R11x27
+    nome: 'R11x27',
     versao: 11,
     largura: 27,
     altura: 11,
@@ -133,7 +136,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 10, blocos: [[1, 5]] },
   },
   {
-    // R11x43
+    nome: 'R11x43',
     versao: 12,
     largura: 43,
     altura: 11,
@@ -142,7 +145,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 20, blocos: [[1, 11]] },
   },
   {
-    // R11x59
+    nome: 'R11x59',
     versao: 13,
     largura: 59,
     altura: 11,
@@ -151,7 +154,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 16, blocos: [[1, 7], [1, 8]] },
   },
   {
-    // R11x77
+    nome: 'R11x77',
     versao: 14,
     largura: 77,
     altura: 11,
@@ -160,7 +163,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[1, 11], [1, 12]] },
   },
   {
-    // R11x99
+    nome: 'R11x99',
     versao: 15,
     largura: 99,
     altura: 11,
@@ -169,7 +172,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 30, blocos: [[1, 14], [1, 15]] },
   },
   {
-    // R11x139
+    nome: 'R11x139',
     versao: 16,
     largura: 139,
     altura: 11,
@@ -178,7 +181,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 30, blocos: [[3, 14]] },
   },
   {
-    // R13x27
+    nome: 'R13x27',
     versao: 17,
     largura: 27,
     altura: 13,
@@ -187,7 +190,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 14, blocos: [[1, 7]] },
   },
   {
-    // R13x43
+    nome: 'R13x43',
     versao: 18,
     largura: 43,
     altura: 13,
@@ -196,7 +199,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 28, blocos: [[1, 13]] },
   },
   {
-    // R13x59
+    nome: 'R13x59',
     versao: 19,
     largura: 59,
     altura: 13,
@@ -205,7 +208,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 20, blocos: [[2, 10]] },
   },
   {
-    // R13x77
+    nome: 'R13x77',
     versao: 20,
     largura: 77,
     altura: 13,
@@ -214,7 +217,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 28, blocos: [[1, 14], [1, 15]] },
   },
   {
-    // R13x99
+    nome: 'R13x99',
     versao: 21,
     largura: 99,
     altura: 13,
@@ -223,7 +226,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 26, blocos: [[1, 11], [2, 12]] },
   },
   {
-    // R13x139
+    nome: 'R13x139',
     versao: 22,
     largura: 139,
     altura: 13,
@@ -232,7 +235,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 28, blocos: [[2, 13], [2, 14]] },
   },
   {
-    // R15x43
+    nome: 'R15x43',
     versao: 23,
     largura: 43,
     altura: 15,
@@ -241,7 +244,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 18, blocos: [[1, 7], [1, 8]] },
   },
   {
-    // R15x59
+    nome: 'R15x59',
     versao: 24,
     largura: 59,
     altura: 15,
@@ -250,7 +253,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 24, blocos: [[2, 13]] },
   },
   {
-    // R15x77
+    nome: 'R15x77',
     versao: 25,
     largura: 77,
     altura: 15,
@@ -259,7 +262,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 24, blocos: [[2, 10], [1, 11]] },
   },
   {
-    // R15x99
+    nome: 'R15x99',
     versao: 26,
     largura: 99,
     altura: 15,
@@ -268,7 +271,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 22, blocos: [[4, 12]] },
   },
   {
-    // R15x139
+    nome: 'R15x139',
     versao: 27,
     largura: 139,
     altura: 15,
@@ -277,7 +280,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 26, blocos: [[1, 13], [4, 14]] },
   },
   {
-    // R17x43
+    nome: 'R17x43',
     versao: 28,
     largura: 43,
     altura: 17,
@@ -286,7 +289,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 20, blocos: [[1, 10], [1, 11]] },
   },
   {
-    // R17x59
+    nome: 'R17x59',
     versao: 29,
     largura: 59,
     altura: 17,
@@ -295,7 +298,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 30, blocos: [[2, 14]] },
   },
   {
-    // R17x77
+    nome: 'R17x77',
     versao: 30,
     largura: 77,
     altura: 17,
@@ -304,7 +307,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 28, blocos: [[1, 12], [2, 13]] },
   },
   {
-    // R17x99
+    nome: 'R17x99',
     versao: 31,
     largura: 99,
     altura: 17,
@@ -313,7 +316,7 @@ export const SIMBOLOS = [
     H: { ecPorBloco: 26, blocos: [[4, 14]] },
   },
   {
-    // R17x139
+    nome: 'R17x139',
     versao: 32,
     largura: 139,
     altura: 17,

@@ -447,7 +447,10 @@ def escrever_js(simbolos: list[dict], bits: dict[str, list[int]]) -> None:
         " * Os nomes sao `R<altura>x<largura>`, tirados do comentario da fonte - o",
         " * codigo nao os tem estruturados. O `gerar-tabela-rmqr.py` veifica que o",
         " * nome bate com o tamanho, que e' o que impede a lista de trocar de",
-        " * sentido em silencio.",
+        " * sentido em silencio, e escreve-o como **campo** e nao so como",
+        " * comentario: um `nome` que so existe no comentario obriga quem verifica",
+        " * a ler o ficheiro inteiro, e um `nome: undefined` numa tabela gerada",
+        " * passa em silencio se o esperado tambem for `undefined`.",
         " *",
         " * A segunda parte, os bits do indicador de caracteres, vem do",
         " * `QRCodecMode.cpp` do mesmo repositorio, com a citacao",
@@ -461,7 +464,7 @@ def escrever_js(simbolos: list[dict], bits: dict[str, list[int]]) -> None:
     for s in simbolos:
         alin = ", ".join(str(c) for c in s["alinhamento"])
         linhas.append("  {")
-        linhas.append(f"    // {s['nome']}")
+        linhas.append(f"    nome: '{s['nome']}',")
         linhas.append(f"    versao: {s['versao']},")
         linhas.append(f"    largura: {s['largura']},")
         linhas.append(f"    altura: {s['altura']},")
