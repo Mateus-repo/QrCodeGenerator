@@ -77,6 +77,16 @@ compacta.
 
 O ficheiro exportado diz o que é (`codigo-ean13.png`, não `qrcode-link.png`).
 
+
+**Cada formato tem um exemplo e uma dica por baixo.** O exemplo e' o que parece,
+e a dica e' o que e' valido: quantos digitos, que caracteres, o que e' calculado.
+O exemplo passa na propria validacao do formato, o que quer dizer que **copiar e
+colar o exemplo resulta sempre** — e um exemplo que o site recusasse seria pior
+do que nenhum, porque a pessoa ficava a achar que o exemplo estava errado.
+
+Os formatos de duas dimensoes (PDF417, Data Matrix, GS1 DataMatrix, SQRC) tambem
+tem, e nos campos de data a interface traz a **data de hoje** em vez de um
+exemplo: um evento com a data de ontem nao e' um exemplo, e' uma data errada.
 A margem muda de valor: 4 módulos no QR, 10 nos códigos de barras, que é o que a
 ISO/IEC 15420 pede para um 1D.
 
@@ -111,6 +121,18 @@ quem descifrar sabe que o problema e' do codigo e nao da chave.
 O que sai do site e' a base64 do contentor cifrado, e e' isso que vai no PNG, no
 SVG e no botao de copiar. **Nao sai o texto em claro** — se saisse, o SQRC seria
 um QR normal com um passo a mais.
+
+**Da para por um logotipo**, como em qualquer QR. Apagar os modulos para o
+logotipo caber e' o caso em que a correccao de erros faz o seu trabalho, e num
+SQRC isso importa mais: um modulo apagado a mais produz um codigo que se le **com
+o texto errado**, e quem descifrar ve "chave errada" — a pista aponta para a
+chave, que esta impecavel, e nao para o codigo. Por isso o limite do logotipo e'
+medido com o ZXing e nao deduzido da percentagem da norma, e a interface diz ate
+onde da.
+
+E o **evento sai com a hora flutuante**, que e' o correcto para um encontro
+marcado num sitio: o calendario de cada pessoa le-o a hora local de cada pessoa.
+Com fuso, quem estivesse noutro pais via-o a hora errada.
 
 Nao ha leitor de SQRC em nenhum lado: quem abre tem de ter a chave. E o ZXing,
 que le o QR, devolve os bytes cifrados — que e' o que tem de acontecer.
