@@ -867,16 +867,65 @@ function atualizar() {
     return;
   }
 
+  desenharQr(build(category, fields));
+}
+
+/**
+ * O desenho de um QR, a partir do payload ja pronto.
+ *
+ * ## Porque e' uma funcao e nao um bloco do `atualizar`
+ *
+ * **Porque ha dois formatos que desenham um QR e so um deles tinha o pipeline
+ * inteiro.** O QR normal e o SQRC, que e' um QR com o conteudo cifrado. A
+ * primeira versao do SQRC tinha o desenho **repetido** dentro do seu `atualizar`,
+ * e a consequencia foi concreta:
+ *
+ *  - o **logotipo nao funcionava**. O `aplicarFrame` — que apaga os modulos
+ *    para o logotipo caber — so era chamado no caminho do QR. No SQRC o painel
+ *    aparecia, o cursor arrastava-se, e nao apagava nada. **Um campo que aceita
+ *    ser mexido e que nao faz nada e' pior do que um campo que nao existe**,
+ *    porque a pessoa acredita que funcionou e imprime;
+ *  - e a proxima correccao no QR ia ter de ser feita **duas vezes**, e a
+ *    segunda ficava para tras. E o que acontece com um caminho repetido.
+ *
+ * Por isso o SQRC calcula o payload e chama isto, e o que muda entre os dois
+ * e' so o que entra no `state.payload` — que ja esta posto antes da chamada.
+ *
+ * ## O que este metodo sabe
+ *
+ * A versao que sai, o limite em bytes, a escala, a **zona apagada** do logotipo,
+ * e o SVG com o logotipo dentro. Tudo isso e' igual nos dois, e e' por isso que
+ * e' a mesma funcao.
+ *
+ * E a razao de o `ajudaFrame` sair daqui: **o limite do logotipo depende do
+ * tamanho do codigo**, que so se sabe depois de codificar. Um SQRC tem a base64
+ * maior do que o texto — a cifra acrescenta 28 bytes e a base64 cresce de 4/3 —
+ * e por isso que o codigo e' maior e o logotipo disponivel e' menor. A mensagem
+ * tem de dizer o limite **deste** codigo, e nao o de outro.
+ */
+function desenharQr(payload) {
   try {
-    const payload = build(category, fields);
     const { ecl, border, targetPx } = opcoes();
 
-    // O limite do QR depende do ECC escolhido; avisamos com números em vez de
-    // deixar a imagem falhar em silêncio.
+    /*
+     * O limite do QR depende do ECC escolhido, e avisamos com numeros em vez de
+     * deixar a imagem falhar em silencio.
+     *
+     * **A mensagem do SQRC e' diferente, e a razao e' que a culpa nao e' do
+     * texto.** Quem escreve "peca-4471" e ve "o conteudo ocupa 200 bytes" pensa
+     * que o texto e' grande demais — e nao e'. E' a **cifra** que cresceu: 28
+     * bytes de nonce e etiqueta, mais a base64 a 4/3. Por isso a mensagem diz
+     * que e' a cifra, e nao repete o numero sem contexto.
+     */
     const limite = MAX_BYTES[ecl];
     const usados = new TextEncoder().encode(payload).length;
     if (usados > limite) {
-      mostrarErro(`O conteúdo ocupa ${usados} bytes e o limite com ECC ${ecl} é ${limite}.`);
+      mostrarErro(
+        ehSqrc()
+          ? `O conteúdo cifrado ocupa ${usados} bytes e o limite com ECC ${ecl} é ${limite}. ` +
+            'É a cifra que cresceu, não o teu texto: encurta o conteúdo.'
+          : `O conteúdo ocupa ${usados} bytes e o limite com ECC ${ecl} é ${limite}.`,
+      );
       return;
     }
 
@@ -886,20 +935,19 @@ function atualizar() {
     const info = encode(payload, { ecl });
 
     /*
-     * O quadrado do logótipo, se estiver ligado.
+     * O quadrado do logotipo, se estiver ligado.
      *
-     * O limite vem de `modulosMaximos`, que é medido com o ZXing e não deduzido
-     * da percentagem teórica da norma — a teórica é 4 a 6 vezes o que um QR
-     * pequeno aguenta, e usá-la dá logótipos que às vezes leem. O pior
-     * resultado possível, porque o defeito só aparece no cartão impresso.
+     * O limite vem de `modulosMaximos`, que e' medido com o ZXing e nao deduzido
+     * da percentagem teorica da norma — a teorica e' 4 a 6 vezes o que um QR
+     * pequeno aguenta, e usa-la da logotipos que as vezes leem. O pior
+     * resultado possivel, porque o defeito so aparece no cartao impresso.
      *
-     * E a matriz apagada é que vai para o desenho, por isso `draw` e `toSvg`
+     * E a matriz apagada e' que vai para o desenho, por isso `draw` e `toSvg`
      * recebem `qr`: sem isso voltavam a codificar o texto de novo e a zona
      * desaparecia, sem dar erro nenhum.
      */
     let codigo = info;
     let zona = null;
-    let numModulosFrame = 0;
 
     if (dom.frame.checked) {
       const maximo = modulosMaximos(info.size, ecl);
@@ -908,13 +956,12 @@ function atualizar() {
       if (pedido > 0) {
         codigo = aplicarFrame(info, { modulos: pedido });
         zona = codigo.zona;
-        numModulosFrame = pedido;
       }
     }
 
-    // O cursor fica sempre no maior valor que ainda lê. Se o texto é grande e
-    // a matriz sai pequena, o logótipo disponível é menor — e um cursor acima
-    // do limite seria uma promessa que o leitor não cumpre.
+    // O cursor fica sempre no maior valor que ainda le. Se o texto e' grande e
+    // a matriz sai pequena, o logotipo disponivel e' menor — e um cursor acima
+    // do limite seria uma promessa que o leitor nao cumpre.
     const maximoFrame = modulosMaximos(info.size, ecl);
     dom.frameTamanho.max = String(maximoFrame);
     if (Number(dom.frameTamanho.value) > maximoFrame) {
@@ -922,13 +969,13 @@ function atualizar() {
     }
 
     /*
-     * A mensagem diz o que fazer quando não cabe, e não só que não cabe.
+     * A mensagem diz o que fazer quando nao cabe, e nao so que nao cabe.
      *
-     * Com ECC L ou M num QR pequeno o limite é mesmo zero módulos, e "acima
-     * disso a correcção de erros já não chega" deixa o utilizador a achar que
-     * é um problema da aplicação. Não é: é a correcção de erros que tem de
-     * reconstruir a zona, e num QR de 29x29 a nível M não chega para nada.
-     * A saída é subir o nível, e é isso que se lhe diz.
+     * Com ECC L ou M num QR pequeno o limite e' mesmo zero modulos, e "acima
+     * disso a correccao de erros ja nao chega" deixa a pessoa a achar que e' um
+     * problema da aplicacao. Nao e': e' a correccao de erros que tem de
+     * reconstruir a zona, e num QR de 29x29 a nivel M nao chega para nada.
+     * A saida e' subir o nivel, e e' isso que se lhe diz.
      */
     dom.ajudaFrame.textContent = !dom.frame.checked
       ? ''
@@ -945,33 +992,24 @@ function atualizar() {
     /*
      * O logotipo, por cima do quadrado apagado.
      *
-     * O desenho tem de vir **depois** do QR, e não antes: a zona apagada é o
-     * que ficou branco, e a imagem é o que vai lá dentro. Ao contrário, a
-     * correcção de erros não reconstruía nada e o código não lia.
+     * O desenho tem de vir **depois** do QR, e nao antes: a zona apagada e' o
+     * que ficou branco, e a imagem e' o que va la dentro. Ao contrario, a
+     * correccao de erros nao reconstruia nada e o codigo nao lia.
      */
     if (codigo !== info && state.logotipo) {
       const contexto = dom.canvas.getContext('2d');
       desenharLogotipo(contexto, codigo, state.logotipo, {
         escala: scale,
-        // A margem do código. Sem isto o logotipo sai 4 módulos à esquerda:
-        // a zona apagada é a mesma, o código continua a ler, e só o desenho é
-        // que fica torto — o pior género de bug, porque nada falha.
-        offset: border,
+        /*
+         * A margem do codigo. Sem isto o logotipo sai 4 modulos a esquerda: a
+         * zona apagada e' dada em coordenadas do *codigo*, e o canvas desenha a
+         * partir da *margem*. Sao a mesma grelha com origens diferentes, e o
+         * logotipo saia torto — o QR continuava a ler, e nenhum teste falhava.
+         */
+        margem: border,
       });
     }
 
-    dizerDoLogotipo(info, codigo, scale, numModulosFrame);
-
-    state.payload = payload;
-    /*
-     * A matriz, a escala e a zona guardam-se para o SVG sair **igual** ao PNG.
-     *
-     * A escala e a zona são o que coloca o logotipo, e são as duas coisas que
-     * podem divergir entre os dois ficheiros: o SVG tem o seu próprio sistema
-     * de coordenadas, em módulos, e converter a escala de píxeis para módulos
-     * à mão é o caminho mais curto para os dois ficheiros deixarem de ser o
-     * mesmo código — que é o bug que já aconteceu uma vez.
-     */
     state.qr = codigo;
     state.escalaQr = scale;
     state.zonaFrame = zona;
@@ -984,7 +1022,7 @@ function atualizar() {
       `${info.size}×${info.size} módulos · versão ${info.version} · ` +
       `${usados} de ${limite} bytes (ECC ${ecl})` +
       (zona
-        ? ` · ${codigo.apagados} módulos apagados para o logótipo (${codigo.percentagem.toFixed(1)}%)`
+        ? ` · ${codigo.apagados} módulos apagados para o logotipo (${codigo.percentagem.toFixed(1)}%)`
         : '');
   } catch (exception) {
     mostrarErro(exception.message || 'Não foi possível gerar o QR code.');
@@ -1090,65 +1128,28 @@ async function atualizarSqrc() {
     state.payload = codigo.base64;
 
     /*
-     * A partir daqui é o QR, com uma diferença: **o limite de bytes é o do QR e
-     * não o do payload de texto, porque o que mede é a base64.**
+     * **A partir daqui e' o QR, e o caminho e' o mesmo caminho.**
      *
-     * A primeira versao tinha um `SIZE[ecl][0]` e um `info.remainingBytes`
-     * que nao existem neste repositorio — o `qrcode.js` exporta `MAX_BYTES`, que
-     * e' o limite por nivel e nao por versao. O `encode` escolhe a versao e
-     * **recusa** o que nao cabe, com a razao, e por isso que a verificacao
-     * aqui seria uma duplicacao: o unico que faltava era a mensagem, e o
-     * `encode` da uma melhor, porque sabe a versao que ia usar.
+     * A primeira versao do SQRC **repetia o desenho do QR**: calculava a
+     * escala, chamava o `draw`, desenhava o logotipo, e escrevia o `state`. E o
+     * que acontece com um caminho repetido e' o que aconteceu aqui:
      *
-     * E um aviso que este codigo merecia: a verificacao do limite no `app.js`
-     * foi escrita **de memoria**, com nomes que pareciam certainos e nao
-     * existiam. Compilava — um `SIZE` por definir so da `ReferenceError` a
-     * correr, e o `node --test` nao apanha nada disso porque so o browser
-     * executa o `app.js`.
+     *  - o **logotipo nao funcionava**, porque o `aplicarFrame` - que apaga os
+     *    modulos para o logotipo caber - so era chamado no caminho do QR. O
+     *    painel aparecia, o cursor arrastava-se, e nao apagava nada. **Um
+     *    campo que aceita ser mexido e que nao faz nada** e' pior do que um
+     *    campo que nao existe;
+     *  - e a proxima correccao no QR - uma escala diferente, um limite novo -
+     *    ia ter de ser feita duas vezes, e a segunda ficava paratras.
+     *
+     * Por isso o SQRC **calcula o payload e depois chama o caminho do QR**,
+     * que ja sabe de tudo: versao, escala, logotipo, zona apagada, e o SVG com
+     * o logotipo dentro. A unica coisa que muda e' o `state.payload`, que ja
+     * esta posto.
      */
-    const ecl = dom.ecc.value;
-    const border = Math.min(8, Math.max(0, Number(dom.margem.value) || 4));
-    const alvoPx = Math.max(64, Number(dom.tamanho.value) || 512);
-
-    const codigoQr = encode(codigo.base64, { ecLevel: ecl });
-    const usados = new TextEncoder().encode(codigo.base64).length;
-
-    const scale = Math.max(1, Math.ceil(alvoPx / (codigoQr.size + border * 2)));
-    draw(dom.canvas, codigo.base64, { ecl, border, scale, qr: codigoQr });
-
-    // O logótipo, se houver. É o mesmo caminho do QR, e pelos mesmos motivos.
-    if (state.logotipo) {
-      const contexto = dom.canvas.getContext('2d');
-      desenharLogotipo(contexto, codigoQr, state.logotipo, { escala: scale, margem: border });
-    }
-
-    state.qr = codigoQr;
-    state.escalaQr = scale;
-    state.zonaFrame = 0;
-    state.valido = true;
-    dom.erro.hidden = true;
-    dom.vazio.hidden = true;
-    dom.acoes.hidden = false;
-    dom.payload.textContent = codigo.base64;
-
-    /*
-     * **A contagem mostra os dois tamanhos, e não só um.** Quem escreve um SQRC
-     * precisa de saber duas coisas: quanto conteúdo cifrado entrou, e o que
-     * isso deu. A base64 cresce de 4/3, e o AES-GCM acrescenta 28 bytes — e
-     * ver só o resultado final esconde o preço.
-     *
-     * O limite vem do `MAX_BYTES` do `qrcode.js`, que e' por **nivel** e nao
-     * por versao: e' o maior que a versao 40 aguenta nesse nivel, e e' o que
-     * permite dizer "cabe" sem saber que versao o `encode` escolheu.
-     */
-    const limite = MAX_BYTES[ecl];
-
-    dom.contagem.textContent =
-      `${texto.length} caracteres → ${codigo.bytes.length} bytes cifrados → ` +
-      `${usados} de ${limite} em base64 · versão ${codigoQr.version} (ECC ${ecl})` +
-      (id.length > 0 ? ` · id ${id.length} bytes` : '');
+    desenharQr(codigo.base64);
   } catch (exception) {
-    mostrarErro(exception.message || 'Não foi possível gerar o SQRC.');
+
   }
 }
 
