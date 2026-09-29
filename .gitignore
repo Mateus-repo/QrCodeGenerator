@@ -24,7 +24,20 @@ target/
 build/
 *.class
 *.jar
+# `*.jar` e' ignorado, e o `gradle-wrapper.jar` e' a excecao — de proposito.
+#
+# **O wrapper so funciona com o jar versionado.** Sem ele o `gradlew` existe e
+# nao executa, e a falha e' `Could not find or load main class`, que nao diz
+# nada sobre um ficheiro em falta. Um preflight que avisa "nao commites binarios"
+# tem razao em geral e engana-se aqui; e a excepcao que o torna seguro e' estar
+# escrita aqui, e nao numa excepcao na memoria de alguem.
+#
+# **E o padrao com uma `/` no meio e' ancorado a raiz**, por isso
+# `!gradle/wrapper/gradle-wrapper.jar` so valia para uma pasta `gradle/` na raiz,
+# que nunca existiu. O wrapper do Kotlin esta em `kotlin/gradle/`, e sem a
+# excecao correcta o clone vinha sem o jar.
 !gradle/wrapper/gradle-wrapper.jar
+!kotlin/gradle/wrapper/gradle-wrapper.jar
 .mvn/
 java/desktop-javafx/dist/
 
@@ -32,6 +45,17 @@ java/desktop-javafx/dist/
 .gradle/
 build/
 local.properties
+captures/
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+## Kotlin / Android
+.gradle/
+build/
+local.properties
+.kotlin/
 captures/
 *.apk
 *.aab
