@@ -15,7 +15,7 @@ segno = pytest.importorskip("segno")
 zxingcpp = pytest.importorskip("zxingcpp")
 Image = pytest.importorskip("PIL.Image", reason="Pillow é necessário para o PNG")
 
-from qrcode_core import EccLevel, PixPayload, build, to_matrix, to_png, to_svg
+from qrcode_core import EccLevel, PixPayload, build_pix, to_matrix, to_png, to_svg
 from qrcode_core.render import MAX_BYTES, CapacityError, check_capacity
 
 SPEC = json.loads((Path(__file__).resolve().parents[2] / "spec" / "vectors.json").read_text("utf-8"))
@@ -35,7 +35,7 @@ def _decode(png: bytes):
 
 @pytest.mark.parametrize("ecc", list(EccLevel))
 def test_png_gerado_e_legivel(ecc):
-    brcode = build(PIX)
+    brcode = build_pix(PIX)
     result = _decode(to_png(brcode, scale=6, ecc=ecc))
     assert result is not None, "o ZXing não conseguiu ler o PNG gerado"
     assert result.text == brcode
@@ -51,7 +51,7 @@ def test_todos_os_vetores_sao_legiveis(vector_id):
 
 
 def test_png_com_escala_custom():
-    brcode = build(PIX)
+    brcode = build_pix(PIX)
     small = Image.open(io.BytesIO(to_png(brcode, scale=6)))
     large = Image.open(io.BytesIO(to_png(brcode, scale=14, border=4, ecc=EccLevel.H)))
     assert large.width > small.width
@@ -60,16 +60,16 @@ def test_png_com_escala_custom():
 
 def test_svg_legivel_tambem():
     """Confirma que a saída SVG também codifica o mesmo conteúdo."""
-    svg = to_svg(build(PIX))
+    svg = to_svg(build_pix(PIX))
     assert b"<svg" in svg[:400]
-    assert _decode(to_png(build(PIX))).text == build(PIX)
+    assert _decode(to_png(build_pix(PIX))).text == build_pix(PIX)
 
 
 # --- Matriz ----------------------------------------------------------------
 
 
 def test_matriz_e_quadrada_com_finder_patterns():
-    matrix = to_matrix(build(PIX), EccLevel.M)
+    matrix = to_matrix(build_pix(PIX), EccLevel.M)
     size = len(matrix)
     assert len(matrix[0]) == size
     assert 21 <= size <= 177

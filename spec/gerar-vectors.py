@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "python"))
 
-from qrcode_core import build, parse  # noqa: E402
+from qrcode_core import build_pix, parse  # noqa: E402
 from qrcode_core.pix import PixPayload  # noqa: E402
 
 CASES: list[dict] = [
@@ -132,7 +132,7 @@ def verify(brcode: str) -> list[str]:
     checks = ["crc", "parse_round_trip", "rebuild_identico"]
     parsed = parse(brcode)
     assert parsed.crc_valid, "CRC inválido"
-    assert build(parsed.payload) == brcode, "rebuild não devolve o mesmo payload"
+    assert build_pix(parsed.payload) == brcode, "rebuild não devolve o mesmo payload"
     return checks
 
 
@@ -155,7 +155,7 @@ def verify_image(brcode: str) -> bool:
 def main() -> int:
     vectors = []
     for case in CASES:
-        brcode = build(_to_payload(case["fields"]))
+        brcode = build_pix(_to_payload(case["fields"]))
         checks = verify(brcode)
         if verify_image(brcode):
             checks.append("png_descodificado")
