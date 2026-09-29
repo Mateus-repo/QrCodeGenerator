@@ -12,17 +12,60 @@
 const NON_SPACING_MARK = /\p{Mn}/gu;
 
 /**
+ * As ligaduras que o NFD **nao** decompoe.
+ *
+ * **`œ` e' o caso, e `cœur` dava `cur`.** Ao contrario do `ç`, que vem `c` mais
+ * cedilha e o NFD separa, o `œ` e' um caracter unico — o *modifier letter
+ * small oe* — e o `NON_SPACING_MARK` nao o apanha. A remocao dos nao-ASCII de
+ * seguida apaga-o, e `cœur` ficava `cur`.
+ *
+ * O mesmo em `manœuvre`, que dava `manuvre`, e em `Œuvre`, que dava `uvre`. **Um
+ * nome com ligadura e' courant em frances e esta em Portugal**, e um QR que le
+ * `cur` mostra o nome errado na etiqueta — e o nome errado e' o que a pessoa vai
+ * ler no documento.
+ *
+ * **A troca e' antes da remocao**, e a ordem e' o que faz funcionar: trocar
+ * depois seria tarde, porque o caracter ja nao estaria la. E nao se usa
+ * `NFKD`, que resolveria tambem mas decompoe o que nao se quer — o `№` viraria
+ * `No`.
+ */
+const LIGADURAS = {
+  'œ': 'oe',
+  'Œ': 'OE',
+  'æ': 'ae',
+  'Æ': 'AE',
+  'ĳ': 'ij',
+  'Ĳ': 'IJ',
+  'ǳ': 'dz',
+  'ǲ': 'Dz',
+  'Ǳ': 'DZ',
+  'ǉ': 'lj',
+  'ǈ': 'Lj',
+  'Ǌ': 'LJ',
+  'ǌ': 'nj',
+  'ǋ': 'Nj',
+  'ſ': 's',
+};
+
+/**
  * Converte para ASCII sem acentos, sem caracteres de controlo e sem repetir
  * espaços. `collapse: false` preserva os espaços tal como estão — é o que o
  * leitor de PIX precisa, para não mexer nos comprimentos declarados.
  */
 export function toAscii(value, { collapse = true } = {}) {
   if (value === null || value === undefined) return '';
-  const ascii = String(value)
-    .normalize('NFD')
-    .replace(NON_SPACING_MARK, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[^\x00-\x7F]/g, '');
+  let ascii = String(value).normalize('NFD').replace(NON_SPACING_MARK, '');
+
+  /*
+   * **As ligaduras ANTES da remocao dos nao-ASCII**, e a ordem e' o que faz
+   * funcionar. Trocar depois seria tarde, porque o caracter ja nao estaria la.
+   */
+  for (const [ligadura, letras] of Object.entries(LIGADURAS)) {
+    ascii = ascii.split(ligadura).join(letras);
+  }
+
+  // eslint-disable-next-line no-control-regex
+  ascii = ascii.replace(/[^\x00-\x7F]/g, '');
 
   return collapse ? ascii.trim().replace(/\s+/g, ' ') : ascii;
 }
