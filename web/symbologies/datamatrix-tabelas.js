@@ -58,17 +58,21 @@ export const SIMBOLOS = [
 /**
  * O 144x144, que é o único com blocos de tamanho desigual.
  *
- * Nove blocos de 156 codewords de dados e um de 154, mais 62 de correcção em
- * cada. Está à parte porque não cabe na regra dos outros 23, e porque um número
- * mágico dentro de uma lista de sete campos não se percebe — aqui diz-se o que
- * é.
+ * **Oito** blocos de 156 codewords de dados e **dois** de 155 — 8 × 156 + 2 ×
+ * 155 = 1558, a capacidade que a linha de cima declara — mais 62 de correcção
+ * em cada.
+ *
+ * Nota para quem contar, porque é um a menos e não dois: a primeira versão
+ * punha 154, e a conta dava 1556 em vez de 1558. Dois codewords num código de
+ * 1558, e o leitor acusa isso como corrupção e não como tabela errada.
  */
 export const ULTIMO = {
-  simbolos: SIMBOLOS[SIMBOLOS.length - 1],
+  simbolo: 23,
   blocos: 10,
-  blocosCheios: 8,
-  dadosPorBloco: 156,
-  errosPorBloco: 62,
+  cheios: 8,
+  dadosCheio: 156,
+  dadosUltimos: 155,
+  erros: 62,
 };
 
 /** Os factores de Reed-Solomon, indexados pelo número de codewords de correcção. */

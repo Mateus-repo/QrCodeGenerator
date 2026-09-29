@@ -50,15 +50,43 @@ test('dados mais correcção dá os codewords do símbolo', () => {
 
 test('os factores existem para todos os tamanhos de correcção usados', () => {
   /*
-   * Cada símbolo usa os seus codewords de correcção, e essa quantidade tem de
-   * estar na tabela dos factores. Se faltar, o encoder falha em tempo de
-   * geração — que é o melhor sítio, e não o que acontece se a verificação
-   *衰竭 for feita por leitura de imagem.
+   * Cada bloco de um símbolo tem os seus codewords de correcção, e **é esse**
+   * o número que tem de estar na tabela — não o total do símbolo.
+   *
+   * Distinguir os dois é o que evita o erro: o símbolo de 52x52 tem 84
+   * codewords de correcção no total, e 84 não está em lado nenhum da tabela
+   * porque são dois blocos de 42. A primeira versão deste teste comparava o
+   * total e falhava num símbolo que o encoder tratava bem.
+   *
+   * Se a tabela não tiver o valor do bloco, o encoder falha em tempo de
+   * geração — que é o melhor sítio para o descobrir.
    */
-  const usados = new Set(SIMBOLOS.map(([, correccao]) => correccao));
-  for (const n of usados) {
-    assert.ok(FATORES[n], `não há factores para ${n} codewords de correcção`);
-    assert.equal(FATORES[n].length, n, `o conjunto de ${n} tem ${FATORES[n].length} factores`);
+  for (const simbolo of SIMBOLOS) {
+    const [dados, correccao, , , , blocoDados, blocoErros] = simbolo;
+    const porBloco = blocoErros === -1 ? correccao : blocoErros;
+
+    assert.ok(
+      FATORES[porBloco],
+      `um símbolo de ${dados} codewords usa blocos de ${porBloco} e não há factores para esse tamanho`,
+    );
+    assert.equal(FATORES[porBloco].length, porBloco);
+
+    // E a capacidade tem de dar um número inteiro de blocos. Um resto aqui é
+    // um codeword a menos em parte do código, e ninguém diz porquê.
+    //
+    // **O 144x144 é a excepção, e é a razão de ser uma excepção:** é o único
+    // símbolo cujos blocos não são todos do mesmo tamanho, e é por isso que a
+    // sua capacidade não divide à cabeça. Uma verificação que o incluísse
+    // falhava sempre — e era a segunda vez que este teste tropeçava no 144.
+    const ultimo = simbolo === SIMBOLOS[SIMBOLOS.length - 1];
+    if (blocoDados !== -1 && !ultimo) {
+      const resto = dados % blocoDados;
+      assert.equal(
+        resto,
+        0,
+        `${dados} dados não dividem à cabeça por ${blocoDados} blocos de ${blocoDados}`,
+      );
+    }
   }
 });
 
@@ -118,18 +146,25 @@ test('a geometria de cada símbolo é quadrada e tem as guias', () => {
   }
 });
 
-test('o 144x144 e o unico com blocos de tamanho desigual, e a conta fecha', () => {
-  const { blocos, blocosCheios, dadosPorBloco, errosPorBloco, simbolos } = ULTIMO;
+test('o 144x144 e o único com blocos de tamanho desigual, e a conta fecha', () => {
+  const { blocos, cheios, dadosCheio, dadosUltimos, erros, simbolo } = ULTIMO;
+  const [dados, correccao] = SIMBOLOS[simbolo];
 
   assert.equal(blocos, 10, 'o 144x144 tem dez blocos de correcção');
-  assert.equal(errosPorBloco, 62);
+  assert.equal(erros, 62);
 
-  // Nove blocos de 156 e um de 154: 9 x 156 + 154 = 1558, que é a capacidade.
-  const total = blocosCheios * dadosPorBloco + (blocos - blocosCheios) * (dadosPorBloco - 2);
-  assert.equal(total, simbolos[0], `os blocos somam ${total} e o símbolo declara ${simbolos[0]}`);
+  /*
+   * **Oito** blocos de 156 e **dois** de 155. A primeira versão deste teste
+   * dizia nove e um de 154, e a conta dava 1556 em vez de 1558 — dois
+   * codewords a menos num código de 1558. O que o leitor diz nesse caso é
+   * "corrupção", e não "a tabela do 144 está errada".
+   */
+  assert.equal(cheios, 8);
+  const total = cheios * dadosCheio + (blocos - cheios) * dadosUltimos;
+  assert.equal(total, dados, `os blocos somam ${total} e o símbolo declara ${dados}`);
 
   // E a correcção: 10 blocos de 62.
-  assert.equal(blocos * errosPorBloco, simbolos[1], 'a correcção dos blocos não bate');
+  assert.equal(blocos * erros, correccao, 'a correcção dos blocos não bate');
 });
 
 test('o payload escolhe o menor símbolo que caiba', () => {
@@ -137,13 +172,27 @@ test('o payload escolhe o menor símbolo que caiba', () => {
     const c = dataMatrix(texto);
     assert.ok(c.usado <= c.capacidade, 'o conteúdo não cabe no símbolo escolhido');
 
-    // E é o menor: o anterior não chegaria.
+    /*
+     * E é o menor. O primeiro símbolo é o de 10x10, com 3 codewords, e uma
+     * letra cabe lá dentro — por isso a comparação com o anterior só faz
+     * sentido a partir do segundo símbolo. A primeira versão deste teste
+     * assumia isso e falhava no caso mais óbvio de todos.
+     */
     const indice = SIMBOLOS.findIndex((s) => s[0] === c.dados);
-    assert.ok(indice > 0, 'o primeiro símbolo é o de 10x10 e devia dar para uma letra');
-    assert.ok(
-      c.usado > SIMBOLOS[indice - 1][0],
-      `o conteúdo cabia no símbolo anterior (${SIMBOLOS[indice - 1][0]}) e o encoder escolheu um maior`,
-    );
+    assert.ok(indice >= 0, `o símbolo de ${c.dados} codewords não está na tabela`);
+
+    if (indice > 0) {
+      assert.ok(
+        c.usado > SIMBOLOS[indice - 1][0],
+        `o conteúdo cabia no símbolo anterior (${SIMBOLOS[indice - 1][0]} codewords) ` +
+          `e o encoder escolheu um maior, de ${c.dados}`,
+      );
+    } else {
+      assert.ok(
+        c.usado <= SIMBOLOS[0][0],
+        'o símbolo mais pequeno não dá para o conteúdo',
+      );
+    }
   }
 });
 
@@ -163,18 +212,45 @@ test('os digitos aos pares entram a menos codewords do que aos pares', () => {
   );
 });
 
-test('um byte acima de 127 custa dois codewords, por causa do deslocamento', () => {
-  // O deslocamento vale para um codeword só, e por isso cada acento paga um
-  // codeword extra. E é a razão de um "ç" ocupar mais espaço do que um "c" —
-  // e a razão de o Base 256, que não está implementado aqui, existir.
-  const comAcento = dataMatrix('açao');
-  const semAcento = dataMatrix('acao');
+test('cada byte acima de 127 custa um codeword a mais, por causa do deslocamento', () => {
+  /*
+   * A regra, sem rodeios: **um byte normal custa um codeword, um byte de 128 ou
+   * mais custa dois** — o valor, mais o deslocamento que o precede.
+   *
+   * Por isso um payload de N bytes em que K são altos custa N + K codewords.
+   *
+   * A primeira versão deste teste comparava "açao" com "acao" e esperava a
+   * diferença ser o número de acentos. Não é, e por uma razão que vale a pena
+   * escrever: os dois payloads **não têm o mesmo número de bytes**. Um "ç" em
+   * UTF-8 são dois bytes e um "c" é um, por isso a comparação media duas
+   * coisas ao mesmo tempo — um byte a mais *e* dois bytes altos. Deu 3 em vez de
+   * 1, e a conta só fecha quando se mede em vez de contar caracteres como se
+   * fossem bytes.
+   */
+  const contar = (texto) => {
+    const bytes = [...new TextEncoder().encode(texto)];
+    return { bytes: bytes.length, altos: bytes.filter((b) => b >= 128).length };
+  };
 
-  assert.equal(
-    comAcento.usado - semAcento.usado,
-    2,
-    'dois acentos deviam custar dois codewords a mais',
-  );
+  const casos = [
+    ['acao', 0],
+    ['a\u00e7ao', 2], // o ç são dois bytes, e os dois são altos
+    ['\u20ac', 3], // o € são três bytes
+    ['\u20ac\u20ac', 6],
+  ];
+
+  for (const [texto, altosEsperados] of casos) {
+    const { bytes, altos } = contar(texto);
+    assert.equal(altos, altosEsperados, `contei ${altos} bytes altos em ${JSON.stringify(texto)}`);
+
+    const c = dataMatrix(texto);
+    assert.equal(
+      c.usado,
+      bytes + altos,
+      `${JSON.stringify(texto)}: ${bytes} bytes com ${altos} altos deviam dar ` +
+        `${bytes + altos} codewords, e deram ${c.usado}`,
+    );
+  }
 });
 
 test('o conteúdo vazio é recusado com uma mensagem que diz o que fazer', () => {

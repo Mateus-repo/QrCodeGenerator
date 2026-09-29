@@ -266,18 +266,32 @@ function corrigir(codewords, simbolo) {
   const saida = codewords.slice();
 
   if (ehUltimo(simbolo)) {
-    const { blocos, blocosCheios, dadosPorBloco, errosPorBloco } = ULTIMO;
-    const tamanho = (i) => (i < blocosCheios ? dadosPorBloco : dadosPorBloco - 2);
+    /*
+     * O 144x144 é o único com blocos de tamanho desigual, e por isso o
+     * comprimento de cada bloco vem dos dados e não de uma divisão.
+     *
+     * A conta é `cheios` blocos de 156 e os restantes de 155: 8 × 156 +
+     * 2 × 155 = 1558, que é a capacidade. Com 154 dava 1556, e dois codewords
+     * a menos num código de 1558 é o tipo de erro que o leitor acusa como
+     * corrupção e não como tabela errada.
+     *
+     * O tamanho de cada bloco **não é preciso calculá-lo**: o entrelaçamento
+     * round-robin dá 156 a quem tem índices a partir de 0 e 155 a quem começa
+     * mais tarde, sozinho. O que a tabela regista é o facto, e é o
+     * `datamatrix.test.mjs` que confirma que a conta fecha.
+     */
+    const { blocos, erros } = ULTIMO;
 
     for (let bloco = 0; bloco < blocos; bloco++) {
       const dados = [];
       for (let d = bloco; d < g.dados; d += blocos) dados.push(codewords[d]);
-      const ecc = correccaoDeBloco(dados, errosPorBloco);
-      for (let e = bloco, p = 0; e < errosPorBloco * blocos; e += blocos) {
+      const ecc = correccaoDeBloco(dados, erros);
+      let p = 0;
+      for (let e = bloco; e < erros * blocos; e += blocos) {
         saida[g.dados + e] = ecc[p++];
       }
     }
-    void tamanho;
+
     return saida;
   }
 
