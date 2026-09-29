@@ -23,6 +23,10 @@ import { build as buildPix, parse as parsePix, fixCrc } from '../payloads/pix.js
 const here = dirname(fileURLToPath(import.meta.url));
 const spec = JSON.parse(readFileSync(join(here, '..', '..', 'spec', 'vectors.json'), 'utf8'));
 
+//** Os vectores de um tipo. Existe para o `tipo === 'pix'` nao estar escrito
+// tres vezes em tres sitios diferentes, que e' como um filtro diverge. */
+spec.vectorsOfType = (tipo) => spec.vectors.filter((v) => v.tipo === tipo);
+
 // --- CRC -------------------------------------------------------------------
 
 test('CRC-16 tem o vetor canónico', () => {
@@ -37,40 +41,83 @@ test('CRC-16 bate com o exemplo do Banco Central', () => {
 
 // --- Spec partilhada -------------------------------------------------------
 
-test('a spec tem o tipo pix', () => {
-  assert.ok(spec.vectors.length >= 10);
-  assert.ok(spec.vectors.every((v) => v.tipo === 'pix'));
+/*
+ * A spec tem os onze tipos, e cada um tem de ter pelo menos um vector.
+ *
+ * **Um tipo sem vector e' um tipo que ninguem sabe se esta certo.** Com a spec
+ * so a PIX, cada stack podia ter o `link` errado e nenhum teste dizia: nao havia
+ * com o que comparar. E o inverso tambem — um tipo aqui que o site nao conheca
+ * rebenta ao construir, que e' o erro visivel; um vector cujo `tipo` o site nao
+ * conheca e' o erro que nao se ve.
+ */
+test('a spec tem os onze tipos, e cada um com pelo menos um vector', () => {
+  assert.ok(spec.vectors.length >= 30, `a spec tem ${spec.vectors.length} vectores`);
+
+  const vistos = new Set(spec.vectors.map((v) => v.tipo));
+  for (const tipo of types.CATEGORY_IDS) {
+    assert.ok(vistos.has(tipo), `a spec nao tem nenhum vector do tipo ${tipo}`);
+  }
+
+  // E nao pode ter um tipo que o site nao conheca: em silencio, o teste de
+  // abaixo saltava-o e a cobertura contava um caso que nao existe.
+  for (const tipo of vistos) {
+    assert.ok(types.CATEGORY_IDS.includes(tipo), `a spec tem um tipo que o site nao conhece: ${tipo}`);
+  }
 });
 
-/** Converte os campos da spec (snake_case) para os do site (camelCase). */
-function fieldsFromSpec(campos) {
-  return {
-    pixKey: campos.key,
-    pixName: campos.name,
-    pixCity: campos.city,
-    pixAmount: campos.amount ?? '',
-    pixTxid: campos.txid ?? '',
-    pixPostcode: campos.postcode ?? '',
-    pixDescription: campos.description ?? '',
-    pixSingleUse: Boolean(campos.single_use),
-  };
+/**
+ * Os campos da spec, ja com os nomes do site.
+ *
+ * **O PIX e' a excepcao, e a razao esta escrita na spec**: os campos chamam-se
+ * `key`, `name` e `city`, e nao `pixKey`, `pixName`, `pixCity`, porque sao os
+ * do `PixPayload` do Banco Central e nao os da interface. Os dez tipos de
+ * transporte usam os campos do navegador tal como estao, e por isso que este
+ * mapeamento sao sete linhas em vez de quarenta.
+ */
+function fieldsFromSpec(campos, tipo) {
+  if (tipo === 'pix') {
+    return {
+      pixKey: campos.key,
+      pixName: campos.name,
+      pixCity: campos.city,
+      pixAmount: campos.amount ?? '',
+      pixTxid: campos.txid ?? '',
+      pixPostcode: campos.postcode ?? '',
+      pixDescription: campos.description ?? '',
+      pixSingleUse: Boolean(campos.single_use),
+    };
+  }
+  return { ...campos };
 }
 
 for (const vector of spec.vectors) {
   test(`bica com a spec: ${vector.id}`, () => {
-    const fields = fieldsFromSpec(vector.campos);
-    assert.equal(types.validate('pix', fields), null);
-    assert.equal(types.build('pix', fields), vector.payload);
+    const fields = fieldsFromSpec(vector.campos, vector.tipo);
+    assert.equal(types.validate(vector.tipo, fields), null, `${vector.id}: validacao`);
+    assert.equal(types.build(vector.tipo, fields), vector.payload, `${vector.id}: payload`);
   });
+}
 
+/*
+ * O round-trip so existe para o PIX.
+ *
+ * **E' porque o PIX tem parser e os outros nao.** O round-trip prova que o
+ * que omite o `parse` e' reconstruivel a partir do que o `build` produziu, e
+ * um link nao tem campos a reler: escreva um parser para "voltar a partir da
+ * string" e o que tem e' um segundo encoder, que da a mesma resposta quando
+ * os dois estao errados.
+ *
+ * Para os outros dez a verificacao e' a leitura pelo ZXing, no `cross-check.mjs`.
+ */
+for (const vector of spec.vectorsOfType('pix')) {
   test(`round-trip pela spec: ${vector.id}`, () => {
     const parsed = parsePix(vector.payload);
-    assert.ok(parsed.crcValid, 'CRC inválido');
+    assert.ok(parsed.crcValid, 'CRC invalido');
     assert.equal(buildPix(parsed.payload), vector.payload);
   });
 }
 
-test('comprimentos declarados batem em todos os vetores', () => {
+test('os comprimentos declarados batem nos vectores de PIX', () => {
   const check = (data, path = '') => {
     let i = 0;
     while (i < data.length) {
@@ -83,7 +130,10 @@ test('comprimentos declarados batem em todos os vetores', () => {
     }
   };
 
-  for (const vector of spec.vectors) check(vector.payload);
+  // **So o PIX tem TLV.** Os comprimentos declarados sao a forma como o
+  // formato diz "aqui vao 25 bytes", e os outros dez nao declaram nada: um
+  // `evento` e' iCalendar e um `link` e' um link.
+  for (const vector of spec.vectorsOfType('pix')) check(vector.payload);
 });
 
 // --- Payload: coerções ----------------------------------------------------
@@ -105,7 +155,10 @@ test('geo arredonda a 7 casas', () => {
 });
 
 test('fixCrc recupera um payload corrompido', () => {
-  const payload = spec.vectors[0].payload;
+  //** Um vector de PIX, e nao o primeiro da lista.** Com a spec so a PIX os
+  // dois eram a mesma coisa; agora o primeiro e' um `link`, e `fixCrc` num link
+  // devolvia a propria string, que e' um teste que passa sem verificar nada.
+  const payload = spec.vectorsOfType('pix')[0].payload;
   assert.equal(fixCrc(payload.slice(0, -4) + '0000'), payload);
 });
 

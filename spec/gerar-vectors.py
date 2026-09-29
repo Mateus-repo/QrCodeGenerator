@@ -1,11 +1,29 @@
 """Gera `spec/vectors.json` a partir da implementação de referência.
 
-Uso:
     python spec/gerar-vectors.py
 
-Cada vetor é validado antes de ser escrito: constrói o payload, relê com o
-parser, confirma o CRC e — se Pillow e zxing-cpp estiverem instalados — gera o
-PNG e confirma que um leitor real devolve a mesma string.
+Cada vetor é validado antes de ser escrito: constrói o payload e — se Pillow e
+zxing-cpp estiverem instalados — gera o PNG e confirma que um leitor real
+devolve a mesma string. **Um vetor que não foi lido por um leitor não entra**,
+porque um payload que parece certo e não se lê é o pior resultado possível.
+
+## O PIX é verificado de outra maneira, e porquê
+
+O PIX tem um `parse`, um CRC e um round-trip: dá para reler o payload e
+comparar. **Os outros dez não têm parser**, porque são transporte — um link é
+um link e o formato não impõe nada sobre o conteúdo. A verificação deles é a
+mesma de todos: a imagem gerada é lida por um leitor independente e tem de
+devolver a mesma cadeia, byte a byte.
+
+A `checks` de cada vetor diz o que foi feito, e é isso que um leitor do ficheiro
+tem de ler antes de acreditar no `payload`.
+
+## O gerador não é o arbrito, e por isso que regista a origem
+
+`docs/TIPOS-QR.md` é a spec em prosa. Este ficheiro é o que a transforma em
+`vectors.json`, e `vectors.json` é o que as stacks têm de bater. **Um payload
+que mude aqui e não mude nas cinco stacks é um bug** — e por isso que o
+`verificado` de cada vetor é a lista do que foi corrido, e não um `true`.
 """
 
 from __future__ import annotations
@@ -16,20 +34,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "python"))
+sys.path.insert(0, str(ROOT / "spec"))
 
-from qrcode_core import build_pix, parse  # noqa: E402
+from casos import CASOS as CASOS_TRANSPORTE  # noqa: E402
+from qrcode_core import build, build_pix, parse, validate  # noqa: E402
 from qrcode_core.pix import PixPayload  # noqa: E402
 
-CASES: list[dict] = [
+#: Os casos do PIX, com os campos do `PixPayload` do Banco Central.
+#:
+#: **Os campos chamam-se `key`, `name`, `city` e nao `pixKey`, `pixName`,
+#: `pixCity`**, e e' a excepcao que a `spec/casos.py` explica: estes sao os
+#: nomes do PIX do Banco Central, nao os da interface. Os dez tipos de
+#: transporte usam os campos do navegador tal como estao.
+#:
+#: **Esta lista foi extraida de `vectors.json` e nao escrita de memoria.** Cinco
+#: dos dez casos estavam errados quando foram escritos de memoria -- outros
+#: nomes, outras cidades, e uma chave de telefone com `+` a mais -- e o
+#: sintoma e' um payload de PIX diferente, que `AGENTS.md` diz que e' um bug
+#: mesmo que o teste do PIX passe. Extrair e' a unica forma de nao errar.
+CASOS_PIX: list[dict] = [
     {
         "id": "pix_uuid_sem_valor",
         "desc": "Exemplo do Manual do Banco Central: chave aleatória, sem valor.",
+        "source": "Banco Central do Brasil, Manual de Padroes para Iniciacao do Pix",
         "fields": {
             "key": "123e4567-e12b-12d1-a456-426655440000",
             "name": "Fulano de Tal",
             "city": "BRASILIA",
         },
-        "source": "Banco Central do Brasil, Manual de Padroes para Iniciacao do Pix",
     },
     {
         "id": "pix_email_com_valor",
@@ -121,43 +153,105 @@ CASES: list[dict] = [
     },
 ]
 
+#: A ordem dos tipos na spec, que é a ordem da interface.
+TIPOS = [
+    "link",
+    "texto",
+    "email",
+    "telefone",
+    "sms",
+    "whatsapp",
+    "evento",
+    "localizacao",
+    "wifi",
+    "vcard",
+    "pix",
+]
 
-def _to_payload(fields: dict) -> PixPayload:
+
+def _pix(case: dict) -> str:
     # `PixPayload` já coage `amount` (aceita "25,75", 25.75, Decimal, ...).
-    return PixPayload(**fields)
+    return build_pix(PixPayload(**case["fields"]))
 
 
-def verify(brcode: str) -> list[str]:
-    """Devolve a lista de verificações que passaram."""
+def verificar_pix(payload: str) -> list[str]:
+    """O que se pode verificar num payload de PIX, e verifica-se."""
     checks = ["crc", "parse_round_trip", "rebuild_identico"]
-    parsed = parse(brcode)
+    parsed = parse(payload)
     assert parsed.crc_valid, "CRC inválido"
-    assert build_pix(parsed.payload) == brcode, "rebuild não devolve o mesmo payload"
+    assert build_pix(parsed.payload) == payload, "rebuild não devolve o mesmo payload"
     return checks
 
 
-def verify_image(brcode: str) -> bool:
+def verificar_transporte(tipo: str, campos: dict, payload: str) -> list[str]:
+    """
+    O que se pode verificar num payload de transporte, e verifica-se.
+
+    **Só a leitura.** Não há parser para reler, porque não há formato com
+    campos a reler — e inventar um parser para "voltar a partir da string"
+    seria escrever um segundo encoder e chamar-lhe verificação, que é como um
+    encoder errado passa nos dois lados ao mesmo tempo.
+    """
+    erro = validate(tipo, campos)
+    assert erro is None, f"o proprio caso nao valida: {erro}"
+
+    checks = ["validado"]
+    if verificar_imagem(payload):
+        checks.append("png_descodificado")
+    return checks
+
+
+def verificar_imagem(payload: str) -> bool:
+    """
+    Gera o PNG e confirma que um leitor independente devolve a mesma cadeia.
+
+    **A comparação é do texto, e para o PIX e para os dez é igual.** A excepção
+    que o `AGENTS.md` regista é o SQRC, cujo atributo `text` do ZXing assume
+    ISO-8859-1 sem ECI — mas isso e' um contentor binário, e nao um payload.
+    """
     try:
         import io
 
         import zxingcpp
 
+        from PIL import Image
+
         from qrcode_core import to_png
     except ImportError:
         return False
-    from PIL import Image
 
-    image = Image.open(io.BytesIO(to_png(brcode, scale=6)))
+    image = Image.open(io.BytesIO(to_png(payload, scale=6)))
     result = zxingcpp.read_barcode(image)
-    return result is not None and result.text == brcode
+    return result is not None and result.text == payload
 
 
 def main() -> int:
     vectors = []
-    for case in CASES:
-        brcode = build_pix(_to_payload(case["fields"]))
-        checks = verify(brcode)
-        if verify_image(brcode):
+
+    for case in CASOS_TRANSPORTE:
+        tipo = case["tipo"]
+        campos = case["campos"]
+        payload = build(tipo, campos)
+        checks = verificar_transporte(tipo, campos, payload)
+
+        vectors.append(
+            {
+                "id": case["id"],
+                "tipo": tipo,
+                "descricao": case["desc"],
+                "fonte": case.get("source", "docs/TIPOS-QR.md, gerado por python/qrcode_core"),
+                "campos": campos,
+                "payload": payload,
+                "bytes": len(payload.encode("utf-8")),
+                "verificado": checks,
+            }
+        )
+        print(f"  {case['id']:28} {tipo:12} {len(payload):3}  {','.join(checks)}")
+
+    for case in CASOS_PIX:
+        payload = _pix(case)
+        checks = verificar_pix(payload)
+        if verificar_imagem(payload):
             checks.append("png_descodificado")
 
         vectors.append(
@@ -165,30 +259,42 @@ def main() -> int:
                 "id": case["id"],
                 "tipo": "pix",
                 "descricao": case["desc"],
-                "fonte": case.get("source", "gerado por python/qrcode_core"),
+                "fonte": case.get("source", "docs/TIPOS-QR.md, gerado por python/qrcode_core"),
                 "campos": case["fields"],
-                "payload": brcode,
-                "bytes": len(brcode.encode("utf-8")),
+                "payload": payload,
+                "bytes": len(payload.encode("utf-8")),
                 "verificado": checks,
             }
         )
-        print(f"  {case['id']:26} {len(brcode):3} bytes  {','.join(checks)}")
+        print(f"  {case['id']:28} {'pix':12} {len(payload):3}  {','.join(checks)}")
+
+    # A spec tem de ter os onze tipos, e nenhum pode aparecer duas vezes.
+    vistos = [v["tipo"] for v in vectors]
+    faltam = [t for t in TIPOS if t not in vistos]
+    sobram = [t for t in dict.fromkeys(vistos) if t not in TIPOS]
+    assert not faltam, f"faltam tipos na spec: {faltam}"
+    assert not sobram, f"tipos a mais na spec: {sobram}"
+
+    ids = [v["id"] for v in vectors]
+    assert len(ids) == len(set(ids)), "há ids repetidos"
 
     document = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "versao": 1,
         "descricao": (
             "Vetores de teste partilhados entre stacks. 'campos' e o input, "
-            "'payload' e a string exata que qualquer implementacao deve produzir."
+            "'payload' e a string exata que qualquer implementacao deve produzir. "
+            "Os campos dos dez tipos de transporte usam os nomes do navegador "
+            "(url, mailTo, wifiSsid, ...); o PIX usa os do PixPayload (key, name, city)."
         ),
-        "tipos": ["pix"],
+        "tipos": TIPOS,
         "vectors": vectors,
     }
 
     target = ROOT / "spec" / "vectors.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", "utf-8")
-    print(f"\n{len(vectors)} vetores -> {target.relative_to(ROOT)}")
+    print(f"\n{len(vectors)} vetores, {len(TIPOS)} tipos -> {target.relative_to(ROOT)}")
     return 0
 
 

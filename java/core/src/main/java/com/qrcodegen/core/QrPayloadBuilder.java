@@ -90,8 +90,8 @@ public final class QrPayloadBuilder {
     private static String buildICalEvent(QrFields f) {
         StringBuilder out = new StringBuilder();
 
-        var start = utc(f.eventStart());
-        var end = utc(f.eventEnd());
+        var start = f.eventStart();
+        var end = f.eventEnd();
 
         out.append("BEGIN:VCALENDAR").append(ICAL_NEWLINE);
         append(out, "VERSION", "2.0");
@@ -113,17 +113,41 @@ public final class QrPayloadBuilder {
         return out.toString();
     }
 
-    private static java.time.ZonedDateTime utc(java.time.LocalDateTime value) {
-        // O DateTimePicker dá hora local; o iCalendar quer UTC, e o fuso do
-        // utilizador não pode mudar o payload entre máquinas.
-        return (value == null ? java.time.LocalDateTime.now() : value)
-                .atZone(java.time.ZoneId.systemDefault())
-                .withZoneSameInstant(java.time.ZoneOffset.UTC);
+    /**
+     * A hora do formulário, tal como foi escrita.
+     *
+     * <p><b>Sem converter para UTC e sem o {@code Z}, e a razão importa mais
+     * do que a linha.</b> O campo é um {@code datetime-local}, que não tem fuso:
+     * quem escreve 18:30 está a dizer "as 18h30 <b>aqui</b>".
+     *
+     * <p>A versão anterior fazia {@code atZone(systemDefault())} e escrevia um
+     * {@code Z} que mentia — em Portugal dava <b>uma hora de diferença</b> entre o
+     * que se escreveu e o que ficou no QR, e o evento aparecia no calendário à
+     * hora errada. O comentário antigo dizia que o fuso do utilizador não podia
+     * mudar o payload entre máquinas, e estava certo no diagnóstico e errado na
+     * cura: o que o tornava instável era <b>trocá-lo</b>, não tê-lo.
+     *
+     * <p>Um horário flutuante é o que o calendário de cada pessoa interpreta na
+     * hora de cada pessoa. Um encontro marcado numa biblioteca é exactamente esse
+     * caso: com {@code TZID} marcava a hora num sítio e quem estivesse noutro
+     * via-o à hora errada.
+     *
+     * <p>O {@code null} continua a dar a hora de agora, que é o que um evento sem
+     * data precisa para não ficar sem {@code DTSTART}.
+     */
+    private static java.time.LocalDateTime semFuso(java.time.LocalDateTime value) {
+        return value == null ? java.time.LocalDateTime.now() : value;
     }
 
-    private static String stamp(java.time.ZonedDateTime value) {
-        return value.format(java.time.format.DateTimeFormatter
-                .ofPattern("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT));
+    /**
+     * O carimbo de hora do iCalendar, <b>sem {@code Z}</b>.
+     *
+     * <p>Um {@code Z} aqui diria que a hora foi convertida, e não foi. Quem lê o
+     * QR vê um horário flutuante, que é o que o calendário assume.
+     */
+    private static String stamp(java.time.LocalDateTime value) {
+        return semFuso(value).format(java.time.format.DateTimeFormatter
+                .ofPattern("yyyyMMdd'T'HHmmss", Locale.ROOT));
     }
 
     // --- Localização ------------------------------------------------------

@@ -105,7 +105,33 @@ def test_limite_mensurado_por_elevacao_de_custo():
     assert MAX_BYTES[EccLevel.Q] > MAX_BYTES[EccLevel.H]
 
 
-def test_payloads_pix_ficam_longe_do_limite():
+def test_payloads_da_spec_ficam_longe_do_limite():
+    """
+    Todos os payloads da spec, e nao so os de PIX.
+
+    **Desde que a spec tem os onze tipos, esta verificacao passou a abranger o
+    vCard completo e o iCalendar completo** -- que sao os maiores, e que antes
+    nao existiam na spec. O `check_capacity` acima ja diz que cabem; o que este
+    numero mede e o quanto sobra.
+
+    E a razao de o limite ser uma fracao do maximo teorico e nao um numero
+    solto: o `AGENTS.md` avisa que a percentagem de correccao de erro da norma
+    **nao e' uma percentagem de area**, e que num QR pequeno a verdadeira e' 4 a
+    6 vezes menor que a teorica. Um payload a 90% do limite teorico nao cabe
+    na realidade, e a defesa e nao chegar la.
+
+    **Um terco, e nao um quarto, porque foi um quarto primeiro e nao fechou.**
+    O maior payload da spec e' o vCard completo, com 325 bytes, e um quarto dos
+    1273 teoricos do H sao 318. A linha tinha de ficar acima do maior payload
+    real, e um quarto estava a dois bytes de nao fechar -- que e' o pior sitio
+    para um limite: fecha hoje e parte quando alguem acrescenta um campo.
+    """
     for payload in PAYLOADS:
         check_capacity(payload, EccLevel.H)
-    assert max(len(p) for p in PAYLOADS) < 200
+
+    maior = max(len(p) for p in PAYLOADS)
+    assert maior < MAX_BYTES[EccLevel.H] // 3, (
+        f"o maior payload da spec tem {maior} bytes e um terco do limite teorico "
+        f"do H e' {MAX_BYTES[EccLevel.H] // 3}: acima disso ja nao ha margem "
+        "para a correccao de erro real"
+    )

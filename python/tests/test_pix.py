@@ -14,9 +14,11 @@ from pathlib import Path
 import pytest
 
 from qrcode_core import pix
+from qrcode_core import CATEGORY_IDS
 from qrcode_core.pix import PixKeyError, PixPayload, PixValidationError
 
 SPEC = json.loads((Path(__file__).resolve().parents[2] / "spec" / "vectors.json").read_text("utf-8"))
+#: Todos os vectores, para os testes que procuram um `id` concreto.
 VECTORS = {v["id"]: v for v in SPEC["vectors"]}
 
 # --- Vetores de referência externos ---------------------------------------
@@ -35,28 +37,53 @@ BCB_PAYLOAD = (
 
 # --- Spec partilhada -------------------------------------------------------
 
+#: Os vectores de PIX, e so. **A spec tem onze tipos desde que os vectores dos
+#: dez de transporte foram escritos**, e o round-trip e os comprimentos declarados
+#: so fazem sentido no PIX.
+VECTORS_PIX = {v["id"]: v for v in SPEC["vectors"] if v["tipo"] == "pix"}
 
-def test_spec_tem_o_tipo_pix():
-    assert "pix" in SPEC["tipos"]
-    assert len(SPEC["vectors"]) >= 10
+
+def test_spec_tem_os_onze_tipos():
+    """
+    **Cada tipo com pelo menos um vector.**
+
+    Um tipo sem vector e' um tipo que ninguem sabe se esta certo: com a spec so a
+    PIX, cada stack podia ter o `link` errado e nenhum teste dizia, porque nao
+    havia com que comparar. Este Python era a implementacao de referencia e
+    falhava exactamente nisso.
+    """
+    assert len(SPEC["tipos"]) == 11
+    assert len(SPEC["vectors"]) >= 30
+
+    vistos = {v["tipo"] for v in SPEC["vectors"]}
+    for tipo in CATEGORY_IDS:
+        assert tipo in vistos, f"a spec nao tem nenhum vector do tipo {tipo}"
+    assert vistos == set(CATEGORY_IDS), "a spec tem tipos que a biblioteca nao conhece"
 
 
-@pytest.mark.parametrize("vector_id", sorted(VECTORS))
+@pytest.mark.parametrize("vector_id", sorted(VECTORS_PIX))
 def test_bate_com_a_spec(vector_id):
     """O contrato entre stacks: mesmos campos -> mesma string."""
-    vector = VECTORS[vector_id]
+    vector = VECTORS_PIX[vector_id]
     assert pix.build(PixPayload(**vector["campos"])) == vector["payload"]
 
 
-@pytest.mark.parametrize("vector_id", sorted(VECTORS))
+@pytest.mark.parametrize("vector_id", sorted(VECTORS_PIX))
 def test_comprimentos_declarados_batem(vector_id):
     """O comprimento é contado em caracteres — se divergir, o banco recusa."""
-    _assert_tlv_lengths_consistent(VECTORS[vector_id]["payload"])
+    _assert_tlv_lengths_consistent(VECTORS_PIX[vector_id]["payload"])
 
 
-@pytest.mark.parametrize("vector_id", sorted(VECTORS))
+@pytest.mark.parametrize("vector_id", sorted(VECTORS_PIX))
 def test_round_trip_pela_spec(vector_id):
-    vector = VECTORS[vector_id]
+    """
+    **O round-trip so existe para o PIX**, porque so o PIX tem parser.
+
+    Prova que o que omite o `parse` e' reconstruivel a partir do que o `build`
+    produziu. Escrever um parser para "voltar a partir da string" de um link
+    seria escrever um segundo encoder, e dois encoders errados concordam.
+    """
+    vector = VECTORS_PIX[vector_id]
     parsed = pix.parse(vector["payload"])
     assert parsed.crc_valid
     assert pix.build(parsed.payload) == vector["payload"]

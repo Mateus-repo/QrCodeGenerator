@@ -75,7 +75,7 @@ public class RenderTests
     private static System.Drawing.Bitmap Render(string payload, int size, EccLevel ecc = EccLevel.M)
     {
         using var generator = new QRCodeGenerator();
-        var data = generator.CreateQrCode(payload, ToEcc(ecc));
+        var data = generator.CreateQrCode(System.Text.Encoding.UTF8.GetBytes(payload), ToEcc(ecc));
         var modules = data.ModuleMatrix.Count;
         var scale = Math.Max(1, size / Math.Max(1, modules));
 
@@ -84,9 +84,10 @@ public class RenderTests
     }
 
     /// <summary>
-    /// Lê o bitmap com o ZXing. O QRCoder devolve 24 bpp, por isso
-    /// convertemos para BGRA32, que é o formato que o ZXing quer.
+    /// Lê o bitmap com o ZXing. O QRCoder devolve 24 bpp, por isso convertemos
+    /// para BGRA32, que é o formato que o ZXing quer.
     /// </summary>
+    /// <param name="source">O QR já desenhado.</param>
     private static string? Decode(System.Drawing.Bitmap source)
     {
         using var bitmap = new System.Drawing.Bitmap(
@@ -110,7 +111,26 @@ public class RenderTests
                 Options = new ZXing.Common.DecodingOptions
                 {
                     PossibleFormats = new List<ZXing.BarcodeFormat> { ZXing.BarcodeFormat.QR_CODE },
-                    TryHarder = true
+                    TryHarder = true,
+
+                    // **E `forceUtf8` acima, no desenho, que é a outra metade.**
+                    // As duas juntas: o desenho diz que é UTF-8, e a leitura diz
+                    // que é UTF-8. Sem a primeira o `ã` vai num byte só, e sem a
+                    // segunda o leitor adivinha outra vez.
+                    //
+                    // O ZXing adivinha a codificação de um segmento em modo byte,
+                    // e a adivinhação é um teste de Shift-JIS. Um iCalendar com
+                    // acentos passa nele — o «ñ» é 0xC3 0xB1 em UTF-8, e esse par
+                    // é um caractere kanji válido — e o leitor devolve o texto
+                    // reconstruído a partir dos pares, com os caracteres trocados
+                    // a partir da posição 190.
+                    //
+                    // O sintoma é enganador porque o QR está certo: lê-se, o
+                    // zxingcpp do Python devolve a string certa, e a falha
+                    // aparece só na comparação. Dizer a codificação desliga a
+                    // adivinhação, e é o que se quer: o payload é UTF-8 porque
+                    // fomos nós que o escrevemos.
+                    CharacterSet = "UTF-8"
                 }
             };
 

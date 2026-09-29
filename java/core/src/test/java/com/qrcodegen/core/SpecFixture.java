@@ -8,12 +8,14 @@ import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Carrega a spec partilhada — a mesma que as stacks C#, Python e web consomem.
@@ -51,12 +53,58 @@ public final class SpecFixture {
     /**
      * Constrói os campos da spec no modelo do Java.
      *
-     * <p>A spec usa nomes snake_case; aqui são camelCase. Esta é a única
-     * tradução entre a spec e o código — e por isso é o ponto onde um
-     * descuido produz um falso "divergimos".
+     * <p><b>O PIX é uma tradução e os outros dez não.</b> Os campos do PIX
+     * chamam-se {@code key}, {@code name} e {@code city} — são os do
+     * {@code PixPayload} do Banco Central, não os da interface, e é a razão de
+     * serem oito linhas. Os dez tipos de transporte usam os campos do navegador
+     * tal como estão, e por isso que o resto deste método é atribuição directa.
+     *
+     * <p><b>A data do evento é lida como {@link LocalDateTime}, e não como
+     * {@code ZonedDateTime}.</b> A spec traz {@code "2026-09-29T18:30"}, sem
+     * fuso, porque o {@code datetime-local} da interface não tem fuso. Converter
+     * para UTC punha uma hora a mais no payload — e foi exactamente o que o C#
+     * fazia, até o vector do evento o expor.
      */
     public static QrFields toFields(Map<String, String> campos) {
         QrFields fields = new QrFields()
+                // Transporte: os nomes são os do navegador.
+                .url(orEmpty(campos.get("url")))
+                .texto(orEmpty(campos.get("texto")))
+                .mailTo(orEmpty(campos.get("mailTo")))
+                .mailSubject(orEmpty(campos.get("mailSubject")))
+                .mailBody(orEmpty(campos.get("mailBody")))
+                .phonePrefix(orEmpty(campos.get("phonePrefix")))
+                .phoneNumber(orEmpty(campos.get("phoneNumber")))
+                .smsMessage(orEmpty(campos.get("smsMessage")))
+                .waMessage(orEmpty(campos.get("waMessage")))
+                .eventTitle(orEmpty(campos.get("eventTitle")))
+                .eventDescription(orEmpty(campos.get("eventDescription")))
+                .eventLocation(orEmpty(campos.get("eventLocation")))
+                .geoLat(number(campos.get("geoLat")))
+                .geoLng(number(campos.get("geoLng")))
+                .wifiSsid(orEmpty(campos.get("wifiSsid")))
+                .wifiPass(orEmpty(campos.get("wifiPass")))
+                .wifiSec(campos.getOrDefault("wifiSec", "WPA/WPA2"))
+                .wifiHidden("true".equalsIgnoreCase(campos.get("wifiHidden")))
+                .vcFirstName(orEmpty(campos.get("vcFirstName")))
+                .vcLastName(orEmpty(campos.get("vcLastName")))
+                .vcPhone(orEmpty(campos.get("vcPhone")))
+                .vcPhone2(orEmpty(campos.get("vcPhone2")))
+                .vcEmail(orEmpty(campos.get("vcEmail")))
+                .vcOrg(orEmpty(campos.get("vcOrg")))
+                .vcRole(orEmpty(campos.get("vcRole")))
+                .vcStreet(orEmpty(campos.get("vcStreet")))
+                .vcCity(orEmpty(campos.get("vcCity")))
+                .vcZip(orEmpty(campos.get("vcZip")))
+                .vcCountry(orEmpty(campos.get("vcCountry")));
+
+        // A data só é posta quando existe: o valor por omissão é
+        // `LocalDateTime.now()`, e um caso sem data ficaria com a hora de hoje.
+        when(campos.get("eventStart")).ifPresent(fields::eventStart);
+        when(campos.get("eventEnd")).ifPresent(fields::eventEnd);
+
+        // O PIX: os nomes são os do PixPayload.
+        return fields
                 .pixKey(campos.get("key"))
                 .pixName(campos.get("name"))
                 .pixCity(campos.get("city"))
@@ -65,8 +113,36 @@ public final class SpecFixture {
                 .pixPostcode(orEmpty(campos.get("postcode")))
                 .pixDescription(orEmpty(campos.get("description")))
                 .pixSingleUse("true".equalsIgnoreCase(campos.get("single_use")));
+    }
 
-        return fields;
+    /**
+     * A hora do formulário, que não tem fuso.
+     *
+     * <p><b>Um {@code null} em vez de um erro, e a razão de ser um
+     * {@code Optional}.</b> Um caso sem data não pode receber a hora de hoje: o
+     * payload saía com um carimbo que mudava de execução para execução, e um
+     * teste que passa com data e falha sem ela é pior do que nenhum.
+     */
+    private static Optional<LocalDateTime> when(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(LocalDateTime.parse(raw.trim()));
+    }
+
+    /**
+     * Um número da spec, com vírgula ou ponto decimal.
+     *
+     * <p><b>A vírgula conta, porque o formulário aceita as duas.</b> O campo da
+     * latitude é escrito {@code 38,7223} por quem está em Portugal, e um
+     * {@code null} silencioso é pior do que um erro: o payload saía com
+     * {@code geo:} e nada mais.
+     */
+    private static Double number(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return Double.valueOf(raw.trim().replace(',', '.'));
     }
 
     private static String orEmpty(String value) {

@@ -97,17 +97,22 @@ public static class QrPayloadBuilder
 
     // --- Evento (iCalendar) ------------------------------------------------
 
+    /// <summary>
+    /// O carimbo de hora do iCalendar, **sem converter e sem <c>Z</c>**.
+    /// </summary>
+    /// <remarks>
+    /// Um <see cref="DateTimeKind.Utc"/> ou um <see cref="DateTimeKind.Local"/>
+    /// seria convertido, e o <c>Z</c> punha a hora num sítio que quem escreveu
+    /// não escolheu. O que interessa é que o que se escreve no formulário
+    /// chegue ao calendário como se escreveu.
+    /// </remarks>
+    private static string Stamp(DateTime value) =>
+        value.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture);
+
     private static string BuildICalEvent(QrFields f)
     {
         var sb = new StringBuilder();
         void Line(string name, string value) => sb.Append(name).Append(':').Append(value).Append(ICalNewline);
-
-        var utcStart = f.EventStart.Kind == DateTimeKind.Utc
-            ? f.EventStart
-            : f.EventStart.ToUniversalTime();
-        var utcEnd = f.EventEnd.Kind == DateTimeKind.Utc
-            ? f.EventEnd
-            : f.EventEnd.ToUniversalTime();
 
         sb.Append("BEGIN:VCALENDAR").Append(ICalNewline);
         Line("VERSION", "2.0");
@@ -117,10 +122,26 @@ public static class QrPayloadBuilder
 
         // Sem UID aleatório: o payload tem de ser reproduzível para passar
         // nos vetores de spec/vectors.json.
-        Line("DTSTAMP", utcStart.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture));
-        Line("DTSTART", utcStart.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture));
-        Line("DTEND", utcEnd.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture));
-        Line("SUMMARY", Text.EscapeICal((f.EventTitle ?? string.Empty).Trim()));
+        //
+        // **A hora sai como foi escrita, sem fuso e sem `Z`.** Isto mudou, e a
+        // razao vale mais do que a linha: o `datetime-local` da interface não
+        // tem fuso, e quem escreve 18:30 está a dizer "as 18h30 **aqui**". A
+        // versão anterior fazia `ToUniversalTime()` e escrevia um `Z` que
+        // mentia — em Portugal dava **uma hora de diferença** entre o que se
+        // escreveu e o que ficou no QR, e o evento aparecia no calendário à hora
+        // errada.
+        //
+        // Um horário flutuante é o que o calendário de cada pessoa interpreta
+        // na hora de cada pessoa. Um encontro marcado numa biblioteca é
+        // exactamente esse caso: com `TZID` marcava a hora num sítio e quem
+        // estivesse noutro via-o à hora errada.
+        //
+        // O `DateTime` com `Kind` não especificado é o que corresponde a um
+        // campo sem fuso, e é o que o `ToFields` produz ao ler a spec.
+        Line("DTSTAMP", Stamp(f.EventStart));
+        Line("DTSTART", Stamp(f.EventStart));
+        Line("DTEND", Stamp(f.EventEnd));
+Line("SUMMARY", Text.EscapeICal((f.EventTitle ?? string.Empty).Trim()));
         Line("LOCATION", Text.EscapeICal((f.EventLocation ?? string.Empty).Trim()));
         Line("DESCRIPTION", Text.EscapeICal((f.EventDescription ?? string.Empty).Trim()));
 

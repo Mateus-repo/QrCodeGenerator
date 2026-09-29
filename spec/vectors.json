@@ -1,11 +1,419 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "versao": 1,
-  "descricao": "Vetores de teste partilhados entre stacks. 'campos' e o input, 'payload' e a string exata que qualquer implementacao deve produzir.",
+  "descricao": "Vetores de teste partilhados entre stacks. 'campos' e o input, 'payload' e a string exata que qualquer implementacao deve produzir. Os campos dos dez tipos de transporte usam os nomes do navegador (url, mailTo, wifiSsid, ...); o PIX usa os do PixPayload (key, name, city).",
   "tipos": [
+    "link",
+    "texto",
+    "email",
+    "telefone",
+    "sms",
+    "whatsapp",
+    "evento",
+    "localizacao",
+    "wifi",
+    "vcard",
     "pix"
   ],
   "vectors": [
+    {
+      "id": "link_sem_esquema",
+      "tipo": "link",
+      "descricao": "Link sem esquema: o https e' acrescentado.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "url": "exemplo.pt"
+      },
+      "payload": "https://exemplo.pt",
+      "bytes": 18,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "link_com_esquema",
+      "tipo": "link",
+      "descricao": "Link ja com esquema e com query string.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "url": "https://exemplo.pt/caminho?a=1&b=2"
+      },
+      "payload": "https://exemplo.pt/caminho?a=1&b=2",
+      "bytes": 34,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "texto_simples",
+      "tipo": "texto",
+      "descricao": "Texto simples.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "texto": "Peca 4471, lote A1"
+      },
+      "payload": "Peca 4471, lote A1",
+      "bytes": 18,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "texto_com_acentos",
+      "tipo": "texto",
+      "descricao": "Acentos, travessao e euro ficam tal como estao: o `texto` nao normaliza.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "texto": "Peça-francesa — cœur — 30 €"
+      },
+      "payload": "Peça-francesa — cœur — 30 €",
+      "bytes": 35,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "texto_com_quebras",
+      "tipo": "texto",
+      "descricao": "Quebras de linha sao duas caracteres da cadeia, e nao o fim de linha do iCalendar.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "texto": "linha um\nlinha dois"
+      },
+      "payload": "linha um\nlinha dois",
+      "bytes": 19,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "email_so_destinatario",
+      "tipo": "email",
+      "descricao": "Sem assunto e sem corpo nao ha interrogacao: um `mailto:` com `?` e nada depois abre mal.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "mailTo": "ana@exemplo.pt"
+      },
+      "payload": "mailto:ana@exemplo.pt",
+      "bytes": 21,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "email_com_assunto",
+      "tipo": "email",
+      "descricao": "O espaco do assunto vai por `%20` e nao por `+`, como o `encodeURIComponent`.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "mailTo": "ana@exemplo.pt",
+        "mailSubject": "Reunião de sexta & balanço",
+        "mailBody": "Confirmo a presença. Traz a documentação."
+      },
+      "payload": "mailto:ana@exemplo.pt?subject=Reuni%C3%A3o%20de%20sexta%20%26%20balan%C3%A7o&body=Confirmo%20a%20presen%C3%A7a.%20Traz%20a%20documenta%C3%A7%C3%A3o.",
+      "bytes": 148,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "telefone_com_indicativo",
+      "tipo": "telefone",
+      "descricao": "O indicativo entra e os separadores do numero saem.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "+351",
+        "phoneNumber": "912 345 678"
+      },
+      "payload": "tel:+351912345678",
+      "bytes": 17,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "telefone_indicativo_em_00",
+      "tipo": "telefone",
+      "descricao": "`00` vira `+` em qualquer posicao, e nao so no inicio.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "00351",
+        "phoneNumber": "912345678"
+      },
+      "payload": "tel:+351912345678",
+      "bytes": 17,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "sms_com_mensagem",
+      "tipo": "sms",
+      "descricao": "O corpo do SMSTO vai ate ao fim da cadeia, depois do segundo `:`. A mensagem **nao tem acentos**: o `a` com til nao existe no GSM 03.38, e a propria validacao desta stack recusa o caso.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "+351",
+        "phoneNumber": "912345678",
+        "smsMessage": "Chego as 18h, traz o caderno (2)."
+      },
+      "payload": "SMSTO:+351912345678:Chego as 18h, traz o caderno (2).",
+      "bytes": 53,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "sms_sem_mensagem",
+      "tipo": "sms",
+      "descricao": "Sem mensagem fica `SMSTO:<numero>:`, e o `:` final continua a la.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "+351",
+        "phoneNumber": "912345678"
+      },
+      "payload": "SMSTO:+351912345678:",
+      "bytes": 20,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "whatsapp_so_numero",
+      "tipo": "whatsapp",
+      "descricao": "O `wa.me` so aceita digitos, e o `+` do indicativo desaparece.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "+351",
+        "phoneNumber": "912 345 678"
+      },
+      "payload": "https://wa.me/351912345678",
+      "bytes": 26,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "whatsapp_com_mensagem",
+      "tipo": "whatsapp",
+      "descricao": "A mensagem vai por percent-encoding, e nao por `+`.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "phonePrefix": "+351",
+        "phoneNumber": "912345678",
+        "waMessage": "Olá & bom dia"
+      },
+      "payload": "https://wa.me/351912345678?text=Ol%C3%A1%20%26%20bom%20dia",
+      "bytes": 58,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "evento_com_separadores",
+      "tipo": "evento",
+      "descricao": "A virgula e o ponto-e-virgula do titulo tem de estar escapados, e o `:` nao.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "eventTitle": "Aula: guionização, nível 2",
+        "eventStart": "2026-09-29T18:30",
+        "eventEnd": "2026-09-29T20:30",
+        "eventLocation": "Biblioteca municipal, sala 3",
+        "eventDescription": "Trazer caderno. Duas horas; com pausa."
+      },
+      "payload": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//QrCodeGenerator//PT\r\nCALSCALE:GREGORIAN\r\nBEGIN:VEVENT\r\nDTSTAMP:20260929T183000\r\nDTSTART:20260929T183000\r\nDTEND:20260929T203000\r\nSUMMARY:Aula: guionização\\, nível 2\r\nLOCATION:Biblioteca municipal\\, sala 3\r\nDESCRIPTION:Trazer caderno. Duas horas\\; com pausa.\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+      "bytes": 328,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "evento_com_barras",
+      "tipo": "evento",
+      "descricao": "Barras invertidas e caracteres CJK. A hora sai como foi escrita, sem fuso.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "eventTitle": "路径 \\ e barra",
+        "eventStart": "2026-01-01T09:00",
+        "eventEnd": "2026-01-01T10:00"
+      },
+      "payload": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//QrCodeGenerator//PT\r\nCALSCALE:GREGORIAN\r\nBEGIN:VEVENT\r\nDTSTAMP:20260101T090000\r\nDTSTART:20260101T090000\r\nDTEND:20260101T100000\r\nSUMMARY:路径 \\\\ e barra\r\nLOCATION:\r\nDESCRIPTION:\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+      "bytes": 247,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "localizacao_simples",
+      "tipo": "localizacao",
+      "descricao": "Coordenada tal como se escreve.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "geoLat": "38.7223",
+        "geoLng": "-9.1393"
+      },
+      "payload": "geo:38.7223,-9.1393",
+      "bytes": 19,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "localizacao_virgula_decimal",
+      "tipo": "localizacao",
+      "descricao": "A virgula decimal do formulario e' aceite e o ponto e' que sai.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "geoLat": "38,7223",
+        "geoLng": "-9,1393"
+      },
+      "payload": "geo:38.7223,-9.1393",
+      "bytes": 19,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "localizacao_muitas_casas",
+      "tipo": "localizacao",
+      "descricao": "Arredonda a sete casas e tira o zero final, e nao em notacao cientifica.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "geoLat": "38.722312345678",
+        "geoLng": "-9.139312345678"
+      },
+      "payload": "geo:38.7223123,-9.1393123",
+      "bytes": 25,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "wifi_com_password",
+      "tipo": "wifi",
+      "descricao": "Rede fechada, com o terminador vazio que o formato exige.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "wifiSsid": "Rede Casa",
+        "wifiSec": "WPA/WPA2",
+        "wifiPass": "segredo123"
+      },
+      "payload": "WIFI:T:WPA;S:Rede Casa;P:segredo123;;",
+      "bytes": 37,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "wifi_aberta_oculta",
+      "tipo": "wifi",
+      "descricao": "Rede aberta nao tem `P:`, e a oculta tem `H:true;`.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "wifiSsid": "Rede Aberta",
+        "wifiSec": "Aberto",
+        "wifiHidden": true
+      },
+      "payload": "WIFI:T:nopass;S:Rede Aberta;H:true;;",
+      "bytes": 36,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "wifi_ssid_com_separadores",
+      "tipo": "wifi",
+      "descricao": "O `;` e a `,` do SSID e da password tem de estar escapados, ou o `P:` e' lido como parte do nome.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "wifiSsid": "Rede; Com, Separadores",
+        "wifiSec": "WPA/WPA2",
+        "wifiPass": "p;ass"
+      },
+      "payload": "WIFI:T:WPA;S:Rede\\; Com\\, Separadores;P:p\\;ass;;",
+      "bytes": 48,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "vcard_completo",
+      "tipo": "vcard",
+      "descricao": "A ADR e' `caixa;extensao;rua;localidade;regiao;codigo-postal;pais` — a cidade e' a quarta.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "vcFirstName": "Ana",
+        "vcLastName": "Silva",
+        "vcOrg": "Oficina de Reparação, Lda.",
+        "vcRole": "Técnica",
+        "vcPhone": "+351 912 345 678",
+        "vcPhone2": "+351 213 456 789",
+        "vcEmail": "ana@exemplo.pt",
+        "vcStreet": "Rua da Bica 12, 3.º Esq",
+        "vcCity": "Lisboa",
+        "vcZip": "1200-401",
+        "vcCountry": "Portugal"
+      },
+      "payload": "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:Ana Silva\r\nN:Silva;Ana;;;\r\nPRODID:-//QrCodeGenerator//PT\r\nORG:Oficina de Reparação\\, Lda.\r\nTITLE:Técnica\r\nTEL;TYPE=cell:+351 912 345 678\r\nTEL;TYPE=work:+351 213 456 789\r\nEMAIL:ana@exemplo.pt\r\nADR;TYPE=work:;;Rua da Bica 12\\, 3.º Esq;Lisboa;;1200-401;Portugal\r\nEND:VCARD\r\n",
+      "bytes": 304,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "vcard_so_o_nome",
+      "tipo": "vcard",
+      "descricao": "O `N` e' `familia;nome;extra;prefixo;sufixo`, e a familia vem primeiro.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "vcFirstName": "Ana",
+        "vcLastName": "Silva"
+      },
+      "payload": "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:Ana Silva\r\nN:Silva;Ana;;;\r\nPRODID:-//QrCodeGenerator//PT\r\nEND:VCARD\r\n",
+      "bytes": 98,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
+    {
+      "id": "vcard_com_barras_e_aspas",
+      "tipo": "vcard",
+      "descricao": "A barra invertida escapa-se e as aspas nao: o vCard so escapa `\\`, `;` e `,`.",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
+      "campos": {
+        "vcFirstName": "Ana \"A\"",
+        "vcLastName": "Silva\\Costa",
+        "vcOrg": "Empresa; Com, Separadores"
+      },
+      "payload": "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:Ana \"A\" Silva\\\\Costa\r\nN:Silva\\\\Costa;Ana \"A\";;;\r\nPRODID:-//QrCodeGenerator//PT\r\nORG:Empresa\\; Com\\, Separadores\r\nEND:VCARD\r\n",
+      "bytes": 153,
+      "verificado": [
+        "validado",
+        "png_descodificado"
+      ]
+    },
     {
       "id": "pix_uuid_sem_valor",
       "tipo": "pix",
@@ -29,7 +437,7 @@
       "id": "pix_email_com_valor",
       "tipo": "pix",
       "descricao": "Chave email com valor fixo.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "Fulano2019@example.com",
         "name": "Fulano de Tal",
@@ -49,7 +457,7 @@
       "id": "pix_cpf_com_valor",
       "tipo": "pix",
       "descricao": "Chave CPF escrita com mascara.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "529.982.247-25",
         "name": "Ana Silva",
@@ -69,7 +477,7 @@
       "id": "pix_cnpj",
       "tipo": "pix",
       "descricao": "Chave CNPJ de empresa.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "11.222.333/0001-81",
         "name": "Empresa Exemplo SA",
@@ -88,7 +496,7 @@
       "id": "pix_telefone_com_txid",
       "tipo": "pix",
       "descricao": "Telefone sem +55, com txid personalizado.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "5511966666666",
         "name": "Loja Doce",
@@ -108,7 +516,7 @@
       "id": "pix_nome_truncado",
       "tipo": "pix",
       "descricao": "Nome com mais de 25 caracteres e truncado.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "fulano@example.com",
         "name": "Jose Carlos dos Santos Silva Jr",
@@ -127,7 +535,7 @@
       "id": "pix_nome_com_acento",
       "tipo": "pix",
       "descricao": "Acentos normalizados para ASCII antes de contar o comprimento.",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "fulano@example.com",
         "name": "José Antônio Café",
@@ -146,7 +554,7 @@
       "id": "pix_descricao_26_02",
       "tipo": "pix",
       "descricao": "Campo opcional 26.02 (descricao).",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "fulano@example.com",
         "name": "Jose Antonio Cafe LTDA",
@@ -166,7 +574,7 @@
       "id": "pix_uso_unico_com_cep",
       "tipo": "pix",
       "descricao": "QR de uso unico (campo 01) com codigo postal (campo 61).",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "fulano@example.com",
         "name": "Fulano",
@@ -187,7 +595,7 @@
       "id": "pix_valor_milhar",
       "tipo": "pix",
       "descricao": "Valor com separador de milhar (1.234,56).",
-      "fonte": "gerado por python/qrcode_core",
+      "fonte": "docs/TIPOS-QR.md, gerado por python/qrcode_core",
       "campos": {
         "key": "fulano@example.com",
         "name": "Fulano",

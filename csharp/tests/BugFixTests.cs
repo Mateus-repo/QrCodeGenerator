@@ -61,15 +61,57 @@ public class BugFixTests
         var ical = Build(new QrFields
         {
             EventTitle = "X",
-            EventStart = new DateTime(2026, 9, 30, 10, 0, 0, DateTimeKind.Utc),
-            EventEnd = new DateTime(2026, 9, 30, 11, 0, 0, DateTimeKind.Utc)
+            EventStart = new DateTime(2026, 9, 30, 10, 0, 0),
+            EventEnd = new DateTime(2026, 9, 30, 11, 0, 0)
         });
 
         Assert.Contains("VERSION:2.0", ical, StringComparison.Ordinal);
-        Assert.Contains("DTSTART:20260930T100000Z", ical, StringComparison.Ordinal);
-        Assert.Contains("DTEND:20260930T110000Z", ical, StringComparison.Ordinal);
+        Assert.Contains("DTSTART:20260930T100000", ical, StringComparison.Ordinal);
+        Assert.Contains("DTEND:20260930T110000", ical, StringComparison.Ordinal);
         Assert.Contains("BEGIN:VEVENT", ical, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// A hora do evento sai <b>sem fuso e sem <c>Z</c></b>.
+    /// </summary>
+    /// <remarks>
+    /// Este teste existia ao contrário, e e' a razao de estar aqui. Ele afirmava
+    /// <c>DTSTART:20260930T100000Z</c> -- com o <c>Z</c> -- porque era isso que a
+    /// aplicacao fazia: <c>ToUniversalTime()</c> e um <c>Z</c> que o utilizador
+    /// nunca escreveu. <b>O teste passava, o payload estava errado, e ninguem via
+    /// nada.</b>
+    /// <para>
+    /// O sintoma em uso real era uma hora de diferenca: quem marcava uma reuniao
+    /// as 18h30 em Portugal via o evento as 17h30 no calendario, e a culpa ia
+    /// para o calendario e nao para o gerador.
+    /// <para>
+    /// Quem nao escreveu o fuso nao pode ser convertido, porque nao ha fuso para
+    /// converter. O <c>DateTime</c> sem <c>Kind</c> e' o que corresponde a um campo
+    /// <c>datetime-local</c>, e e' o que o <c>SpecFixture</c> produz ao ler a spec.
+    /// </remarks>
+    [Theory]
+    [InlineData(DateTimeKind.Unspecified, "20260930T100000")]
+    [InlineData(DateTimeKind.Utc, "20260930T100000")]
+    [InlineData(DateTimeKind.Local, "20260930T100000")]
+    public void ICal_sai_a_hora_que_foi_escrita_sem_converter_para_utc(
+        DateTimeKind kind, string esperado)
+    {
+        var ical = Build(new QrFields
+        {
+            EventTitle = "X",
+            EventStart = new DateTime(2026, 9, 30, 10, 0, 0, kind),
+            EventEnd = new DateTime(2026, 9, 30, 11, 0, 0, kind)
+        });
+
+        Assert.Contains("DTSTART:" + esperado + "\r\n", ical, StringComparison.Ordinal);
+        Assert.Contains("DTEND:20260930T110000\r\n", ical, StringComparison.Ordinal);
+
+        // **E o `Z` nao esta em lado nenhum.** Um horario flutuante nao o leva, e
+        // um `Z` que nao foi escrito mente sobre o sitio.
+        Assert.DoesNotContain("T100000Z", ical, StringComparison.Ordinal);
+        Assert.DoesNotContain("T110000Z", ical, StringComparison.Ordinal);
+    }
+
 
     // --- Bug 3: vCard perdia a morada --------------------------------------
 

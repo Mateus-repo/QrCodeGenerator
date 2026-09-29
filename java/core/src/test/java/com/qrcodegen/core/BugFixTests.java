@@ -70,48 +70,97 @@ class BugFixTests {
     @Test
     @DisplayName("iCal tem os campos obrigatórios")
     void iCalTemCamposObrigatorios() {
-        // O DTSTART é convertido para UTC, portanto o payload depende do fuso
-        // da máquina. Sem fixar o fuso, este teste passa no meu portátil e
-        // falha noutro computador ou na CI.
+        // **Este teste já não fixa o fuso, e essa é a parte importante.**
+        //
+        // A versão anterior fazia `TimeZone.setDefault(UTC)` à volta de tudo, com
+        // um comentário a dizer que sem isso "este teste passa no meu portátil e
+        // falha noutro computador ou na CI". Era o symptomatico honesto do bug: o
+        // payload dependia da máquina, e a única forma de o testar era Guests
+        // prender o fuso para o resultado ser estável.
+        //
+        // Corrigido, a hora sai como foi escrita e o fuso da máquina é irrelevante
+        // — que é o que se verifica aqui, sem tocar em nada.
+
+        String ical = build(new QrFields()
+                .eventTitle("X")
+                .eventStart(LocalDateTime.of(2026, 9, 30, 10, 0))
+                .eventEnd(LocalDateTime.of(2026, 9, 30, 11, 0)));
+
+        assertTrue(ical.contains("VERSION:2.0"), ical);
+        assertTrue(ical.contains("DTSTART:20260930T100000"), ical);
+        assertTrue(ical.contains("DTEND:20260930T110000"), ical);
+        assertTrue(ical.contains("BEGIN:VEVENT"), ical);
+    }
+
+    /**
+     * A hora do evento sai <b>igual em qualquer fuso</b>, e sem {@code Z}.
+     *
+     * <p>Este teste existia ao contrário, e é a razão de estar aqui com este
+     * nome. Chamava-se {@code horaDoEventoConvertidaParaUtc} e afirmava que 10h00
+     * em Lisboa davam 09h00Z — ou seja, <b>documentava o bug como comportamento
+     * desejado</b>.
+     *
+     * <p>O sintoma em uso real era uma hora de diferença: quem marcava uma reunião
+     * às 18h30 em Portugal via o evento às 17h30 no calendário, e a culpa ia para o
+     * calendário e não para o gerador.
+     *
+     * <p><b>Um horário flutuante é o que o calendário de cada pessoa interpreta na
+     * hora de cada pessoa.</b> Um encontro marcado numa biblioteca é exactamente
+     * esse caso: com {@code TZID} marcava a hora num sítio e quem estivesse noutro
+     * via-o à hora errada.
+     */
+    @Test
+    @DisplayName("a hora do evento não é convertida para UTC")
+    void horaDoEventoNaoEConvertidaParaUtc() {
         java.util.TimeZone original = java.util.TimeZone.getDefault();
         try {
-            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
+            // Lisboa no verão é UTC+1. A hora escrita tem de continuar a ser a
+            // hora escrita, e não 09h00.
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Lisbon"));
 
             String ical = build(new QrFields()
                     .eventTitle("X")
                     .eventStart(LocalDateTime.of(2026, 9, 30, 10, 0))
                     .eventEnd(LocalDateTime.of(2026, 9, 30, 11, 0)));
 
-            assertTrue(ical.contains("VERSION:2.0"), ical);
-            assertTrue(ical.contains("DTSTART:20260930T100000Z"), ical);
-            assertTrue(ical.contains("DTEND:20260930T110000Z"), ical);
-            assertTrue(ical.contains("BEGIN:VEVENT"), ical);
+            assertTrue(ical.contains("DTSTART:20260930T100000"), ical);
+            assertFalse(ical.contains("T100000Z"), ical);
         } finally {
             java.util.TimeZone.setDefault(original);
         }
     }
 
+    /**
+     * O payload do evento não depende da máquina que o gerou.
+     *
+     * <p>É a mesma propriedade do teste de cima, vista pelo outro lado: dois
+     * fusos, o mesmo payload. Um gerador cujo payload muda com o fuso do
+     * utilizador não é determinístico, e determinismo é o que permite ter uma
+     * spec com vectors.
+     */
     @Test
-    @DisplayName("a hora do evento é convertida para UTC")
-    void horaDoEventoConvertidaParaUtc() {
+    @DisplayName("o payload do evento é igual em qualquer fuso")
+    void oPayloadDoEventoEhIgualEmQualquerFuso() {
         java.util.TimeZone original = java.util.TimeZone.getDefault();
         try {
             java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Europe/Lisbon"));
-
-            // Lisboa no verão é UTC+1: 10:00 local são 09:00 UTC.
-            String ical = build(new QrFields()
+            String emLisboa = build(new QrFields()
                     .eventTitle("X")
                     .eventStart(LocalDateTime.of(2026, 9, 30, 10, 0))
                     .eventEnd(LocalDateTime.of(2026, 9, 30, 11, 0)));
 
-            assertTrue(ical.contains("DTSTART:20260930T090000Z"), ical);
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("America/New_York"));
+            String emNovaYork = build(new QrFields()
+                    .eventTitle("X")
+                    .eventStart(LocalDateTime.of(2026, 9, 30, 10, 0))
+                    .eventEnd(LocalDateTime.of(2026, 9, 30, 11, 0)));
+
+            assertEquals(emLisboa, emNovaYork,
+                    "o payload nao pode depender do fuso da maquina");
         } finally {
             java.util.TimeZone.setDefault(original);
         }
     }
-
-    // --- Bug 3: vCard perdia a morada --------------------------------------
-
     @Test
     @DisplayName("vCard gera a morada")
     void vCardGeraAMorada() {
