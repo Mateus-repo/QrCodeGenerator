@@ -24,6 +24,7 @@ const EXEMPLOS = {
   ean8: '9638507',
   upca: '03600029145',
   code128: 'MAST-2024-0001',
+  'gs1-128': '(01)04012345678901(10)LOTE-A1(17)270630',
   code39: 'ABC-1234',
   itf14: '1234567890123',
   codabar: '12345678',
@@ -31,14 +32,26 @@ const EXEMPLOS = {
 
 // --- O registo --------------------------------------------------------------
 
-test('as sete simbologias estão registadas, com ids válidos', () => {
+test('as oito simbologias estão registadas, com ids válidos', () => {
   assert.deepEqual(
     SIMBOLOGIAS.map((s) => s.id),
-    ['ean13', 'ean8', 'upca', 'code128', 'code39', 'itf14', 'codabar'],
+    ['ean13', 'ean8', 'upca', 'code128', 'gs1-128', 'code39', 'itf14', 'codabar'],
   );
 
   for (const s of SIMBOLOGIAS) {
-    assert.match(s.id, /^[a-z][a-z0-9]*$/);
+    /*
+     * O id vai para o `value` de um `<option>` e e' o que a interface usa para
+     * escolher a simbologia, por isso so pode ter letras, digitos e hifenes - e
+     * tem de comecar por letra, para nao parecer um numero nem um valor
+     * vazio. O hifen foi acrescentado com o `gs1-128`: o nome da GS1 tem
+     * hifen e escrever `gs1128` seria pior do que o separador.
+     *
+     * **E um `id` de HTML nao serve**, e por isso o regex aceita o hifen: o
+     * `id` que vai para o DOM e' o do `option`, gerado a partir de um contador,
+     * e nao o da simbologia. Se algum dia o id entrar num atributo `id`, este
+     * teste tem de mudar - e e' melhor que mude aqui do que no browser.
+     */
+    assert.match(s.id, /^[a-z][a-z0-9-]*$/);
     assert.ok(s.rotulo.length > 0);
     assert.ok(s.descricao.length > 0);
     assert.equal(typeof s.encode, 'function');

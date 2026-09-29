@@ -15,12 +15,14 @@ import { code128 } from './code128.js';
 import { code39 } from './code39.js';
 import { itf, itf14 } from './itf.js';
 import { codabar } from './codabar.js';
+import { gs1_128 } from './gs1-128.js';
 
 export { ean13, ean8, upcA } from './upcean.js';
 export { code128 } from './code128.js';
 export { code39 } from './code39.js';
 export { itf, itf14 } from './itf.js';
 export { codabar } from './codabar.js';
+export { gs1_128 } from './gs1-128.js';
 
 /**
  * Altura da barra em modulos, por simbologia.
@@ -35,6 +37,7 @@ const ALTURA_PADRAO = {
   'EAN-8': 62,
   'UPC-A': 68,
   'Code 128': 60,
+  'GS1-128': 60,
   'Code 39': 55,
   'ITF': 50,
   'ITF-14': 50,
@@ -126,6 +129,44 @@ export const SIMBOLOGIAS = [
       return texto;
     },
     encode: code128,
+  },
+  {
+    id: 'gs1-128',
+    symbology: 'GS1-128',
+    rotulo: 'GS1-128',
+    grupo: 'LOGISTICA',
+    descricao:
+      'O Code 128 com campos separados. Etiquetas de encomenda, caixas de ' +
+      'farmácia, tudo o que leva mais do que um código de barras.',
+    campo: {
+      key: 'valor',
+      label: 'Campos GS1',
+      placeholder: '(01)04012345678901(10)LOTE-A1(17)270630',
+      dica:
+        'Cada campo começa por (AI) entre parênteses. O (01) é o GTIN de 14 ' +
+        'dígitos, o (10) o lote e o (17) a validade. As datas vão em AAMMDD.',
+    },
+    /*
+     * A validação é a do encoder, e não uma cópia daqui.
+     *
+     * Cada um dos outros campos deste registo reescreve as regras à sua maneira,
+     * porque cada simbologia tem as suas. O GS1-128 tem **541 regras** - uma por
+     * AI, cada uma com o seu comprimento e a sua expressão regular, todas numa
+     * tabela gerada da fonte oficial. Escrever as regras outra vez aqui seria
+     * criar uma segunda fonte de verdade sobre a mesma coisa, e as duas iam
+     * divergir sem que nada dissesse: a validação de aqui passaria, a do encoder
+     * não, e o erro apareceria no momento de gerar em vez de ao escrever.
+     *
+     * A única coisa que fica aqui é o mínimo: não estar vazio.
+     */
+    validar(valor) {
+      const texto = String(valor).trim();
+      if (texto.length === 0) {
+        throw new Error('GS1-128: escreve os campos, como (01)04012345678901(10)LOTE-A1.');
+      }
+      return texto;
+    },
+    encode: gs1_128,
   },
   {
     id: 'code39',
