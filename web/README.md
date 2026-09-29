@@ -5,7 +5,13 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + FrameQR + PDF417 + 7 simbologias 1D · ✅ 161 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ⚠️ 11 tipos de QR + FrameQR (incompleto) + PDF417 + 7 simbologias 1D · ✅ 161 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+
+> **O FrameQR está pela metade.** O cursor que escolhe o tamanho do quadrado
+> existe e está verificado; **meter a imagem dentro não existe**. Não há upload,
+> e logo não há limite de píxeis nem o aviso que o acompanha. É a diferença
+> entre um logótipo e um buraco, e está escrito na secção do FrameQR do
+> [`../docs/TODO.md`](../docs/TODO.md).
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 

@@ -152,6 +152,19 @@ nada de parcial, nada de "está quase certo". E um `frameqr.js` sem
 `descodificar-frameqr.py` a dizer que os logótipos recomendados leem-se é
 código não verificado, por muito que passe nos testes de estrutura.
 
+**E uma feature que se dá por feita e não está:** o `frameqr.js` tem o cursor
+que escolhe o tamanho do quadrado, e **não tem forma de meter uma imagem lá
+dentro**. É a diferença entre um logótipo e um buraco. Quando mexeres nisso,
+lembra-te de que o limite útil da imagem é em **píxeis e depende da escala** —
+que muda com o tamanho pedido e com a versão do QR — e de que essa mudança tem
+de aparecer ao utilizador. Um número fixo seria uma mentira em metade dos casos.
+Está escrito por extenso no `TODO.md`, na secção do FrameQR.
+
+**E um ficheiro exportado tem de sair igual ao que está no ecrã.** Aconteceu
+com o QR com logótipo — o PNG saía com o logótipo e o SVG sem ele, dois ficheiros
+com o mesmo nome e conteúdos diferentes, sem nenhum aviso. A regra é passar a
+mesma matriz aos dois, e vale para o SVG e para o PNG de qualquer formato.
+
 ### O QR code é sempre preto sobre branco
 
 Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há
