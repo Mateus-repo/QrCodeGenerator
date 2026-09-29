@@ -80,6 +80,41 @@ O ficheiro exportado diz o que é (`codigo-ean13.png`, não `qrcode-link.png`).
 A margem muda de valor: 4 módulos no QR, 10 nos códigos de barras, que é o que a
 ISO/IEC 15420 pede para um 1D.
 
+### SQRC, o QR com conteudo cifrado
+
+Escolhe **SQRC (conteudo cifrado)** no formato, escreve o conteudo como
+escreverias num QR normal, e escreve **a chave**.
+
+**A chave e' tua, e so tua.** O site nao a guarda em lado nenhum: nem no
+servidor, nem no dispositivo, nem no historico do browser. Sem a chave, o
+conteudo esta **perdido para sempre** — nao escondido, perdido. Nao ha
+recuperacao e nao ha segunda tentativa.
+
+Isto e' deliberado, e o inverso e' que nao e': um servico que guardasse a tua
+chave poderia mostrar o teu conteudo a alguem. Um que nao a guarda nao tem esse
+poder. O preco e' a ausencia de segunda chance.
+
+O campo da chave aceita qualquer texto. A mesma frase da sempre a mesma chave, e
+por isso que a frase tem de ser a mesma noutro dispositivo. O botao **"gerar
+uma chave aleatoria"** escreve no campo — nao a aplica a dedo, para a poderes ler
+e confirmar antes de a usar.
+
+**O identificador da chave** e' opcional e serve para ter varios SQRC com chaves
+diferentes no mesmo sitio e saber de que chave e' cada um sem abrir nenhum. Os
+bytes desse campo vao no codigo, e quem o ler ve-los: **nao e' segredo.**
+
+O conteudo vai cifrado com **AES-GCM**, que e' a Web Crypto do browser — sem
+dependencias, sem nada para instalar. Escolhe-se o GCM e nao outro porque
+**verifica**: um codigo adulterado da erro em vez de devolver bytes errados, e
+quem descifrar sabe que o problema e' do codigo e nao da chave.
+
+O que sai do site e' a base64 do contentor cifrado, e e' isso que vai no PNG, no
+SVG e no botao de copiar. **Nao sai o texto em claro** — se saisse, o SQRC seria
+um QR normal com um passo a mais.
+
+Nao ha leitor de SQRC em nenhum lado: quem abre tem de ter a chave. E o ZXing,
+que le o QR, devolve os bytes cifrados — que e' o que tem de acontecer.
+
 ### Temas
 
 Em *Opções* tens **Tema** e **Modo**.
