@@ -138,13 +138,18 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       rápida de entregar códigos que não passam em leitor nenhum. Entra com a
       ISO/IEC 6120 à mão. É a versão comprimida do UPC-A, e só codifica uma
       parte dos produtos.
-- [ ] **Code 93** — mais compacto e mais seguro que o Code 39. Não é um
+- [x] **Code 93** — mais compacto e mais seguro que o Code 39. Não é um
       Code 39 melhorado: tem dois dígitos de controlo e uma tabela diferente.
-      > **Decisão do utilizador: fica para mais tarde.** Anotado, não
-      > esquecido. O motivo de ficar atrás é o de sempre: o `python-barcode`
-      > não o tem, a tabela vem de outra fonte, e é exactamente aí que já me
-      > Parti com o Code 39 e o ITF. Quando houver uma fonte de referência à
-      > mão, entra com o teste de comparação de tabelas como os outros.
+      > **Feito e verificado pelo ZXing**, 10 de 10 casos lidos.
+      >
+      > A tabela não veio do `python-barcode`, que não o tem — veio do próprio
+      > **ZXing**, o `Code93Reader.java`, e o `gerar-tabela-code93.py` gera o
+      > ficheiro a partir de lá. A razão de ser aceitável é a mesma do Code
+      > 32: não é uma tabela transcrita de uma tabela, é a que o leitor usa.
+      >
+      > Quatro bugs, e **nenhum era de tabela**: os 9 bits lidos de três
+      > maneiras diferentes, o asterisco ausente do código, e a barra de
+      > terminação ausente. Todos se desenhavam e nenhum lia.
 - [ ] **Code 11** — telecomunicações. Formato antigo, três dígitos de
       controlo.
       > **Decisão do utilizador: fica para mais tarde**, pela mesma razão do
@@ -266,12 +271,28 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       estendido, e o código que sai é **perfeitamente válido e lê em qualquer
       leitor**. A diferença é o tamanho: "MAST-2024-0001" sai um símbolo maior
       do que sairia em C40, e num número de série comprido a diferença nota-se.
-      > Falta o algoritmo de *look-ahead* da ISO, que é a escolha de modo, e é a
-      > parte mais longa do encoder do ZXing. Não está aqui porque não é
-      > preciseza, é optimização — e otimização sem a parte difícil de pensar
-      > por baixo é a maneira de entregar códigos maiores do que o necessário
-      > sem dar conta. **A ser o primeiro dos 2D**: é o
-      mais usado, e destrava o GS1 DataMatrix, que é só um wrapper.
+      > **As tabelas do C40 e do Text estão feitas**, geradas do Zint
+      > (`dmatrix.h`, as Tabelas C.1 e C.2 da ISO/IEC 16022) e verificadas em
+      > `web/tests/dm-modos.test.mjs` — 8 testes que verificam sobretudo que as
+      > duas tabelas **não são iguais**, porque é aí que um encoder erra sem dar
+      > erro.
+      >
+      > **O que os testes apanharam a mim, e vale a pena registar:** escrevi que
+      > as minúsculas estavam no conjunto 1 do C40, e no conjunto 0 do Text, e
+      > que os dígitos valiam 0 a 9. **As duas coisas estão erradas.** As
+      > minúsculas são o **conjunto 3** do C40 (valores 1 a 26) e o **básico** do
+      > Text (valores 14 a 39) — o oposto do que escrevi, e a confusão é de meio
+      > de campo: o que eu escrevi é verdade para as *maiúsculas*, que o C40 põe
+      > no básico. E os dígitos valem **4 a 13**, porque o 0 está reservado para
+      > o indicador de modo do *extended* e para o *latch*.
+      >
+      > **Falta o encoder**, que é o algoritmo de *look-ahead*: a escolha de modo
+      > é a parte mais longa do encoder do ZXing, e é a que decide se vale a pena
+      > mudar de modo. Otimização sem a parte difícil de pensar por baixo é a
+      > maneira de entregar códigos maiores do que o necessário sem dar conta.
+      > **X12 e EDIFACT ficam de fora**: nao trazem nenhuma melhoria ao que se
+      > usa (números de série e lotes são ASCII), e cada um traz a sua tabela.
+
 - [x] **PDF417** — empilhado, e o que se vê no verso de cartas de condução e
       cartões de embarque. O mais usado dos 2D que faltam a seguir o Data
       Matrix, e o que a lista tinha esquecido.
@@ -304,8 +325,14 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > `text` em ISO-8859-1. Comparar o `text` com o payload faz falhar todos
       > os casos com acentos e emojis e dá a impressão de que o modo de bytes
       > está partido. Não está — os `bytes` é que têm de se ler, em UTF-8.
-- [ ] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
+- [x] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
       cabeçalho FNC1 em ASCII, para rastreabilidade na saúde e na logística.
+      > **Feito, ligado à interface e verificado pelo ZXing**: 8 de 8, com
+      > `]d2` e `ContentType.GS1` reconhecidos e os separadores no sítio.
+      >
+      > Não é só o FNC1: os campos de comprimento variável precisam de um
+      > separador **no fim de cada um, menos o último**. Sem isso o leitor
+      > descodifica com os campos trocados, e não há erro nenhum.
 - [ ] **Aztec** — bilhetes de comboio e cartões de embarque. Tem um padrão de
       orientação central e usa Reed-Solomon sobre GF(16) e GF(256). Não é
       apenas mais difícil: é um algoritmo diferente do QR.
@@ -345,10 +372,18 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > leitura passava, o SVG tinha o mesmo erro, e o único sintoma era um
       > logotipo torto. Nenhum teste estrutural o apanha, porque o código
       > estava certo.
-- [ ] **Afinar o limite do logótipo por versão.** Hoje a mesma percentagem vale
+- [x] **Afinar o limite do logótipo por versão.** Hoje a mesma percentagem vale
       para todas as versões, o que é conservador nos QR grandes. A conta certa é
       em codewords: quantos o bloco aguenta estragar, e não que percentagem de
       área. Deixa o logótipo maior no H sem perder a garantia.
+      > **Feito, e medido com o ZXing em vez de deduzido da norma.** É o
+      > `modulosMaximos` de `frameqr.js`, com os piores casos de uma varredura
+      > real — não a percentagem teórica, que é 4 a 6 vezes o que um QR pequeno
+      > aguenta.
+      >
+      > A razão de medir e não deduzir: **a teórica dá logotipos que às vezes
+      > leem**, e o defeito só aparece no cartão impresso. Verificado em 8 de 8
+      > pela leitura, e o aviso da interface diz até onde dá.
 - [ ] **rMQR Code** — ISO/IEC 23941 (2022), o QR **rectangular**. A especificação
       é **paga** (CHF 204 na ISO), mas as tabelas não são, e a procura já está
       feita.
