@@ -22,6 +22,9 @@ import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
 import { aplicarFrame, modulosMaximos, desenharLogotipo, dimensaoDoLogotipo } from './frameqr.js';
 import { pdf417 } from './symbologies/pdf417.js';
+import { dataMatrix as codificarDataMatrix } from './symbologies/datamatrix.js';
+import { gs1DataMatrix } from './symbologies/gs1-datamatrix.js';
+import { desenharDataMatrix, paraSvgDataMatrix } from './datamatrix.js';
 import { ligarSeletores } from './themes.js';
 import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
 import { desenhar as desenharLinear, paraSvg as linearParaSvg, dimensoes } from './symbologies/linear.js';
@@ -65,6 +68,14 @@ const state = {
   fields: {},
   payload: '',
   valido: false,
+  /**
+   * A matriz do Data Matrix (e do GS1 DataMatrix) tal como foi desenhada.
+   *
+   * Vive aqui pelo mesmo motivo que a do QR: o SVG tem de sair **igual** ao PNG,
+   * e para isso precisa da mesma matriz e não do payload outra vez. Sem isto, os
+   * dois ficheiros saíam de codificações diferentes e ninguém dizia nada.
+   */
+  dataMatrix: null,
   /**
    * A matriz do QR como foi desenhada, com a zona do logotipo ja apagada.
    *
@@ -115,10 +126,15 @@ const state = {
  */
 const ehQr = () => dom.formato.value === 'qr';
 const ehPdf417 = () => dom.formato.value === 'pdf417';
+/** O Data Matrix, e o GS1 DataMatrix: grelha 2D, mas não o QR. */
+const ehDataMatrix = () =>
+  dom.formato.value === 'datamatrix' || dom.formato.value === 'gs1-datamatrix';
+/** O GS1 DataMatrix tem os AI entre parênteses; o Data Matrix normal, texto solto. */
+const ehGs1DataMatrix = () => dom.formato.value === 'gs1-datamatrix';
 
 /** A simbologia 1D escolhida, se for o caso. */
 const simbologiaActual = () =>
-  ehQr() || ehPdf417() ? null : simbologiaPorId(dom.formato.value);
+  ehQr() || ehPdf417() || ehDataMatrix() ? null : simbologiaPorId(dom.formato.value);
 
 // --- Formulário ------------------------------------------------------------
 
@@ -136,6 +152,11 @@ function desenharCampos() {
 
   if (ehPdf417()) {
     desenharCamposPdf417();
+    return;
+  }
+
+  if (ehDataMatrix()) {
+    desenharCamposDataMatrix();
     return;
   }
 
@@ -444,26 +465,37 @@ function carregarLogotipo(ficheiro) {
 function alternarFormato() {
   const qr = ehQr();
   const empilhado = ehPdf417();
+  const matriz = ehDataMatrix();
 
   dom.campoCategoria.hidden = !qr;
 
-  // O campo de correcção de erros serve para o QR e para o PDF417, cada um com
+  // O campo de correção de erros serve para o QR e para o PDF417, cada um com
   // as suas opções. São reconstruídos porque as opções são diferentes e não
   // vale a pena trocar os valores a meio.
+  //
+  // **O Data Matrix fica de fora, e não por ser 2D.** É que ele tem um único
+  // nível, o ECC200, e não se escolhe: o `dom.campoEcc` ficaria visível com as
+  // opções do PDF417, que são nove, e nenhuma delas se aplicaria. Deixar um
+  // campo de correção de erros que não faz nada é pior do que não o ter — é o
+  // que a nota do `campoEcc` diz, e o Data Matrix é o caso onde a tentação de o
+  // mostrar é maior porque "é 2D, como o QR".
   dom.campoEcc.hidden = !(qr || empilhado);
   if (qr) preencherEcc(eccQr);
   else if (empilhado) preencherEcc(eccPdf417);
 
   dom.ajudaMargem.textContent = qr
     ? 'A norma do QR pede 4. Só mexa se souber o que está a fazer.'
-    : empilhado
-      ? 'A norma do PDF417 pede 2. Só mexa se souber o que está a fazer.'
+    : empilhado || matriz
+      ? matriz
+        ? 'O Data Matrix funciona com 0 ou 1. Só mexa se souber o que está a fazer.'
+        : 'A norma do PDF417 pede 2. Só mexa se souber o que está a fazer.'
       : 'A ISO/IEC 15420 pede 10 módulos. Só mexa se souber o que está a fazer.';
 
-  // A margem do QR vai de 0 a 8; a do código de barras é bem maior, e um
-  // campo que não deixa escrever 10 seria mais uma coisa a explicar.
-  dom.margem.max = qr || empilhado ? '8' : '20';
-  if (!qr) dom.margem.value = empilhado ? '2' : '10';
+  // A margem do QR e do PDF417 vai de 0 a 8; a do código de barras é bem maior, e
+  // um campo que não deixa escrever 10 seria mais uma coisa a explicar. A do
+  // Data Matrix é pequena como a do QR - ele tem guias, e a zona muda é de 2.
+  dom.margem.max = qr || empilhado || matriz ? '8' : '20';
+  if (!qr) dom.margem.value = empilhado || matriz ? '2' : '10';
 
   // O quadrado do logótipo é um conceito do QR. Num código de barras não há
   // correção de erros que reconstrua o que se apaga, e o resultado seria um
@@ -567,9 +599,118 @@ function opcoes() {
   };
 }
 
+/**
+ * O campo dos Data Matrix.
+ *
+ * O GS1 DataMatrix e o Data Matrix normal tem o mesmo campo - uma linha de texto
+ * - e so muda o que se escreve nela e o que a dica diz. Sao duas funcoes e nao
+ * uma com uma condicao porque **a dica e' a metade do que o utilizador precisa**:
+ * o `((01)...)` com os AI entre parenteses nao e' adivinhavel, e uma dica que
+ * nao mostra um exemplo completo deixa a pessoa a descobrir a sintaxe.
+ */
+function desenharCamposDataMatrix() {
+  const gs1 = ehGs1DataMatrix();
+
+  const div = document.createElement('div');
+  div.className = 'campo';
+
+  const input = document.createElement('input');
+  input.id = 'campo-valor';
+  input.placeholder = gs1 ? '(01)04012345678901(10)LOTE-A1' : 'MAST-2024-0001';
+  input.value = state.payload;
+  input.addEventListener('input', atualizar);
+
+  const label = document.createElement('label');
+  label.htmlFor = input.id;
+  label.textContent = gs1 ? 'Campos GS1' : 'Conteúdo';
+
+  const ajuda = document.createElement('p');
+  ajuda.className = 'ajuda';
+  ajuda.textContent = gs1
+    ? 'Cada campo começa por (AI) entre parênteses. O (01) é o GTIN de 14 ' +
+      'dígitos, o (10) o lote e o (17) a validade, em AAMMDD. O quadradinho ' +
+      'é o que vai em ampolas de farmácia e em chips — é o código 2D mais ' +
+      'denso que existe.'
+    : 'Texto solto, sem AI. Para etiquetas de farmácia e chips, o GS1 ' +
+      'DataMatrix é o certo: traz o GTIN, o lote e a validade juntos.';
+
+  div.append(label, input, ajuda);
+  dom.campos.append(div);
+}
+
+/**
+ * O caminho do Data Matrix e do GS1 DataMatrix.
+ *
+ * **O Data Matrix é o código 2D mais denso que existe**, e isso é a razão de ele
+ * ser pequeno e não haver mush choices. Um símbolo de 22×22 leva 44 caracteres
+ * de dados, que é quase o que um QR de nível L com a mesma informação leva em
+ * área. A razão é a correção de erros: o ECC200 põe até 62% do símbolo em
+ * codewords de correcção, três vezes mais do que o QR mais robusto, porque as
+ * etiquetas são pequenas e apanham inferno.
+ *
+ * O que ele não tem são os três padrões de localização nos cantos que o QR tem.
+ * A orientação vem de duas guias em L. É por isso que é muito mais pequeno.
+ */
+function atualizarDataMatrix() {
+  const input = document.getElementById('campo-valor');
+  const texto = input ? input.value : '';
+
+  if (texto.length === 0) {
+    mostrarErro(
+      'Escreve alguma coisa para codificar.',
+      ehGs1DataMatrix()
+        ? 'Preenche os campos GS1 para o código aparecer aqui.'
+        : 'Preenche o conteúdo para o Data Matrix aparecer aqui.',
+    );
+    return;
+  }
+
+  try {
+    const codigo = ehGs1DataMatrix()
+      ? gs1DataMatrix(texto)
+      : codificarDataMatrix(texto);
+
+    const margem = Math.min(8, Math.max(0, Number(dom.margem.value) || 2));
+    const alvo = Math.max(64, Number(dom.tamanho.value) || 512);
+
+    desenharDataMatrix(dom.canvas, codigo, { margem, targetPx: alvo });
+
+    state.payload = texto;
+    // A matriz guarda-se para o SVG sair igual ao PNG, pelo mesmo motivo que no
+    // QR com o logótipo e no PDF417.
+    /*
+     * A matriz do Data Matrix guarda-se tal como a do QR e a do PDF417, e pelo
+     * mesmo motivo: o SVG tem de sair **igual** ao PNG, e para isso precisa da
+     * mesma matriz e nao do payload outra vez. Sem isto, mudar o campo faria o
+     * PNG e o SVG divergirem sem nenhum aviso.
+     */
+    state.dataMatrix = codigo;
+    state.valido = true;
+    dom.erro.hidden = true;
+    dom.vazio.hidden = true;
+    dom.acoes.hidden = false;
+    dom.payload.textContent = texto;
+
+    const info = ehGs1DataMatrix()
+      ? `${codigo.campos.length} campos GS1 · ${codigo.separadores} FNC1 · ` +
+        `${codigo.colunas}×${codigo.linhas} módulos · ${codigo.usado} de ` +
+        `${codigo.capacidade} codewords`
+      : `${codigo.colunas}×${codigo.linhas} módulos · ${codigo.usado} de ` +
+        `${codigo.capacidade} codewords · ECC200`;
+    dom.contagem.textContent = info;
+  } catch (exception) {
+    mostrarErro(exception.message);
+  }
+}
+
 function atualizar() {
   if (ehPdf417()) {
     atualizarPdf417();
+    return;
+  }
+
+  if (ehDataMatrix()) {
+    atualizarDataMatrix();
     return;
   }
 
@@ -878,6 +1019,18 @@ function guardarSvg() {
 
   if (ehPdf417()) {
     guardar(new Blob([svgPdf417()], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
+    return;
+  }
+
+  if (ehDataMatrix()) {
+    /*
+     * A **mesma matriz** que o canvas, e nao o payload outra vez. Sem isto o PNG
+     * e o SVG saiam de codificacoes diferentes, e dois ficheiros com o mesmo nome
+     * e conteudos diferentes e' o bug que ja aconteceu com o QR com o logotipo.
+     */
+    const margem = Math.min(8, Math.max(0, Number(dom.margem.value) || 2));
+    const svg = paraSvgDataMatrix(state.dataMatrix, { margem });
+    guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
     return;
   }
 

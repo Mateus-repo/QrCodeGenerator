@@ -54,16 +54,22 @@ const DO_HTML = [...SELECTOR.matchAll(/<option value="([^"]+)"/g)].map((m) => m[
 /**
  * Os formatos que vivem no selector mas **nao** no registo dos lineares.
  *
- * O QR e o PDF417 estao no selector e noutro caminho da aplicacao, por desenho.
- * A primeira versao deste teste nao os excluia e falhava com `qr` na lista, o que
- * e' o mesmo sintoma de um `<option>` a apontar para o vazio e completamente
- * diferente: aqui e' proposito.
+ * O QR, o PDF417 e os dois Data Matrix estao no selector e noutro caminho da
+ * aplicacao, por desenho: os lineares tem validacao e desenho proprios, e um
+ * codigo 1D nao se desenha como uma grelha 2D. A primeira versao deste teste so
+ * excluia o QR e o PDF417, e quando os Data Matrix entraram no selector falhou a
+ * dizer que estavam no selector e nao no registo - que e' verdade e nao e' um
+ * problema.
  *
  * Escritos um a um e nao por `startsWith`, porque um filtro em vez de uma lista
  * e' uma lista implicita, e a proxima vez que entrar um formato sem registo o
  * filtro passa a apanha-lo sem ninguem ver.
+ *
+ * **O proximo formato que aparecer tem de ser posto aqui**, ou o teste diz a
+ * verdade e alguem vai corrigir no sitio errado - que e' o registo dos lineares,
+ * e que passaria a conter um Data Matrix.
  */
-const FORA_DO_REGISTO = new Set(['qr', 'pdf417']);
+const FORA_DO_REGISTO = new Set(['qr', 'pdf417', 'datamatrix', 'gs1-datamatrix']);
 
 /**
  * Os formatos que vivem no selector mas **nao** no registo dos lineares.
