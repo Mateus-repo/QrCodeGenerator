@@ -149,10 +149,68 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       controlo.
       > **Decisão do utilizador: fica para mais tarde**, pela mesma razão do
       > Code 93.
-- [ ] **GS1-128** — não é um encoder novo: é Code 128 com o caractere FNC1 no
-      início, para os dados de Application Identifier da GS1 (data de
-      validade, lote, quantidade). Barato de fazer; falta decidir que campos
-      da GS1 se expõem na interface.
+- [x] **GS1-128** — Code 128 com o FNC1 no início e os separadores entre campos.
+      **Feito e verificado: 8 casos lidos pelo ZXing, `]C1` reconhecido, e o PNG
+      exportado pelo browser lido.** `web/symbologies/gs1-128.js`
+      > **Não é "Code 128 com FNC1 no início", que foi o que se escrevia aqui.**
+      > São três coisas, e as três são obrigatórias:
+      >
+      > 1. **O FNC1 do início**, logo a seguir ao caracter de início do conjunto.
+      > 2. **Um FNC1 no fim de cada campo de comprimento variável** — *menos no
+      >    último*, porque um separador no fim não separa de nada.
+      > 3. **Ficar no conjunto B**, sem comutar. Uma comutação para o conjunto C
+      >    partiria um campo ao meio sem o leitor dar por isso.
+      >
+      > **Os 541 AIs estão numa tabela gerada** do JSON-LD de `ref.gs1.org`, pela
+      > ferramenta oficial da GS1. Cada AI traz o formato, o comprimento, se leva
+      > separador e um regex. Não se escreve uma tabela assim de memória: o Code 39
+      > deste repositório foi escrito de memória e saiu com doze elementos por
+      > carácter em vez de nove, e nenhum teste estrutural a apanhou. Um AI com o
+      > comprimento errado desenha-se perfeito e o leitor lê-o como inválido.
+      >
+      > A notação de formato tem **quatro** tipos de campo — `N`, `X`, `Y` e `Z` —
+      > e um `grep` inicial que só procurava `N` e `X` perdeu os dois últimos. Os
+      > `Y` e `Z` só aparecem uma vez cada, nos AIs 8010 e 8030.
+      >
+      > **O que o ZXing devolve foi medido, e é mais do que se esperava.** O
+      > leitor dá três coisas, e só uma delas distingue um GS1-128 com separadores
+      > de um sem eles:
+      >
+      >  - `text` — os AIs **entre parênteses**, sem separadores. É a forma
+      >    humana, e não distingue nada sobre os separadores.
+      >  - `bytes` — os campos **sem** parênteses, com `0x1D` onde está o
+      >    separador. É aqui que os separadores se veem.
+      >  - `symbology_identifier` — `]C1` quando há FNC1 no início, `]C0` quando
+      >    não há. É a única prova de que é GS1 e não Code 128.
+      >
+      > Duas versões do teste falharam por esperar `<GS>` no texto, porque um
+      > script escrito à mão mostrava isso. Um script à mão chega a conclusões
+      > diferentes do leitor a sério.
+      >
+      > **O `python-barcode` não serve de referência.** O `Gs1_128` dele prefixa
+      > FNC1 e não emite separadores nenhum, e o `get_fullcode()` devolve
+      > `'(01)04012345678901(17)270630'` — com os parênteses **dentro do código de
+      > barras**, porque ele codifica a string humana tal e qual e não faz parsing
+      > de AIs. Serve para confirmar que o FNC1 do início é o codeword 102, e para
+      > nada mais.
+      >
+      > **Três bugs que só apareceram com o leitor ligado**, e todos com o mesmo
+      > sintoma — o ZXing recusa o código sem dizer porquê:
+      >
+      > 1. **A soma de verificação não tinha pesos.** Fiz `reduce((s, v) => s + v)`
+      >    em vez de ponderar pela posição. O número de módulos é 11 por codeword,
+      >    por isso o erro **não se via no desenho**; foi a contagem que denunciou:
+      >    222 módulos onde a conta dava 200.
+      > 2. **O número do AI não ia para o código de barras.** Emitia só o valor, e
+      >    o AI ficava de fora — confusão entre a forma humana e a de máquina: os
+      >    parênteses não vão, mas os dígitos **vão**.
+      > 3. **O separador ia no fim de todo o campo variável**, mesmo no último.
+      >    O ZXing devolvia o mesmo texto com um `0x1D` a mais, e o código de
+      >    barras continuava a desenhar-se bem. Metade dos leitores aceitava.
+      >
+      > O primeiro e o mais instrutivo: **a soma ponderada e a soma simples dão o
+      > mesmo número de módulos**, porque todos os padrões têm 11. O defeito é
+      > invisível na imagem e só aparece na leitura.
 
 ### 2D matriciais — 1 de 5
 

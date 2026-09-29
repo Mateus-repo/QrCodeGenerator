@@ -171,6 +171,25 @@ com o QR com logótipo — o PNG saía com o logótipo e o SVG sem ele, dois fic
 com o mesmo nome e conteúdos diferentes, sem nenhum aviso. A regra é passar a
 mesma matriz aos dois, e vale para o SVG e para o PNG de qualquer formato.
 
+**E duas listas do mesmo conjunto divergem em silêncio.** O selector de formatos
+vive no `index.html` e o registo das simbologias vive no módulo. São o mesmo
+conjunto escrito duas vezes, e nada as ligava: o GS1-128 entrou no registo com o
+encoder, a validação, a altura e os 8 casos lidos pelo ZXing — e **não aparecia
+no selector**. Sem sintoma e sem erro; a aplicação é que está certa e a pessoa é
+que não o consegue escolher. O `formatos.test.mjs` compara as duas, nos dois
+sentidos: um `<option>` sem registo rebenta ao desenhar (erro visível), e um
+registo sem `<option>` é invisível (erro que não se vê). O mesmo se aplica à
+lista de AIs e à de tipos de QR.
+
+**E o service worker servia a versão antiga para sempre.** Com um nome de cache
+fixo e a estratégia "cache primeiro", quem abrisse o site ficava com a versão de
+ontem — e o sintoma é o mais confuso possível: o encoder está no disco, o registo
+tem a entrada, o servidor responde certo, e a aplicação diz "Formato
+desconhecido" porque tem em memória o módulo de antes. O `sw.js` passou a levar a
+versão no nome do cache, e a lista de recursos passou a ser explícita e
+completa. **Ao acrescentar um módulo, acrescentá-lo à lista**, ou o site não
+funciona offline.
+
 ### O QR code é sempre preto sobre branco
 
 Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há

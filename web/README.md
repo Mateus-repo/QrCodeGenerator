@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 7 simbologias 1D · ✅ 171 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 8 simbologias 1D · ✅ 193 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -57,6 +57,8 @@ web/
 │   ├── code39.js         Code 39, com controlo mod 43
 │   ├── itf.js            ITF e ITF-14
 │   ├── codabar.js        Codabar
+│   ├── gs1-128.js        GS1-128, o Code 128 com campos separados
+│   ├── gs1-tabelas.js    os 541 AIs da GS1 — **gerado**
 │   ├── pdf417.js         PDF417, o empilhado, com nove níveis de correcção
 │   ├── pdf417-tabelas.js os 3 × 929 padrões e os factores — **gerado**
 │   ├── datamatrix.js     Data Matrix ECC200, 24 tamanhos quadrados
@@ -98,6 +100,35 @@ três conjuntos partilham parte dos valores, por isso o encoder tem de emitir um
 carácter *de cada vez que muda*. Sem isso o código desenha-se perfeito, o leitor
 lê, e devolve caracteres completamente errados. Foi o primeiro bug desta fase, e
 só apareceu quando um leitor leu o que o encoder dizia estar certo.
+
+Os **oito** codigos de barras, e onde vivem:
+
+| Formato | Modulo | Para que serve |
+|---|---|---|
+| EAN-13 | `symbologies/upcean.js` | produto de supermercado |
+| EAN-8 | `symbologies/upcean.js` | embalagens pequenas |
+| UPC-A | `symbologies/upcean.js` | o equivalente norte-americano do EAN-13 |
+| Code 128 | `symbologies/code128.js` | etiquetas de encomenda, texto qualquer |
+| GS1-128 | `symbologies/gs1-128.js` | o Code 128 com campos separados pela GS1 |
+| Code 39 | `symbologies/code39.js` | industria e defesa |
+| ITF-14 | `symbologies/itf.js` | caixas de cartao, impresso no proprio cartao |
+| Codabar | `symbologies/codabar.js` | bancos de sangue, arquivos, laboratorio |
+
+**A lista do selector e a do registo tem de bater, e ha um teste que as
+compara.** Vivem em sitios diferentes - os `<option>` no `index.html`, as
+entradas em `symbologies/index.js` - e sao o mesmo conjunto escrito duas vezes.
+Quando o GS1-128 entrou no registo, com o encoder e os oito casos lidos pelo
+ZXing, **nao aparecia no selector**: a aplicacao estava certa e o formato era
+inescolhivel, sem nenhum aviso. O `formatos.test.mjs` vai nos dois sentidos,
+porque cada sentido apanha um erro diferente - um `<option>` sem registo
+rebenta ao desenhar, e um registo sem `<option>` e invisivel.
+
+O **GS1-128** merece uma nota a parte, porque parece simples e nao e. Nao e
+"Code 128 com FNC1 no inicio": e isso *e* um separador no fim de cada campo de
+comprimento variavel (menos no ultimo) *e* ficar no conjunto B sem comutar. Os
+**541 AIs** estao numa tabela gerada do JSON-LD de `ref.gs1.org`, com o formato,
+o comprimento, se leva separador e um regex por AI. Uma tabela assim nao se
+escreve de memoria.
 
 ### Por que é que um código de barras não passa pelo caminho do QR
 
@@ -285,7 +316,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 171 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + os 10 vetores da spec
+# 193 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?
