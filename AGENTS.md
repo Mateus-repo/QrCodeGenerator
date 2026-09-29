@@ -190,6 +190,19 @@ versão no nome do cache, e a lista de recursos passou a ser explícita e
 completa. **Ao acrescentar um módulo, acrescentá-lo à lista**, ou o site não
 funciona offline.
 
+**E um script que reescreve a documentação estraga-a melhor do que a mão.** O
+`docs/TODO.md` passou de 612 para 32 958 linhas num `git diff --stat`, e a
+razão foi `"\n".join(uma_cadeia)`, que junta **cada caractere** com uma quebra
+de linha. A defesa óbvia — contar as linhas de um caractere só antes de
+escrever — **não chega**: na segunda tentativa o ficheiro ficou com 670 linhas,
+um tamanho perfeitamente plausível, e mesmo assim tinha quatro blocos
+duplicados, uma frase sem a primeira metade e um item que dizia uma coisa e
+meio. **O número de linhas não diz nada sobre o ficheiro estar bem.** A regra
+que ficou é: um script que edita `docs/` substitui **blocos inteiros** — do
+cabeçalho do item ao fim dele —, declara o texto novo por inteiro, e no fim
+relê o resultado em memória para confirmar que cada título aparece **uma vez
+só**. E se a procura do texto a substituir falhar, o script não escreve nada.
+
 ### O QR code é sempre preto sobre branco
 
 Nas cinco apps, e em qualquer tema ou cor. Um código tem de se ler e não há

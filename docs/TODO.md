@@ -6,12 +6,13 @@
 > Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR + 4 simbologias
-de codigos de barras, 467 testes. A
+de codigos de barras, 467 testes — dos quais 178 sao do Python. A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
-O que bloqueia: **Python só tem PIX** — é a maior lacuna de paridade, numa das
-stacks que se chamava de referência. Kotlin não existe. Não há CI.
+O que bloqueia: **a spec so tem PIX.** `spec/vectors.json` e' gerado pelo
+Python, que agora tem os 11 tipos — mas os vectores dos outros dez
+ainda nao estao escritos. Kotlin nao existe. Nao ha CI.
 
 ---
 
@@ -50,8 +51,9 @@ A spec em prosa não é verificável. Precisamos de input → output esperado.
       `+55`, nome >25, acento, descrição, uso único + CEP, valor com milhar
 - [ ] `spec/payloads.json` — metadados por tipo (nome PT/EN, ícone, ordem,
       campos, validação) — necessário para as UIs
-- [ ] Vetores dos 10 tipos restantes (precisa de os portar para Python, que é
-      quem gera a spec)
+- [ ] Vetores dos 10 tipos restantes — **já é possível**, o Python tem os 11
+      tipos e o `paridade-python.mjs` compara-os com o navegador antes de
+      escrever. Falta escrever os casos em `gerar-vectors.py`.
 - [ ] `spec/verificar-paridade.*` — script que corre as stacks e imprime
       ✅/❌ por vetor (hoje corre-se `dotnet test` e `pytest` à parte)
 - [ ] Casos de erro: payload vazio, campo em falta, limite excedido
@@ -416,7 +418,7 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > `31x15` não está em tabela nenhuma. E o rMQR **recusa** o que não cabe,
       > com a razão; um código truncado leria sem o último carácter e não
       > avisaria.
-- [ ] **SQRC (Secret Function Equipped QR Code)** — o contentor é especificado
+- [x] **SQRC (Secret Function Equipped QR Code)** — o contentor é especificado
       pela DENSO (AES-128 em dois segmentos, com o ID da chave no primeiro
       byte), e o browser tem AES no Web Crypto sem dependências.
       > **Decisão do utilizador: a chave é gerida pelo próprio utilizador.**
@@ -425,48 +427,29 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > em levantar, porque a alternativa (a chave no mesmo sítio) não é
       > segredo nenhum.
       >
-      > **O que isso significa em código, e o que não significa:**
+      > **Feito por inteiro**: `web/sqrc.js` (a cifra, sem dependências),
+      > ligado à interface com o aviso de "sem a chave perdeste isto para
+      > sempre" e o botão de gerar chave aleatória, e verificado em três
+      > níveis — a estrutura, a leitura pelo ZXing, e o ficheiro que o browser
+      > exporta.
       >
-      > - A aplicação **gera** a chave (ou deriva-a de uma frase que o
-      >   utilizador escreve) e **encripta** o conteúdo. É local, é Web Crypto,
-      >   nada sai do dispositivo sem o utilizador o pedir.
-      > - A chave **não vai no código**, e a aplicação tem de o dizer com todas
-      >   as letras: quem não tiver a chave não lê. Isto tem de estar na
-      >   interface, não num texto de rodapé.
-      > - Guardar a chave no `localStorage` para não a reescrever é
-      >   opcional e tem de ser uma escolha explícita. Uma chave guardada num
-      >   telemóvel partilhado é uma chave que saiu do aparelho.
-      > - **O aviso que não pode faltar:** sem a chave, o conteúdo está perdido
-      >   para sempre. Não há recuperação e não há segunda tentativa. O botão
-      >   que apaga a chave tem de dizer isso antes de apagar.
+      > **A propriedade que substitui a leitura de SQRC é mais forte do que
+      > parecia.** Não se descifra — mas o ZXing tem de devolver **exactamente**
+      > a base64 que lhe foi dada, e um byte a mais ou a menos **não dá erro
+      > nenhum**: o QR desenha-se, lê-se, e parece estar tudo bem. A falha só
+      > apareceria a quem tentasse descifrar, com o erro de "chave errada" — a
+      > apontar para o software e não para o código. Por isso o nível 2 compara
+      > a base64 caractere a caractere, e não texto: o atributo `text` do ZXing
+      > **assume ISO-8859-1 sem ECI**, que num formato binário dá sempre o
+      > resultado errado.
       >
-      > **O que este item não vai poder ter, e é melhor-prometer-agora:** a
-      > verificação por leitor independente. O ZXing lê o QR, mas não
-      > desencripta SQRC — não existe um leitor de SQRC no ar tooling de
-      > testes. O que se pode verificar é que o código se lê, que o texto
-      > cifrado tem a estrutura certa e que o nosso próprio descifrador devolve
-      > o original. A interoperabilidade com um leitor DENSO **não fica
-      > verificada**, e há que o dizer em vez de o deixar parecer que sim.
-      >
-      > **A cifra está feita** — `web/sqrc.js`, com AES-GCM na Web Crypto e sem
-      > dependências. Sete casos vão de ponta a ponta pelo ZXing com os bytes
-      > intactos, e o round-trip do descifrador está verificado com acentos,
-      > emoji, CJK e conteúdo vazio.
-      >
-      > **E a propriedade que substitui a leitura de SQRC é mais forte do que
-      > parecia, e valeu a pena descobrir.** Não se descifra — mas o ZXing tem de
-      > devolver **exactamente** a base64 que lhe foi dada, e um byte a mais ou a
-      > menos **não dá erro nenhum**: o QR desenha-se, lê-se, e parece estar
-      > tudo bem. A falha só apareceria a quem tentasse descifrar, com o erro de
-      > "chave errada" — a apontar para o software e não para o código. Por isso
-      > o nível 2 compara a base64 caractere a caractere, e não texto: o
-      > atributo `text` do ZXing **assume ISO-8859-1 sem ECI**, que num
-      > formato binário dá sempre o resultado errado.
-      >
-      > **Falta a interface.** O módulo existe e está testado, mas **não está
-      > ligado ao cliente** — o aviso de "sem a chave perdeste isto para sempre"
-      > ainda não está em lado nenhum do ecrã, e é a parte de que o utilizador
-      > mais precisa.
+      > **O que fica por verificar, e é melhor-prometer-agora:** a
+      > interoperabilidade com um leitor DENSO. **Não há leitor de SQRC em lado
+      > nenhum** — nem no ZXing, nem em outra ferramenta. O que se verifica é
+      > que os bytes chegam intactos, que o descifrador devolve o original, e que
+      > o QR com a zona do logotipo apagada ainda se lê. A leitura por um leitor
+      > DENSO **não fica verificada**, e há que o dizer em vez de o deixar
+      > parecer que sim.
 
 ### E uma que não é código
 
@@ -549,7 +532,7 @@ codewords, e daria logótipos maiores no H sem perder a garantia.
 ## Ordem de implementação
 
 ```
-1. python/qrcode_core   → ✅ PIX pronto. FALTA os 10 tipos existentes  ← aqui
+1. python/qrcode_core   → ✅ 11 tipos prontos, e a spec que eles geram
 2. web/                 → ✅ PWA + encoder próprio + ficheiro único
 3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
 4. java/                → ✅ core + app + CLI + jpackage, 119 testes
@@ -559,10 +542,18 @@ codewords, e daria logótipos maiores no H sem perder a garantia.
 
 Cada passo só avança quando os vetores passam nessa stack.
 
-**A ordem mudou em relação ao plano original:** o site foi feito antes de o
-Python ter os 10 tipos, porque era o cliente com mais alcance. O resultado é
-que o Python é hoje a única stack incompleta — e é a implementação de
-referência, o que é uma incoerência que vale resolver.
+**A ordem mudou duas vezes.** O site foi feito antes de o Python ter os 10
+tipos, porque era o cliente com mais alcance; e depois o Python foi portado,
+porque é a implementação de referência e sem ele a spec não podia crescer.
+Hoje as quatro stacks têm os 11 tipos e a paridade verifica-se entre pares.
+
+**E o que este bloco deixou ver é a lição.** Durante meses esteve escrito, duas
+linhas acima, que o Python era a única stack incompleta — a implementação de
+referência incompleta enquanto as outras três cópias estavam completas. **Uma
+spec que se gera da implementação de referência obriga a que ela seja a mais
+completa, e não a menos**, e a incoerência não se via nos testes: os testes do
+Python passavam todos, com 108 verdes, a testar uma biblioteca que sabia fazer
+uma coisa de onze.
 
 ---
 
@@ -575,16 +566,38 @@ referência, o que é uma incoerência que vale resolver.
 - [x] Encoder de QR do site verificado por leitura com o ZXing (29 matrizes)
 - [x] `docs/COMO-USAR.md` — como usar e como partilhar cada app
 - [x] Java: 4.ª stack completa, com `jpackage` para os três sistemas
-- [ ] `spec/vectors.json` com ~30 casos (faltam os 10 tipos em Python)
+- [ ] `spec/vectors.json` com ~30 casos — o Python já tem os 10 tipos; falta
+      escrever os vectores
 - [ ] Respostas ao BLOQUEIO 4 registadas em `IDEIA.md` secção 9
 
 ## Dívidas conhecidas
 
 Coisas que ficaram por fazer e que se notam:
 
-- [ ] **Python só tem PIX.** Os 10 tipos antigos estão no C#, no Java e no
-      site, mas não na biblioteca Python. É a maior lacuna de paridade — e
+- [x] **Python tinha só o PIX.** Os 10 tipos antigos estavam no C#, no Java e
+      no site, mas não na biblioteca Python — a maior lacuna de paridade, e
       apesar de ser a implementação de referência.
+      > **Fechado.** `python/qrcode_core/tipos.py` (a construção) e
+      > `validacao.py` (as mensagens), com `build(categoria, campos)` com a
+      > mesma assinatura que o `types.js` do navegador, e ligado ao CLI com
+      > `qrcli payload <tipo>`. 178 testes.
+      >
+      > **A paridade é verificada, não prometida.** O
+      > `web/tests/paridade-python.mjs` corre 26 casos nos dois lados e compara
+      > os payloads byte a byte. Não é uma transcrição: o Python é que escreve
+      > e o JavaScript é que lê, e é o que impede que os dois concordem num erro.
+      >
+      > **E a tabela de campos é comparada nos dois sentidos**, porque
+      > `--ssid` a escrever `ssid` em vez de `wifiSsid` dá um `WIFI:S:`
+      > vazio, com código de saída 0 e o ficheiro escrito. Um registo sem
+      > entrada é invisível — e a `AGENTS.md` já tinha o caso do GS1-128, que
+      > entrou no registo com o encoder e não apareceu no selector.
+      >
+      > **Um bug nas duas stacks ao mesmo tempo**, e que por isso só a
+      > leitura apanhava: `cœur` dava `cur`. O `œ` é um caractere único, e não
+      > um `o` com um acento por cima, pelo que o NFD não o decompõe. As duas
+      > cópias davam o mesmo resultado errado — **e é por isso que um teste de
+      > paridade não o apanha**.
 - [ ] **Kotlin/Android não existe.** A pasta tem README, nada mais.
 - [ ] **Sem GUI em Python.** `python/gui/` está vazio.
 - [ ] **Sem CI.** Os testes correm à mão, uma stack de cada vez. Um
