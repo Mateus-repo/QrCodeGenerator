@@ -21,6 +21,7 @@
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
 import { aplicarFrame, modulosMaximos } from './frameqr.js';
+import { pdf417 } from './symbologies/pdf417.js';
 import { ligarSeletores } from './themes.js';
 import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
 import { desenhar as desenharLinear, paraSvg as linearParaSvg, dimensoes } from './symbologies/linear.js';
@@ -82,11 +83,20 @@ const state = {
   codigo: null,
 };
 
-/** O formato escolhido: 2D (QR) ou 1D (código de barras). */
+/**
+ * O formato escolhido.
+ *
+ * São três caminhos e não dois, porque o PDF417 é uma grelha de duas dimensões
+ * como o QR mas não é um QR: tem payload próprio (o texto cru, não o resultado
+ * de um gerador de tipo), não tem versão nem máscara nem margem de 4, e a sua
+ * zona muda é de 2 módulos. Fingir que é um QR dá erros nos dois sentidos.
+ */
 const ehQr = () => dom.formato.value === 'qr';
+const ehPdf417 = () => dom.formato.value === 'pdf417';
 
 /** A simbologia 1D escolhida, se for o caso. */
-const simbologiaActual = () => (ehQr() ? null : simbologiaPorId(dom.formato.value));
+const simbologiaActual = () =>
+  ehQr() || ehPdf417() ? null : simbologiaPorId(dom.formato.value);
 
 // --- Formulário ------------------------------------------------------------
 
@@ -102,6 +112,11 @@ function popularCategorias() {
 function desenharCampos() {
   dom.campos.textContent = '';
 
+  if (ehPdf417()) {
+    desenharCamposPdf417();
+    return;
+  }
+
   if (!ehQr()) {
     desenharCamposLineares();
     return;
@@ -113,6 +128,43 @@ function desenharCampos() {
   for (const field of category.fields) {
     dom.campos.append(campoDe(field, state.fields[field.key]));
   }
+}
+
+/**
+ * O formulário do PDF417: um campo de texto, e só.
+ *
+ * O QR tem categorias porque cada uma monta um payload diferente. O PDF417 não
+ * tem categorias: é um transportador de texto, e o que escreve vai dentro tal
+ * e qual. Um utilizador que venha de um código de barras espera um campo e não
+ * uma lista — e o que ele está a fazer, colar o conteúdo e imprimir, dá igualmente bem num e noutro.
+ *
+ * O `inputMode` fica no teclado normal, e não no numérico: o PDF417 é o único
+ * formato deste ecrã que leva texto corrente, e pôr o teclado numérico seria
+ * dizer que não leva.
+ */
+function desenharCamposPdf417() {
+  const div = document.createElement('div');
+  div.className = 'campo';
+
+  const input = document.createElement('input');
+  input.id = 'campo-valor';
+  input.placeholder = 'Conteúdo a codificar';
+  input.value = state.payload;
+  input.addEventListener('input', atualizar);
+
+  const label = document.createElement('label');
+  label.htmlFor = input.id;
+  label.textContent = 'Conteúdo';
+
+  const ajuda = document.createElement('p');
+  ajuda.className = 'ajuda';
+  ajuda.textContent =
+    'Texto ou números, até 2710 caracteres. O PDF417 comprime os números ' +
+    'muito mais do que as letras: um número de série longo sai em metade do ' +
+    'tamanho do mesmo texto com letras.';
+
+  div.append(label, input, ajuda);
+  dom.campos.append(div);
 }
 
 /**
@@ -197,26 +249,84 @@ function campoDe(field, valor) {
 }
 
 /**
- * Mostra e esconde o que só faz sentido num dos dois formatos.
+ * Os níveis de correção de erros, por formato.
+ *
+ * São listas diferentes e não a mesma com outros nomes. No QR são quatro e
+ * chamam-se L, M, Q, H. No PDF417 são **nove**, chamam-se 0 a 8, e cada um é
+ * `2^(nível+1)` codewords de correcção — o nível 8 são 512, e é mais do que o
+ * QR máximo. Pôr os quatro do QR no PDF217 e dizer "H — máximo" seria uma
+ * mentira pequena e de后果ência: quem quisesse o máximo ficaria com um quarto
+ * do que dá.
+ */
+const eccQr = [
+  ['L', 'L — mais conteúdo, menos robustez'],
+  ['M', 'M — equilibrado (recomendado)'],
+  ['Q', 'Q — mais robustez'],
+  ['H', 'H — máximo, para imprimir'],
+];
+
+const eccPdf417 = [
+  ['0', '0 — 2 codewords. Só para texto que nunca se danifica'],
+  ['1', '1 — 4 codewords'],
+  ['2', '2 — 8 codewords (recomendado)'],
+  ['3', '3 — 16 codewords'],
+  ['4', '4 — 32 codewords, para imprimir'],
+  ['5', '5 — 64 codewords'],
+  ['6', '6 — 128 codewords'],
+  ['7', '7 — 256 codewords'],
+  ['8', '8 — 512 codewords. Enche o código de barras inútil'],
+];
+
+function preencherEcc(opcoes) {
+  const anterior = dom.ecc.value;
+  dom.ecc.textContent = '';
+
+  for (const [valor, texto] of opcoes) {
+    const option = document.createElement('option');
+    option.value = valor;
+    option.textContent = texto;
+    dom.ecc.append(option);
+  }
+
+  // Tenta manter o que lá estava, para não trocar de formato e perder a escolha.
+  if (opcoes.some(([valor]) => valor === anterior)) dom.ecc.value = anterior;
+}
+
+/**
+ * Mostra e esconde o que só faz sentido num dos formatos.
  *
  * A correção de erros é o caso obvio: é uma propriedade do QR, e um código de
  * barras não tem. Deixá-la visível e a fingir que funciona é pior do que
  * escondê-la.
+ *
+ * O PDF417 complica: **tem** correção de erros, e é a mais ajustável dos três
+ * — nove níveis, de 0 a 8. Por isso o campo aparece, mas com o texto do PDF417
+ * e não o do QR, porque os níveis não são os mesmos e dizer "H — máximo" seria
+ * mentira.
  */
 function alternarFormato() {
   const qr = ehQr();
+  const empilhado = ehPdf417();
 
   dom.campoCategoria.hidden = !qr;
-  dom.campoEcc.hidden = !qr;
+
+  // O campo de correcção de erros serve para o QR e para o PDF417, cada um com
+  // as suas opções. São reconstruídos porque as opções são diferentes e não
+  // vale a pena trocar os valores a meio.
+  dom.campoEcc.hidden = !(qr || empilhado);
+  if (qr) preencherEcc(eccQr);
+  else if (empilhado) preencherEcc(eccPdf417);
 
   dom.ajudaMargem.textContent = qr
     ? 'A norma do QR pede 4. Só mexa se souber o que está a fazer.'
-    : 'A ISO/IEC 15420 pede 10 módulos. Só mexa se souber o que está a fazer.';
+    : empilhado
+      ? 'A norma do PDF417 pede 2. Só mexa se souber o que está a fazer.'
+      : 'A ISO/IEC 15420 pede 10 módulos. Só mexa se souber o que está a fazer.';
 
   // A margem do QR vai de 0 a 8; a do código de barras é bem maior, e um
   // campo que não deixa escrever 10 seria mais uma coisa a explicar.
-  dom.margem.max = qr ? '8' : '20';
-  if (!qr) dom.margem.value = '10';
+  dom.margem.max = qr || empilhado ? '8' : '20';
+  if (!qr) dom.margem.value = empilhado ? '2' : '10';
 
   // O quadrado do logótipo é um conceito do QR. Num código de barras não há
   // correção de erros que reconstrua o que se apaga, e o resultado seria um
@@ -225,13 +335,92 @@ function alternarFormato() {
 
   dom.vazio.textContent = qr
     ? 'Preenche o conteúdo para o QR code aparecer aqui.'
-    : 'Preenche o código para as barras aparecerem aqui.';
+    : empilhado
+      ? 'Preenche o conteúdo para o PDF417 aparecer aqui.'
+      : 'Preenche o código para as barras aparecerem aqui.';
 
   desenharCampos();
   atualizar();
 }
 
 // --- Geração ---------------------------------------------------------------
+
+/**
+ * O caminho do PDF417.
+ *
+ * Não é o do QR com outros valores, e também não o do código de barras. É uma
+ * grelha de duas dimensões, como o QR, mas o que se escreve dentro é o texto
+ * tal e qual — o PDF417 é um transportador de texto, não um gerador de tipos
+ * como o QR, e não há categorias nem payloads estruturados.
+ *
+ * **As linhas são mais altas do que largas**, e é o que o distingue à primeira
+ * vista. Um módulo é um módulo quadrado num código de barras 1D e num QR, mas
+ * no PDF417 a especificação pede que a linha tenha cerca de três a quatro
+ * vezes a altura do módulo. Desenhar a grelha com módulos quadrados dá um
+ * código que o leitor lê, e que não parece com nenhum PDF417 do mundo — o que
+ * é sinal de que alguma coisa está errada antes de o ler.
+ */
+function atualizarPdf417() {
+  const input = document.getElementById('campo-valor');
+  const texto = input ? input.value : '';
+  const nivel = Number(dom.ecc.value);
+  const colunas = 6;
+
+  if (texto.length === 0) {
+    mostrarErro('Escreve alguma coisa para codificar.', 'Preenche o conteúdo para o PDF417 aparecer aqui.');
+    return;
+  }
+
+  try {
+    const codigo = pdf417(texto, { colunas, nivel });
+    const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 2));
+    const alvo = Math.max(64, Number(dom.tamanho.value) || 512);
+
+    // O alvo é a largura, como no QR. A escala em píxeis por módulo sai da
+    // largura, e a altura vem da razão das linhas.
+    const modulos = codigo.modules[0].length + margem * 2;
+    const escala = Math.max(1, Math.ceil(alvo / modulos));
+    const largura = modulos * escala;
+    const altura = (codigo.modules.length + margem * 2) * escala * RAZAO_LINHA_PDF417;
+
+    dom.canvas.width = largura;
+    dom.canvas.height = altura;
+
+    const contexto = dom.canvas.getContext('2d');
+    contexto.fillStyle = '#ffffff';
+    contexto.fillRect(0, 0, largura, altura);
+    contexto.fillStyle = '#000000';
+
+    const alturaModulo = escala * RAZAO_LINHA_PDF417;
+    for (let y = 0; y < codigo.modules.length; y++) {
+      for (let x = 0; x < codigo.modules[y].length; x++) {
+        if (!codigo.modules[y][x]) continue;
+        const x0 = (x + margem) * escala;
+        const y0 = (y + margem) * alturaModulo;
+        contexto.fillRect(x0, y0, escala, alturaModulo);
+      }
+    }
+
+    state.payload = texto;
+    // A matriz guarda-se para o SVG sair igual ao PNG, pelo mesmo motivo que
+    // no QR com o logótipo.
+    state.qr = codigo;
+    state.valido = true;
+    dom.erro.hidden = true;
+    dom.vazio.hidden = true;
+    dom.acoes.hidden = false;
+    dom.payload.textContent = texto;
+    dom.contagem.textContent =
+      `${codigo.linhas} linhas × ${codigo.colunas} colunas · ` +
+      `${codigo.palavras} codewords · ECC ${nivel} (${2 ** (nivel + 1)} de correcção) · ` +
+      `${codigo.modules[0].length} módulos de largura`;
+  } catch (exception) {
+    mostrarErro(exception.message || 'Não foi possível gerar o PDF417.');
+  }
+}
+
+/** A razão entre a altura e a largura de um módulo no PDF417. */
+const RAZAO_LINHA_PDF417 = 4;
 
 function opcoes() {
   return {
@@ -242,6 +431,11 @@ function opcoes() {
 }
 
 function atualizar() {
+  if (ehPdf417()) {
+    atualizarPdf417();
+    return;
+  }
+
   if (!ehQr()) {
     atualizarLinear();
     return;
@@ -452,6 +646,43 @@ function nomeFicheiro(extensao) {
   return `${nome}.${extensao}`;
 }
 
+/**
+ * O PDF417 em SVG, com a mesma grelha que está no canvas.
+ *
+ * Sai da **mesma matriz**, e não de codificar o texto outra vez. É a mesma
+ * razão do QR com o logótipo: se os dois ficheiros saíssem de codificações
+ * diferentes, o PNG e o SVG seriam códigos diferentes com o mesmo nome, e
+ * ninguém saberia qual dos dois está certo.
+ *
+ * `shape-rendering="crispEdges"` é o que impede o browser de pôr módulos
+ * cinzentos nas margens entre eles. Num código de barras 2D isso é a diferença
+ * entre se ler e não se ler.
+ */
+function svgPdf417() {
+  const grade = state.qr.modules;
+  const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 2));
+  const colunas = grade[0].length + margem * 2;
+  const linhas = grade.length + margem * 2;
+
+  const rects = [];
+  for (let y = 0; y < grade.length; y++) {
+    for (let x = 0; x < grade[y].length; x++) {
+      if (grade[y][x]) {
+        rects.push(
+          `<rect x="${x + margem}" y="${y + margem}" width="1" height="1"/>`,
+        );
+      }
+    }
+  }
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${colunas} ${linhas}" ` +
+    `shape-rendering="crispEdges">` +
+    `<rect width="${colunas}" height="${linhas}" fill="#fff"/>` +
+    `<g fill="#000">${rects.join('')}</g></svg>`
+  );
+}
+
 function guardar(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -474,6 +705,11 @@ function guardarPng() {
 
 function guardarSvg() {
   if (!state.valido) return;
+
+  if (ehPdf417()) {
+    guardar(new Blob([svgPdf417()], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
+    return;
+  }
 
   if (!ehQr()) {
     const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 10));
