@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ⚠️ 11 tipos de QR + FrameQR (incompleto) + PDF417 + 7 simbologias 1D · ✅ 161 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ⚠️ 11 tipos de QR + FrameQR (incompleto) + PDF417 + Data Matrix + 7 simbologias 1D · ✅ 171 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 > **O FrameQR está pela metade.** O cursor que escolhe o tamanho do quadrado
 > existe e está verificado; **meter a imagem dentro não existe**. Não há upload,
@@ -65,6 +65,8 @@ web/
 │   ├── codabar.js        Codabar
 │   ├── pdf417.js         PDF417, o empilhado, com nove níveis de correcção
 │   ├── pdf417-tabelas.js os 3 × 929 padrões e os factores — **gerado**
+│   ├── datamatrix.js     Data Matrix ECC200, 24 tamanhos quadrados
+│   ├── datamatrix-tabelas.js  os símbolos e os factores de RS — **gerado**
 │   ├── index.js          registo: validação e altura por simbologia
 │   └── linear.js         desenho em canvas e SVG, com a legenda
 ├── payloads/
@@ -89,7 +91,7 @@ Não é só QR code. O seletor **Formato** tem um grupo 2D e um grupo 1D.
 | Simbologia | Ficheiro | Para quê |
 |---|---|---|
 | QR Code | `qrcode.js` | o de sempre, versões 1–40 |
-| PDF417 | `symbologies/pdf417.js` | o empilhado: cartas de condução, cartões de embarque |
+| Data Matrix | `symbologies/datamatrix.js` | etiquetas de ampola, chip, peça |
 | EAN-13 | `symbologies/upcean.js` | produto de supermercado |
 | EAN-8 | `symbologies/upcean.js` | embalagens pequenas |
 | UPC-A | `symbologies/upcean.js` | o equivalente norte-americano do EAN-13 |
@@ -288,7 +290,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 161 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + os 10 vetores da spec
+# 171 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?

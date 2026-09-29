@@ -162,10 +162,57 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       de oito, e máscaras de dados próprias. A ISO/IEC 18004 é a mesma do QR
       normal, o que é uma vantagem: a parte difícil, que é a colocação dos
       codewords, é partilhada.
-- [ ] **Data Matrix (ECC200)** — o padrão da indústria farmacêutica,
+- [x] **Data Matrix (ECC200)** — o padrão da indústria farmacêutica,
       aeroespacial e de defesa. Pequeno e quadrado, sem os quadrados grandes
-      nos cantos. Reed-Solomon sobre GF(256) e cinco modos de codificação
-      (ASCII, C40, Text, EDIFACT, Base256). **A ser o primeiro dos 2D**: é o
+      nos cantos. **Feito e verificado: 12 casos lidos pelo ZXing.**
+      > **A referência não é um pacote de Python.** Não há, ao contrário dos
+      > códigos de barras, e por isso a tabela dos factores de Reed-Solomon
+      > veio da implementação de referência do ZXing — que é também o leitor
+      > que vai verificar o que este encoder produz.
+      >
+      > **A verificação dessa tabela é funcional, e não por comparação.** Derivei
+      > os polinómios geradores e não batem: a tabela põe o coeficiente de
+      > `x^(n-1)` no primeiro lugar e o cálculo põe o termo de ordem zero, e são
+      > convenções diferentes para o mesmo polinómio. Como não se podem deduzir,
+      > a única verificação honesta é se a correcção de erros bate — e um factor
+      > errado dá um símbolo que o leitor **rejeita por corrupção**, o que é
+      > mais forte do que uma comparação entrada a entrada, não mais fraco.
+      >
+      > Três coisas que só apareceram na leitura:
+      >
+      > 1. **A guia de baixo não era reposta a zero.** Escrevia a partir da
+      >    coluna onde a linha de dados tinha acabado, e a última linha do
+      >    símbolo saía **vazia**. O sintoma é um código que se parece com um
+      >    Data Matrix e não é lido por nada — e a última linha é a última
+      >    coisa que se olha. A guia de baixo é a que o leitor usa para se
+      >    orientar.
+      > 2. **O valor do deslocamento para ASCII estendido é `b - 127`, não
+      >    `b - 128`.** A norma descreve-o de maneira que se lê como `b - 128`; a
+      >    implementação de referência emite `b - 128 + 1` e o leitor dela faz
+      >    `valor + 128 - 1`, que é o mesmo número. Fazer "o que a norma diz"
+      >    fazia o ZXing devolver **cada byte alto um abaixo**: um "ç" saía
+      >    como "r", um "€" como "Ñ". Todos os payloads ASCII e todos os
+      >    numéricos liam-se bem, e só os com acentos e emojis falhavam — a
+      >    assinatura de um erro que só aparece no canto.
+      > 3. **O 144x144 tem oito blocos de 156 e dois de 155, e não nove de 156 e
+      >    um de 154.** Com 154 a conta dava 1556 em vez de 1558, e dois
+      >    codewords a menos num código de 1558 é o que o leitor acusa como
+      >    corrupção, não como tabela errada.
+      >
+      > **Em conjunto, isto destrava o GS1 DataMatrix**, que é Data Matrix com
+      > um cabeçalho FNC1 e nada mais. Fica de fora de propósito por agora: só
+      > faz sentido com o GS1-128 feito, e os dois são a mesma coisa com
+      > finalidades diferentes.
+- [ ] **C40, Text, X12 e EDIFACT no Data Matrix** — otimização, não
+      conformidade. O encoder usa só ASCII e o deslocamento para ASCII
+      estendido, e o código que sai é **perfeitamente válido e lê em qualquer
+      leitor**. A diferença é o tamanho: "MAST-2024-0001" sai um símbolo maior
+      do que sairia em C40, e num número de série comprido a diferença nota-se.
+      > Falta o algoritmo de *look-ahead* da ISO, que é a escolha de modo, e é a
+      > parte mais longa do encoder do ZXing. Não está aqui porque não é
+      > preciseza, é optimização — e otimização sem a parte difícil de pensar
+      > por baixo é a maneira de entregar códigos maiores do que o necessário
+      > sem dar conta. **A ser o primeiro dos 2D**: é o
       mais usado, e destrava o GS1 DataMatrix, que é só um wrapper.
 - [x] **PDF417** — empilhado, e o que se vê no verso de cartas de condução e
       cartões de embarque. O mais usado dos 2D que faltam a seguir o Data
