@@ -20,7 +20,7 @@
 
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
-import { aplicarFrame, modulosMaximos } from './frameqr.js';
+import { aplicarFrame, modulosMaximos, desenharLogotipo, dimensaoDoLogotipo } from './frameqr.js';
 import { pdf417 } from './symbologies/pdf417.js';
 import { ligarSeletores } from './themes.js';
 import { SIMBOLOGIAS, codificar as codificarLinear, simbologiaPorId } from './symbologies/index.js';
@@ -50,6 +50,8 @@ const dom = {
   frame: el('frame'),
   frameTamanho: el('frame-tamanho'),
   ajudaFrame: el('ajuda-frame'),
+  frameFicheiro: el('frame-ficheiro'),
+  ajudaFrameImagem: el('ajuda-frame-imagem'),
   payload: el('payload'),
   contagem: el('contagem'),
   btnPng: el('btn-png'),
@@ -71,6 +73,26 @@ const state = {
    * nome e conteudos diferentes, sem nenhum aviso.
    */
   qr: null,
+  /**
+   * A imagem do logotipo do FrameQR, ja carregada.
+   *
+   * Vive aqui e nao num `<img>` do DOM porque o canvas precisa dela com as
+   * dimensoes **naturais**, e um `<img>` escondido pode ter sido reescalado
+   * pelo CSS. A resolucao e o que interessa, e a unica forma de a ter a
+   * certeza e ler da propria imagem.
+   */
+  /**
+   * A escala e a zona do FrameQR, para o logotipo sair no sítio certo.
+   *
+   * O SVG vive em coordenadas de **módulo**, e o canvas em píxeis. Passar de
+   * uns para os outros é dividir pela escala, e essa divisão tem de ser feita
+   * uma vez e aqui — e não nos dois sítios, onde uma diferença de um arredondamento
+   * põe o logotipo um módulo ao lado do sítio e o código deixa de ler.
+   */
+  escalaFrame: 1,
+  zonaFrame: null,
+  logotipo: null,
+  nomeLogotipo: '',
   /**
    * O codigo de barras codificado, quando o formato e 1D.
    *
@@ -254,8 +276,8 @@ function campoDe(field, valor) {
  * São listas diferentes e não a mesma com outros nomes. No QR são quatro e
  * chamam-se L, M, Q, H. No PDF417 são **nove**, chamam-se 0 a 8, e cada um é
  * `2^(nível+1)` codewords de correcção — o nível 8 são 512, e é mais do que o
- * QR máximo. Pôr os quatro do QR no PDF217 e dizer "H — máximo" seria uma
- * mentira pequena e de后果ência: quem quisesse o máximo ficaria com um quarto
+ * QR máximo. Pôr os quatro do QR no PDF417 e dizer "H — máximo" seria uma
+ * mentira pequena e de consequência: quem quisesse o máximo ficaria com um quarto
  * do que dá.
  */
 const eccQr = [
@@ -290,6 +312,121 @@ function preencherEcc(opcoes) {
 
   // Tenta manter o que lá estava, para não trocar de formato e perder a escolha.
   if (opcoes.some(([valor]) => valor === anterior)) dom.ecc.value = anterior;
+}
+
+/**
+ * O que dizer ao utilizador sobre a imagem do logótipo.
+ *
+ * **O número muda com a escala, e é por isso que isto é uma função.** A escala
+ * depende do tamanho pedido e da versão do QR, e ambas mudam enquanto o
+ * utilizador escreve: o mesmo logótipo de 5 módulos dá uma caixa de 60×60 px a
+ * 512 e de 250×250 a 2048. Uma mensagem escrita uma vez seria uma mentira em
+ * metade dos casos, e a pessoa só descobria a meio de imprimir.
+ *
+ * O que se diz tem os dois lados, porque as correções são diferentes: uma
+ * imagem pequena fica a serrilhada e o remédio é fechá-la ou pôr o logótipo
+ * mais pequeno; uma grande não é problema nenhum, porque o browser reduz bem e
+ * o ideal é mesmo N×N **módulos**, onde já não há resolução a ganhar.
+ */
+function dizerDoLogotipo(info, codigo, escala, modulos) {
+  if (!dom.frame.checked || modulos === 0) {
+    dom.ajudaFrameImagem.textContent =
+      'Sem ficheiro, fica só o quadrado apagado — que é o que o FieldQR está feito para: os dados dentro dele são reconstruídos pela correção de erros.';
+    return;
+  }
+
+  const { pix } = dimensaoDoLogotipo(modulos, escala);
+  const ideal = `${pix}×${pix} px (${modulos}×${modulos} módulos a ${escala} px por módulo)`;
+  const imagem = state.logotipo;
+
+  if (!imagem) {
+    dom.ajudaFrameImagem.textContent = `Escolhe uma imagem para pôr no quadrado. A caixa é ${ideal}.`;
+    return;
+  }
+
+  const largura = imagem.naturalWidth;
+  const altura = imagem.naturalHeight;
+  const nome = state.nomeLogotipo;
+  const medida = `${largura}×${altura} px`;
+
+  /*
+   * A partir de `modulos` píxeis por lado já não há nada a ganhar: um módulo é
+   * o menor elemento do código, e ampliar mais só repete pixels. O browser
+   * reduz bem, por isso acima disso **não há problema nenhum** — e dizer que há
+   * um máximo seria inventar uma restrição que não existe. O aviso é só para
+   * baixo, que é onde a imagem é esticada e o logotipo fica a serrilhado.
+   *
+   * A primeira versão dizia "está no tamanho certo — é grande, e o browser
+   * reduz", que é uma frase que se contradiz a meio. O que interessa dizer é
+   * uma coisa só, e o resto é silêncio.
+   */
+  if (largura < modulos || altura < modulos) {
+    dom.ajudaFrameImagem.textContent =
+      `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem é menor do que a ` +
+      `caixa, por isso vai ser esticada e o logotipo fica a serrilhado — numa ` +
+      `etiqueta pequena vê-se a um metro. Fecha-a para ${modulos}×${modulos} px, ` +
+      'ou põe o logotipo mais pequeno.';
+    return;
+  }
+
+  const folga = Math.max(largura, altura) / modulos;
+  dom.ajudaFrameImagem.textContent =
+    folga > 8
+      ? `${nome} tem ${medida}, e a caixa é ${ideal}. Está muito acima do ` +
+        'necessário, mas o resultado é o mesmo — o browser reduz sem se ver.'
+      : `${nome} tem ${medida}, e a caixa é ${ideal}. Está no tamanho certo.`;
+}
+
+/**
+ * Carrega a imagem do logótipo.
+ *
+ * A imagem é lida por `FileReader` e não por um `<img>` escondido, porque o
+ * que interessa é a **dimensão natural** e um elemento no DOM pode ter sido
+ * reescalado pelo CSS. A resolução é a única coisa que decide se o logótipo
+ * fica nítido, e é a que se diz ao utilizador.
+ */
+function carregarLogotipo(ficheiro) {
+  if (!ficheiro) {
+    state.logotipo = null;
+    state.nomeLogotipo = '';
+    atualizar();
+    return;
+  }
+
+  if (!ficheiro.type.startsWith('image/')) {
+    state.logotipo = null;
+    state.nomeLogotipo = '';
+    dom.ajudaFrameImagem.textContent = `"${ficheiro.name}" não é uma imagem.`;
+    mostrarErro(`"${ficheiro.name}" não é uma imagem. Escolhe um PNG, um JPEG ou um SVG.`);
+    return;
+  }
+
+  const leitor = new FileReader();
+
+  leitor.onload = () => {
+    const imagem = new Image();
+    imagem.onload = () => {
+      state.logotipo = imagem;
+      state.nomeLogotipo = ficheiro.name;
+      // Um erro anterior pode estar a tapar o código, e agora já há código.
+      dom.erro.hidden = true;
+      atualizar();
+    };
+    imagem.onerror = () => {
+      state.logotipo = null;
+      state.nomeLogotipo = '';
+      mostrarErro(`Não consegui ler "${ficheiro.name}". O ficheiro pode estar corrompido.`);
+    };
+    imagem.src = leitor.result;
+  };
+
+  leitor.onerror = () => {
+    state.logotipo = null;
+    state.nomeLogotipo = '';
+    mostrarErro(`Não consegui ler "${ficheiro.name}".`);
+  };
+
+  leitor.readAsDataURL(ficheiro);
 }
 
 /**
@@ -489,6 +626,7 @@ function atualizar() {
      */
     let codigo = info;
     let zona = null;
+    let numModulosFrame = 0;
 
     if (dom.frame.checked) {
       const maximo = modulosMaximos(info.size, ecl);
@@ -497,6 +635,7 @@ function atualizar() {
       if (pedido > 0) {
         codigo = aplicarFrame(info, { modulos: pedido });
         zona = codigo.zona;
+        numModulosFrame = pedido;
       }
     }
 
@@ -530,8 +669,39 @@ function atualizar() {
 
     draw(dom.canvas, payload, { ecl, border, scale, qr: codigo });
 
+    /*
+     * O logotipo, por cima do quadrado apagado.
+     *
+     * O desenho tem de vir **depois** do QR, e não antes: a zona apagada é o
+     * que ficou branco, e a imagem é o que vai lá dentro. Ao contrário, a
+     * correcção de erros não reconstruía nada e o código não lia.
+     */
+    if (codigo !== info && state.logotipo) {
+      const contexto = dom.canvas.getContext('2d');
+      desenharLogotipo(contexto, codigo, state.logotipo, {
+        escala: scale,
+        // A margem do código. Sem isto o logotipo sai 4 módulos à esquerda:
+        // a zona apagada é a mesma, o código continua a ler, e só o desenho é
+        // que fica torto — o pior género de bug, porque nada falha.
+        offset: border,
+      });
+    }
+
+    dizerDoLogotipo(info, codigo, scale, numModulosFrame);
+
     state.payload = payload;
+    /*
+     * A matriz, a escala e a zona guardam-se para o SVG sair **igual** ao PNG.
+     *
+     * A escala e a zona são o que coloca o logotipo, e são as duas coisas que
+     * podem divergir entre os dois ficheiros: o SVG tem o seu próprio sistema
+     * de coordenadas, em módulos, e converter a escala de píxeis para módulos
+     * à mão é o caminho mais curto para os dois ficheiros deixarem de ser o
+     * mesmo código — que é o bug que já aconteceu uma vez.
+     */
     state.qr = codigo;
+    state.escalaQr = scale;
+    state.zonaFrame = zona;
     state.valido = true;
     dom.erro.hidden = true;
     dom.vazio.hidden = true;
@@ -728,11 +898,17 @@ function guardarSvg() {
    * Sem isto, o PNG saía com o logótipo e o SVG saía sem ele — dois ficheiros
    * diferentes com o mesmo nome, e nenhum aviso. Guardar o `qr` em `state` é o
    * que garante que os dois são o mesmo código.
+   *
+   * E o logotipo vai embutido no SVG como uma imagem, senão o mesmo problema
+   * numa forma diferente: o PNG com o logotipo e o SVG com o buraco.
    */
   const svg = toSvg(state.payload, {
     ecl: dom.ecc.value,
     border: opcoes().border,
     qr: state.qr,
+    logotipo: state.logotipo,
+    escala: state.escalaQr,
+    zona: state.zonaFrame,
   });
   guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
 }
@@ -826,6 +1002,9 @@ function arranque() {
    */
   dom.frame.addEventListener('change', atualizar);
   dom.frameTamanho.addEventListener('input', atualizar);
+  dom.frameFicheiro.addEventListener('change', () => {
+    carregarLogotipo(dom.frameFicheiro.files[0]);
+  });
 
   dom.btnPng.addEventListener('click', guardarPng);
   dom.btnSvg.addEventListener('click', guardarSvg);

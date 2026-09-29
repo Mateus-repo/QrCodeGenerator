@@ -177,6 +177,94 @@ const PERCENTAGEM_SEGURA = { L: 0.9, M: 0.9, Q: 3.4, H: 2.8 };
 export const MARGEM = 2;
 
 /**
+ * Quanto uma imagem pode medir, em píxeis, para o logotipo.
+ *
+ * **O número não é fixo, e é por isso que isto é uma função e não uma
+ * constante.** Depende da escala — os píxeis por módulo — e a escala depende do
+ * tamanho pedido e da versão do QR, que mudam enquanto o utilizador escreve. Um
+ * número escrito uma vez no HTML seria uma mentira em metade dos casos: com o
+ * tamanho em 512 px e um logotipo de 5 módulos, a imagem útil tem 60×60; a
+ * 2048 px, o mesmo logotipo dá 250×250.
+ *
+ * **A medida é o que interessa, e há dois lados:**
+ *
+ *  - O **ideal** é N×N **módulos**, que é `N × escala` em píxeis. Acima
+ *    disso já não há resolução a ganhar, porque um módulo é o menor elemento
+ *    do código — o browser reduz a imagem e o resultado é o mesmo.
+ *  - **Abaixo** é que se perde: a imagem é esticada e o logotipo fica a
+ *    serrilhado, que numa etiqueta pequena se vê a um metro.
+ *
+ * Por isso o aviso ao utilizador é dos dois lados, e com conselhos
+ * diferentes: uma imagem pequena manda ficar maior ou escolher um logotipo
+ * mais pequeno; uma grande não é problema nenhum, porque o browser reduz bem.
+ */
+export function dimensaoDoLogotipo(modulos, escala) {
+  return {
+    modulos,
+    escala,
+    /** O lado da caixa, em píxeis. */
+    pix: modulos * escala,
+    /** A caixa em módulos — a medida ideal, e a que não se passa. */
+    ideal: modulos,
+  };
+}
+
+/**
+ * Desenha a imagem do logotipo dentro da zona apagada.
+ *
+ * **O deslocamento pela margem do código entra aqui, e esquecê-lo descentra o
+ * logótipo sem o estragar.** A zona apagada é dada em coordenadas de *módulo do
+ * código*, mas o canvas desenha cada módulo a partir de `offset` módulos de
+ * margem. São a mesma grelha com origens diferentes, e a primeira versão desta
+ * função ignorava a segunda: o logótipo saía 4 módulos à esquerda, ou seja à
+ * esquerda da margem, e o código continuava a ler porque a zona apagada é a
+ * mesma — só o desenho é que estava torto. Uma falha que se vê logo, mas que
+ * nenhum teste de leitura apanha, porque o QR não mudou.
+ *
+ * @param `offset` a margem do código, em módulos. Não é a `MARGEM` de cima,
+ *   que é o anel em volta do logotipo: são duas coisas diferentes com o mesmo
+ *   nome, e confundi-las é exactamente o erro acima.
+ *
+ * **A imagem é reduzida, nunca esticada.** Entra pelo lado mais comprido e fica
+ * centrada, e o que sobra do quadrado é branco. Esticar uma imagem quadrada para
+ * um rectângulo — ou o contrário — deforma o logotipo, e um logotipo deformado
+ * é pior do que um logotipo pequeno.
+ */
+export function desenharLogotipo(contexto, codigo, imagem, { escala, offset = 0 }) {
+  if (!imagem || !codigo || !codigo.zona) return;
+
+  const { inicio, fim } = codigo.zona;
+  const ladoModulos = fim - inicio;
+  const caixa = ladoModulos * escala;
+  if (caixa <= 0) return;
+
+  // A origem da grelha do canvas: o mesmo deslocamento que `draw()` usa.
+  const x0 = (inicio + offset) * escala;
+  const y0 = (inicio + offset) * escala;
+
+  // Entra pelo lado mais comprido, para não deformar.
+  const proporcao = imagem.naturalWidth / imagem.naturalHeight;
+  let largura;
+  let altura;
+
+  if (imagem.naturalWidth >= imagem.naturalHeight) {
+    largura = caixa;
+    altura = Math.round(caixa / proporcao);
+  } else {
+    altura = caixa;
+    largura = Math.round(caixa * proporcao);
+  }
+
+  contexto.drawImage(
+    imagem,
+    Math.round(x0 + (caixa - largura) / 2),
+    Math.round(y0 + (caixa - altura) / 2),
+    largura,
+    altura,
+  );
+}
+
+/**
  * O maior número de módulos de lado que o logotipo pode ter.
  *
  * A conta é sobre a zona apagada inteira — logotipo mais margem. A margem

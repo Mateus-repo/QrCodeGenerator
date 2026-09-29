@@ -544,9 +544,60 @@ export function toSvg(text, options = {}) {
     }
   }
 
+  /*
+   * O logótipo, nas mesmas coordenadas de módulo que a matriz.
+   *
+   * O SVG tem o seu próprio sistema: **um módulo é uma unidade**, e o
+   * `viewBox` é o que dá a escala. Por isso o logotipo é aqui um `<image>` com
+   * as medidas em módulos — e não em píxeis, que seriam o tamanho do ecrã e não
+   * o do código. Passar a escala aqui é o que garante que o SVG e o PNG têm o
+   * logotipo no mesmo sítio; a escala em píxeis vive em `options.escala`.
+   *
+   * Sem isto o PNG saía com o logótipo e o SVG com o buraco: dois ficheiros
+   * com o mesmo nome e conteúdos diferentes, sem nenhum aviso. Já aconteceu.
+   */
+  let logotipo = '';
+  const { zona, escala = 1, logotipo: imagem } = options;
+
+  if (imagem && zona) {
+    // Píxeis para módulos: a escala é a mesma nos dois sistemas, e é dividir.
+    const porModulo = 1 / escala;
+    const lado = (zona.fim - zona.inicio) * porModulo;
+
+    const larguraImagem = imagem.naturalWidth / imagem.naturalHeight;
+    let largura;
+    let altura;
+
+    // Entra pelo lado mais comprido, como no canvas: esticar deformava.
+    if (imagem.naturalWidth >= imagem.naturalHeight) {
+      largura = lado;
+      altura = lado / larguraImagem;
+    } else {
+      altura = lado;
+      largura = lado * larguraImagem;
+    }
+
+    /*
+     * **Mais a margem, e é o que faz o logotipo sair centrado.** A zona é dada
+     * em coordenadas do código, e o `viewBox` conta a partir da margem. A
+     * primeira versão não somava a margem e o logotipo ficava `border` módulos
+     * ao canto — o mesmo bug do canvas, nas mesmas coordenadas, e pela mesma
+     * razão: duas grelhas com origens diferentes.
+     */
+    const x0 = (zona.inicio + border) * porModulo + (lado - largura) / 2;
+    const y0 = (zona.inicio + border) * porModulo + (lado - altura) / 2;
+
+    logotipo =
+      `<image x="${x0.toFixed(4)}" y="${y0.toFixed(4)}" ` +
+      `width="${largura.toFixed(4)}" height="${altura.toFixed(4)}" ` +
+      `href="${imagem.src}" preserveAspectRatio="none"/>`;
+  }
+
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" ` +
     `shape-rendering="crispEdges"><rect width="${dimension}" height="${dimension}" fill="${light}"/>` +
-    `<path d="${parts.join('')}" fill="${dark}"/></svg>`
+    `<path d="${parts.join('')}" fill="${dark}"/>` +
+    logotipo +
+    `</svg>`
   );
 }
