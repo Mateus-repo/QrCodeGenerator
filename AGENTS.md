@@ -84,6 +84,19 @@ Os testes correm antes de qualquer commit. Só os das stacks tocadas:
 | `java/` | `cd java && ./build.sh test` |
 | `python/` | `cd python && python -m pytest tests -q` |
 | `web/` | `node --test "web/tests/*.test.mjs"` |
+| `kotlin/core/` | `cd kotlin && gradlew.bat :core:test` |
+
+O `gradlew` não precisa de Gradle instalado — descarrega a versão fixada em
+`kotlin/gradle/wrapper/`. O toolchain está fixado em **Java 21**, e isso importa
+porque o Android Studio corre o Gradle com o JBR dele, que pode ser outro: sem a
+fixação compila numa máquina e falha na outra, e a mensagem de erro é sempre a de
+uma dependência que desceu de versão.
+
+**O `gradle-wrapper.jar` entra no repositório apesar de ser um binário, e o
+preflight avisa contra isso.** Tem razão em geral e engana-se aqui: sem o jar o
+`gradlew` existe e não executa, com um `Could not find or load main class` que
+não fala de um ficheiro em falta. A excepção está escrita no `.gitignore` com a
+razão, e não numa excepção na memória de alguém.
 
 Em Windows o `./build.sh` é `C:\Program Files\Git\bin\bash.exe build.sh test`.
 

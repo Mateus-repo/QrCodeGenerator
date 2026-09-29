@@ -624,15 +624,37 @@ Coisas que ficaram por fazer e que se notam:
       > um `o` com um acento por cima, pelo que o NFD não o decompõe. As duas
       > cópias davam o mesmo resultado errado — **e é por isso que um teste de
       > paridade não o apanha**.
-- [ ] **Kotlin/Android não existe.** A pasta tem README, nada mais. É a
-      última stack, e a spec deixou de ser o bloqueio: os 34 vectores estão
-      escritos e as outras quatro stacks batem com eles, que é exactamente o
-      que o core Kotlin precisa para ser verificável desde o primeiro dia.
-      > **O que a máquina tem, e o que falta.** JDK 21 e o Android SDK
-      > (plataforma `android-36`, build-tools 35/36, `adb`) já estão
-      > instalados; falta o Gradle, que se descarrega. **O Android Studio não
-      > é preciso** — é o IDE que junta as peças, e construir à linha de
-      > comandos só quer o SDK e o Gradle.
+- [ ] **Kotlin/Android: o core existe, a app não.** É a última stack, e
+      o que está feito é o `:core` — Kotlin/JVM puro, os onze tipos de
+      payload e o PIX, a passar os 34 vectores de `spec/vectors.json` byte a
+      byte com `gradlew :core:test`.
+      > **O core é um módulo à parte, e não `Payloads.kt` dentro de
+      > `app/`.** Era o caminho curto para um ficheiro e o caminho longo para
+      > não ter testes: dentro do módulo Android, um teste de payload só corre
+      > com o SDK instalado e o AGP a resolver. O `README.md` da pasta é que
+      > propunha a outra coisa, e está desatualizado.
+      >
+      > **O que ficou a fazer, por ordem:**
+      >
+      > - **O encoder de QR.** Sem ele não há nível 2, e o nível 2 é o que
+      >   apanha o que nenhum teste estrutural vê. É a peça que falta.
+      > - **A app Android** — o `README.md` da pasta tem o plano, e a
+      >   decisão em BLOQUEIO 4 continua por responder: conta de Play Store ou
+      >   APK sideload. Isso muda a assinatura e o keystore.
+      > - **A leitura pela câmara**, que é a razão de ser desta plataforma.
+      >
+      > **A máquina não precisa de nada novo.** O Android Studio já lá está,
+      > com a imagem de sistema e o AVD `Medium_Phone`; a aceleração do
+      > emulador está disponível (`WHPX is installed and usable`). O único
+      > que faltava era o Gradle, e resolvedo com o wrapper — versionado no
+      > repositório, para o `AGENTS.md` ter uma linha na tabela de testes.
+      >
+      > **Os quatro bugs que a spec apanhou ao escrever o core**, e que
+      > nenhum teste de estrutura apanharia, estão no `kotlin/README.md`. O
+      > mais instructive é o `escapeWifi` a punir `$1` em vez de `\`: **é a
+      > terceira vez que a mesma armadilha aparece neste repositório** — o
+      > `re.sub` do Python e o `String.replace` do `bundle.mjs` tiveram o
+      > mesmo, e a correcção em todos é a mesma.
 - [ ] **Sem GUI em Python.** `python/gui/` está vazio.
 - [ ] **Sem CI.** Os testes correm à mão, uma stack de cada vez. Um
       `verificar-paridade.sh` juntava tudo.
