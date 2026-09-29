@@ -518,24 +518,53 @@ function comGuias(bits, simbolo) {
 
 // --- A API ------------------------------------------------------------------
 
-export function dataMatrix(texto) {
+export function dataMatrix(texto, opcoes = {}) {
   const conteudo = String(texto);
   if (conteudo.length === 0) {
     throw new Error('Data Matrix: escreve alguma coisa para codificar.');
   }
 
+  /*
+   * `codewords` salta a compactacao, e e' por isso que existe.
+   *
+   * O GS1 DataMatrix nao e' um texto com um prefixo: e' uma lista de codewords
+   * onde o FNC1 - o 232 - aparece em posicoes que dependem da estrutura dos
+   * campos, e nao do texto. Passar pelo `compactar` perderia essa estrutura, e o
+   * 232 no meio seria lido como o par de digitos "02", que e' o mesmo codeword.
+   *
+   * A opcao e' interna ao modulo mas fica exportada no objecto, para que o
+   * `gs1-datamatrix.js` possa usar a correccao de erros, a escolha do simbolo e
+   * a colocacao **sem duplicar nenhuma delas** - que e' a razao de o codigo estar
+   * aqui e nao copiado.
+   */
   const bytes = new TextEncoder().encode(conteudo);
-  const dados = compactar(bytes);
+  const dados = opcoes.codewords ?? compactar(bytes);
 
+  return montar(dados, opcoes.symbology ?? 'Data Matrix');
+}
+
+/**
+ * De uma lista de codewords ate a matriz.
+ *
+ * Separado do `dataMatrix()` para que o GS1 entre por aqui: a escolha do símbolo,
+ * o enchimento, a correcção de erros e a colocação são as mesmas, e uma segunda
+ * implementação de cada uma delas seria uma segunda fonte de verdade sobre a
+ * parte que o ZXing verifica.
+ */
+function montar(dados, nomeSimbolio) {
   const simbolo = simboloPara(dados.length);
   const g = geometria(simbolo);
   const comDados = encher(dados, g.dados);
   const comEC = corrigir(comDados, simbolo);
 
-  const bits = colocar(comEC, regioesColunas(g.regioes) * g.regiaoLargura, regioesLinhas(g.regioes) * g.regiaoAltura);
+  const bits = colocar(
+    comEC,
+    regioesColunas(g.regioes) * g.regiaoLargura,
+    regioesLinhas(g.regioes) * g.regiaoAltura,
+  );
 
   return {
-    symbology: 'Data Matrix',
+    symbology: nomeSimbolio,
     modules: comGuias(bits, simbolo),
     colunas: g.colunas,
     linhas: g.linhas,
@@ -543,7 +572,16 @@ export function dataMatrix(texto) {
     correccao: g.correccao,
     capacidade: g.dados,
     usado: dados.length,
+    codewords: dados,
   };
+}
+
+/** O FNC1 do Data Matrix, que no GS1 faz as duas coisas: sinaliza e separa. */
+export const FNC1_DATAMATRIX = 232;
+
+/** De uma lista de codewords ate a matriz, para quem precisar dela. */
+export function dataMatrixDeCodewords(codewords, nomeSimbolio = 'Data Matrix') {
+  return montar(codewords.slice(), nomeSimbolio);
 }
 
 export { PAD as PAD_DATAMATRIX, CAPACIDADE_MAXIMA as CAPACIDADE_DATAMATRIX };

@@ -95,3 +95,6 @@ project.lock.json
 _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
+
+web/tests/.gs1-datamatrix.json
+web/tests/.dm-fnc1.json
