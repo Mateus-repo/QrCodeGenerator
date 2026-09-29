@@ -167,23 +167,38 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       nos cantos. Reed-Solomon sobre GF(256) e cinco modos de codificação
       (ASCII, C40, Text, EDIFACT, Base256). **A ser o primeiro dos 2D**: é o
       mais usado, e destrava o GS1 DataMatrix, que é só um wrapper.
-- [ ] **PDF417** — empilhado, e o que se vê no verso de cartas de condução e
+- [x] **PDF417** — empilhado, e o que se vê no verso de cartas de condução e
       cartões de embarque. O mais usado dos 2D que faltam a seguir o Data
       Matrix, e o que a lista tinha esquecido.
       > **Decisão do utilizador: sim, entra.**
       >
-      > **A referência está encontrada, e é boa.** A tabela são 3 × 930
-      > padrões de 17 módulos — a maior de quantas este repositório tem — e
-      > escrevê-la de memória seria a terceira vez que isso daria errado. O
-      > pacote `pdf417gen` (Python puro, licença MIT) traz a tabela em forma
-      > legível **e traz o PDF da especificação**, o que dá duas fontes
-      > independentes em vez de uma transcrição.
+      > **Feito e verificado**: 72 casos lidos pelo ZXing, mais o PNG e o SVG
+      > que o browser exporta. A tabela são 3 × 929 padrões e não está escrita
+      > à mão — vem do `pdf417gen` (Python puro, MIT), e o
+      > `tabelas-pdf417.test.mjs` compara as 2787 entradas com a referência.
       >
-      > E há uma propriedade estrutural que se pode verificar sem consultar
-      > ninguém: um cluster do PDF417 tem 17 módulos em 8 elementos (4 barras
-      > e 4 espaços), e a soma das larguras das barras menos a dos espaços é
-      > 0, 3 ou 6 conforme o cluster é o 0, o 3 ou o 6. Isso é um teste de
-      > nível 0 que valida 2790 entradas de uma vez.
+      > Três coisas que só apareceram na leitura, e que estão escritas nos
+      > comentários do encoder:
+      >
+      > 1. **A correcção de erros sai invertida.** Calcula-se de trás para a
+      >    frente e tem de se devolver na ordem certa. A primeira linha do
+      >    símbolo batia certo — é a única em que a diferença ainda não
+      >    apareceu — e o código não lia.
+      > 2. **O enchimento e as colunas decidem-se em conjunto.** O enchimento
+      >    depende do número de colunas, e o número de linhas depende do
+      >    enchimento. Calcular um e depois o outro dá uma grelha que não
+      >    encaixa, e há dois casos em que os codewords eram **idênticos** aos
+      >    da referência e liam-se com uma forma e não com a outra.
+      > 3. **Os valores do modo texto não são as posições de uma lista.** No
+      >    submodo MIXED o valor 25 não é usado por ninguém, e o espaço vale 26
+      >    e não 25. Guardar a tabela como cadeia ordenada e tirar o valor da
+      >    posição dá um código que se lê com um caractere trocado, sem erro
+      >    nenhum — porque o espaço existe no MIXED, só com outro número.
+      >
+      > E uma armadilha do teste: o ZXing, na ausência de ECI, devolve o
+      > `text` em ISO-8859-1. Comparar o `text` com o payload faz falhar todos
+      > os casos com acentos e emojis e dá a impressão de que o modo de bytes
+      > está partido. Não está — os `bytes` é que têm de se ler, em UTF-8.
 - [ ] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
       cabeçalho FNC1 em ASCII, para rastreabilidade na saúde e na logística.
 - [ ] **Aztec** — bilhetes de comboio e cartões de embarque. Tem um padrão de

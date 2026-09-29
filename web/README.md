@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + FrameQR + 7 simbologias 1D · ✅ 151 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + FrameQR + PDF417 + 7 simbologias 1D · ✅ 161 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -57,6 +57,8 @@ web/
 │   ├── code39.js         Code 39, com controlo mod 43
 │   ├── itf.js            ITF e ITF-14
 │   ├── codabar.js        Codabar
+│   ├── pdf417.js         PDF417, o empilhado, com nove níveis de correcção
+│   ├── pdf417-tabelas.js os 3 × 929 padrões e os factores — **gerado**
 │   ├── index.js          registo: validação e altura por simbologia
 │   └── linear.js         desenho em canvas e SVG, com a legenda
 ├── payloads/
@@ -81,6 +83,7 @@ Não é só QR code. O seletor **Formato** tem um grupo 2D e um grupo 1D.
 | Simbologia | Ficheiro | Para quê |
 |---|---|---|
 | QR Code | `qrcode.js` | o de sempre, versões 1–40 |
+| PDF417 | `symbologies/pdf417.js` | o empilhado: cartas de condução, cartões de embarque |
 | EAN-13 | `symbologies/upcean.js` | produto de supermercado |
 | EAN-8 | `symbologies/upcean.js` | embalagens pequenas |
 | UPC-A | `symbologies/upcean.js` | o equivalente norte-americano do EAN-13 |
@@ -279,7 +282,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 151 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + os 10 vetores da spec
+# 161 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?
