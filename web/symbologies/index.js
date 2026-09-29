@@ -15,6 +15,7 @@ import { code128 } from './code128.js';
 import { code39 } from './code39.js';
 import { itf, itf14 } from './itf.js';
 import { codabar } from './codabar.js';
+import { code93 } from './code93.js';
 import { gs1_128 } from './gs1-128.js';
 
 export { ean13, ean8, upcA } from './upcean.js';
@@ -22,6 +23,7 @@ export { code128 } from './code128.js';
 export { code39 } from './code39.js';
 export { itf, itf14 } from './itf.js';
 export { codabar } from './codabar.js';
+export { code93 } from './code93.js';
 export { gs1_128 } from './gs1-128.js';
 
 /**
@@ -39,6 +41,7 @@ const ALTURA_PADRAO = {
   'Code 128': 60,
   'GS1-128': 60,
   'Code 39': 55,
+  'Code 93': 50,
   'ITF': 50,
   'ITF-14': 50,
   Codabar: 50,
@@ -195,6 +198,43 @@ export const SIMBOLOGIAS = [
       return texto;
     },
     encode: code39,
+  },
+  {
+    id: 'code93',
+    symbology: 'Code 93',
+    rotulo: 'Code 93',
+    grupo: 'INDUSTRIA',
+    descricao:
+      'Automóveis, defesa, saúde. Traz minúsculas e dois dígitos de ' +
+      'controlo, e é 13% mais curto que o Code 39 para o mesmo texto.',
+    campo: {
+      key: 'valor',
+      label: 'Conteúdo',
+      placeholder: 'Lote-2024-A',
+      dica:
+        'ASCII completo, minúsculas incluídas. Vai com dois dígitos de ' +
+        'controlo, que são calculados e impressos por baixo.',
+    },
+    /*
+     * A validação do Code 93 é a do encoder, e por uma razão que vale a pena:
+     * o Code 93 é **ASCII completo** — traz minúsculas, o Code 39 não traz, e
+     * esse é o motivo de existir. A validação aqui só verifica que não está
+     * vazio, e tudo o resto — acentos recusados, asterisco recusado — vem do
+     * `code93.js`, que sabe as regras porque as usa.
+     *
+     * A alternativa, reescrever as regras neste registo, criaria uma segunda
+     * fonte de verdade sobre o que o Code 93 aceita. E o registo já tem esse
+     * problema noutro sítio: o HTML e este ficheiro são o mesmo conjunto escrito
+     * duas vezes, e o `formatos.test.mjs` existe por causa disso.
+     */
+    validar(valor) {
+      const texto = String(valor);
+      if (texto.length === 0) {
+        throw new Error('Code 93: escreve alguma coisa para codificar.');
+      }
+      return texto;
+    },
+    encode: code93,
   },
   {
     id: 'itf14',

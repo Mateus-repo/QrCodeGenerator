@@ -32,10 +32,10 @@ const EXEMPLOS = {
 
 // --- O registo --------------------------------------------------------------
 
-test('as oito simbologias estão registadas, com ids válidos', () => {
+test('as nove simbologias estão registadas, com ids válidos', () => {
   assert.deepEqual(
     SIMBOLOGIAS.map((s) => s.id),
-    ['ean13', 'ean8', 'upca', 'code128', 'gs1-128', 'code39', 'itf14', 'codabar'],
+    ['ean13', 'ean8', 'upca', 'code128', 'gs1-128', 'code39', 'code93', 'itf14', 'codabar'],
   );
 
   for (const s of SIMBOLOGIAS) {

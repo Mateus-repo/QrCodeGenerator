@@ -70,6 +70,8 @@ const RECURSOS = [
   './symbologies/upcean.js',
   './symbologies/code128.js',
   './symbologies/code39.js',
+  './symbologies/code93.js',
+  './symbologies/code93-tabelas.js',
   './symbologies/itf.js',
   './symbologies/codabar.js',
   './symbologies/pdf417.js',
