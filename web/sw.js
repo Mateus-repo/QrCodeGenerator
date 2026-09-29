@@ -59,26 +59,53 @@ const RECURSOS = [
   './app.js',
   './qrcode.js',
   './frameqr.js',
+  './datamatrix.js',
+  './themes.js',
   './payloads/types.js',
   './payloads/pix.js',
   './payloads/text.js',
   './payloads/normalize.js',
   './symbologies/index.js',
+  './symbologies/linear.js',
   './symbologies/upcean.js',
   './symbologies/code128.js',
-  './symbologies/gs1-128.js',
-  './symbologies/gs1-tabelas.js',
   './symbologies/code39.js',
   './symbologies/itf.js',
   './symbologies/codabar.js',
-  './symbologies/linear.js',
   './symbologies/pdf417.js',
   './symbologies/pdf417-tabelas.js',
   './symbologies/datamatrix.js',
   './symbologies/datamatrix-tabelas.js',
+  './symbologies/gs1-128.js',
+  './symbologies/gs1-datamatrix.js',
+  './symbologies/gs1-tabelas.js',
   './manifest.json',
   './assets/icon.svg',
 ];
+
+/*
+ * **Por que esta lista e' manual e nao gerada, apesar de se poder gerar.**
+ *
+ * A lista de ficheiros que o site usa pode ser percorrida a partir do disco -
+ * ha uma ferramenta para isso, e seria uma linha de codigo. Nao esta aqui, por
+ * duas razoes que valem mais do que a linha:
+ *
+ *  1. **O service worker nao tem como se auto-verificar.** Ele corre no browser,
+ *     sem acesso a disco. A unica verificacao possivel dentro dele e' contra a
+ *     lista que ele proprio tem, e essa nao prova nada.
+ *  2. **Uma lista gerada dentro do proprio ficheiro que tem de a ler e' circular.**
+ *     Se a lista fosse construida a partir de si, o servico nunca notaria a falta
+ *     de um modulo: so notaria a falta de um modulo que a lista gerada dissesse
+ *     que la esta.
+ *
+ * **A verificacao esta no `tests/sw.test.mjs`**, que le o disco em Node e compara
+ * com esta lista - e compara nos dois sentidos, para apanhar tambem um caminho
+ * que nao existe, cujo `cache.add` falha em silencio. Ja apanhou dois ficheiros
+ * postos duas vezes e um `themes.js` que nunca esteve na lista.
+ *
+ * A lista e' curta e muda duas vezes por ano, e quem a escreve sabe o que esta a
+ * escrever. O teste e' que a torna verificada em vez de correcta por atencao.
+ */
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
