@@ -61,6 +61,8 @@ web/tests/.tabelas.json
 web/tests/.frameqr.json
 web/tests/.tabelas-pdf417.json
 web/tests/.pdf417.json
+web/tests/.datamatrix.json
+web/tests/.datamatrix-tabelas.json
 web/tests/.pdf417-biscar.json
 web/tests/.pdf417-reduzir.json
 web/tests/.pw.json
