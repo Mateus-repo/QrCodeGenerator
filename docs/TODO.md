@@ -594,8 +594,19 @@ Coisas que ficaram por fazer e que se notam:
       está automatizado.
 - [ ] **`jpackage` só corre no SO de destino.** O `.msi` faz-se no Windows, o
       `.dmg` no macOS. Documentado, mas é uma limitação real.
-- [ ] **`assets/icon-192.png` e `icon-512.png` não existem** — estão
-      declarados no manifesto mas nunca gerados. Num PWA instalável no telemóvel
-      isso nota-se.
+- [x] **`assets/icon-192.png` e `icon-512.png` não existiam** — estavam
+      declarados no manifesto mas nunca gerados, e o sintoma é o mais discreto
+      que há: o manifesto é JSON válido, o site instala, e o ícone que aparece
+      no telemóvel é o do browser.
+      > **Gerados, e gerados do encoder que o site usa** — `gerar-icone.mjs` faz
+      > o SVG com o `toSvg` de `qrcode.js`, e `gerar-icones.py` faz os PNG a
+      > partir dele. O `descodificar-icones.py` lê-os com o ZXing e confirma que
+      > devolvem o endereço do próprio gerador.
+      >
+      > **E o SVG, que existia, não era um QR válido** — tinha os três cantos
+      > com um quadrado 7x7 cheio e o padrão de baixo-direito inexistente.
+      > Parecia um QR e nenhuma câmara o lia. **Uma conta de módulos não apanha**:
+      > o ícone tinha 302 módulos escuros, e qualquer verificação que conta
+      > módulos passa.
 - [ ] **`responder.txt`** na raiz: parece ser texto solto que ficou num commit.
       Convém confirmar se se deve apagar.
