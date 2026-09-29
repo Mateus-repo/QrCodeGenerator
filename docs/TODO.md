@@ -6,13 +6,12 @@
 > Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR + 4 simbologias
-de codigos de barras, 467 testes — dos quais 178 sao do Python. A
+de codigos de barras, 781 testes (202 Python, 188 C#, 120 Java, 271 site). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
-O que bloqueia: **a spec so tem PIX.** `spec/vectors.json` e' gerado pelo
-Python, que agora tem os 11 tipos — mas os vectores dos outros dez
-ainda nao estao escritos. Kotlin nao existe. Nao ha CI.
+O que bloqueia: **o Kotlin não existe.** É a única stack em falta, e é a
+que precisa de mais decisão — ver o item em «Dívidas conhecidas». Não há CI.
 
 ---
 
@@ -51,9 +50,35 @@ A spec em prosa não é verificável. Precisamos de input → output esperado.
       `+55`, nome >25, acento, descrição, uso único + CEP, valor com milhar
 - [ ] `spec/payloads.json` — metadados por tipo (nome PT/EN, ícone, ordem,
       campos, validação) — necessário para as UIs
-- [ ] Vetores dos 10 tipos restantes — **já é possível**, o Python tem os 11
-      tipos e o `paridade-python.mjs` compara-os com o navegador antes de
-      escrever. Falta escrever os casos em `gerar-vectors.py`.
+- [x] **Vetores dos 10 tipos restantes.** A spec tem 34 vectores e 11 tipos:
+      24 de transporte e 10 de PIX, todos lidos por um ZXing antes de
+      entrar. `spec/casos.py` tem a lista, e `gerar-vectors.py` gera a
+      partir da implementação de referência — que para isso é que ela tinha
+      de ter os dez tipos.
+      > **O que isto apanhou, e são três bugs que nenhum teste via.**
+      >
+      > - **O C# e o Java convertiam a hora do evento para UTC** e escreviam
+      >   um `Z` que ninguém tinha escrito. O sintoma era uma hora de
+      >   diferença — quem marcava uma reunião às 18h30 via-a às 17h30 — e
+      >   o pior: **os dois testes que havia afirmavam o bug.** O de Java
+      >   chamava-se `horaDoEventoConvertidaParaUtc` e tinha de fixar o fuso
+      >   da máquina para o payload ser estável, com um comentário a dizer que
+      >   passava no portátil e falhava noutro computador.
+      > - **A app Windows escrevia o QR na codificação do sistema.** A
+      >   sobrecarga de `string` do QRCoder usa a cp1252 em vez de UTF-8, e um
+      >   vCard com «Reparação» ia com o `ã` num byte só. Lido como UTF-8 — ou
+      >   pela adivinhação de Shift-JIS do ZXing — o nome aparecia trocado. Nenhum
+      >   teste via: a spec só tinha PIX, e as chaves PIX são ASCII.
+      > - **O ZXing adivinha a codificação** de um segmento em modo byte, e a
+      >   adivinhação é um teste de Shift-JIS. Um iCalendar com acentos passa
+      >   nele e sai com os caracteres trocados a partir da posição 190. A
+      >   correção é dizer a codificação ao leitor.
+      >
+      > **Nenhum dos três era um bug de payload, e é por isso que escaparam
+      > todos.** O payload estava certo nas quatro cópias; o que divergia era a
+      > hora, a codificação da imagem e a do leitor. A spec só apanha
+      > divergências de payload — e por isso que a leitura, que é outro nível,
+      > teve de mudar também.
 - [ ] `spec/verificar-paridade.*` — script que corre as stacks e imprime
       ✅/❌ por vetor (hoje corre-se `dotnet test` e `pytest` à parte)
 - [ ] Casos de erro: payload vazio, campo em falta, limite excedido
@@ -563,11 +588,12 @@ uma coisa de onze.
 - [x] `spec/vectors.json` com 10 casos de PIX, verdes e descodificados
 - [x] `QrService.cs` sem os 7 bugs, com teste de regressão para cada um
 - [x] `verificar-paridade` a correr em 4 stacks (C#, Java, Python e web) com ✅
-- [x] Encoder de QR do site verificado por leitura com o ZXing (29 matrizes)
+- [x] Encoder de QR verificado por leitura com o ZXing (53 matrizes, todos os vectores da spec)
 - [x] `docs/COMO-USAR.md` — como usar e como partilhar cada app
 - [x] Java: 4.ª stack completa, com `jpackage` para os três sistemas
-- [ ] `spec/vectors.json` com ~30 casos — o Python já tem os 10 tipos; falta
-      escrever os vectores
+- [x] `spec/vectors.json` com ~30 casos — tem 34, e as quatro stacks batem
+      com todos eles: 202 testes em Python, 188 em C#, 120 em Java e 271 no
+      site. O nível 2 subiu de 29 para 53 matrizes lidas.
 - [ ] Respostas ao BLOQUEIO 4 registadas em `IDEIA.md` secção 9
 
 ## Dívidas conhecidas
@@ -598,7 +624,15 @@ Coisas que ficaram por fazer e que se notam:
       > um `o` com um acento por cima, pelo que o NFD não o decompõe. As duas
       > cópias davam o mesmo resultado errado — **e é por isso que um teste de
       > paridade não o apanha**.
-- [ ] **Kotlin/Android não existe.** A pasta tem README, nada mais.
+- [ ] **Kotlin/Android não existe.** A pasta tem README, nada mais. É a
+      última stack, e a spec deixou de ser o bloqueio: os 34 vectores estão
+      escritos e as outras quatro stacks batem com eles, que é exactamente o
+      que o core Kotlin precisa para ser verificável desde o primeiro dia.
+      > **O que a máquina tem, e o que falta.** JDK 21 e o Android SDK
+      > (plataforma `android-36`, build-tools 35/36, `adb`) já estão
+      > instalados; falta o Gradle, que se descarrega. **O Android Studio não
+      > é preciso** — é o IDE que junta as peças, e construir à linha de
+      > comandos só quer o SDK e o Gradle.
 - [ ] **Sem GUI em Python.** `python/gui/` está vazio.
 - [ ] **Sem CI.** Os testes correm à mão, uma stack de cada vez. Um
       `verificar-paridade.sh` juntava tudo.
