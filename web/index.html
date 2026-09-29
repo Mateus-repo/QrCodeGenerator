@@ -8,7 +8,20 @@
     <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <!--
+  Os icones, por ordem de preferencia.
+
+  **O SVG primeiro**, porque e' um QR que este gerador produz e e' o que a
+  maioria dos browsers de hoje usa. O `png` a seguir, para os que nao
+  percebem SVG — e existe porque o `gerar-icones.py` o gera a partir do
+  mesmo SVG, e nao porque se desenhou a mao.
+
+  O `apple-touch-icon` vem no fim porque e' o que o iOS usa no ecra principal
+  de um PWA, e so aceita PNG.
+-->
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+<link rel="alternate icon" href="assets/icon-192.png" type="image/png" />
+<link rel="apple-touch-icon" href="assets/icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="themes.css" />
 

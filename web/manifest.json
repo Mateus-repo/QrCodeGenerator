@@ -1,7 +1,7 @@
 {
   "name": "Gerador de QR codes",
   "short_name": "QR codes",
-  "description": "Gera QR codes de 11 tipos, incluindo PIX. Funciona offline, no telemóvel e no computador, sem instalar nada.",
+  "description": "Gera QR codes de 11 tipos, incluindo PIX, e mais 13 formatos: PDF417, Data Matrix, GS1, codigos de barras e SQRC cifrado. Funciona offline, no telemovel e no computador, sem instalar nada.",
   "lang": "pt-PT",
   "start_url": "./index.html",
   "scope": "./",
@@ -9,7 +9,10 @@
   "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "categories": ["utilities", "productivity"],
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "assets/icon.svg",
