@@ -312,11 +312,61 @@ function campoDe(field, valor) {
     return div;
   }
 
+  /*
+   * O `select` das opcoes fixas, que e' o `wifiSec` da seguranca.
+   *
+   * **Um `select` nao leva `placeholder`, e por isso e' um ramo a parte.** Se
+   * caisse no `input` de baixo com `type: 'select'`, o browser desenhava um
+   * campo de texto com a palavra "select" no sitio e **nada mais** — e o campo
+   * da seguranca do WiFi e' o que decide se o QR liga a rede ou nao, o que
+   * e' a pior coisa para dar mal.
+   */
+  if (field.type === 'select' && Array.isArray(field.options)) {
+    const select = document.createElement('select');
+    select.id = `campo-${field.key}`;
+    for (const opcao of field.options) {
+      const item = document.createElement('option');
+      item.value = opcao;
+      item.textContent = opcao;
+      select.append(item);
+    }
+    select.value = valor ?? field.options[0];
+    select.addEventListener('change', atualizar);
+
+    const label = document.createElement('label');
+    label.htmlFor = select.id;
+    label.textContent = field.label;
+
+    div.append(label, select);
+    return div;
+  }
+
   const input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
   input.id = `campo-${field.key}`;
   if (field.type && !['textarea', 'checkbox'].includes(field.type)) input.type = field.type;
   if (field.placeholder) input.placeholder = field.placeholder;
-  input.value = valor ?? '';
+
+  /*
+   * **O `defaultValue` e' o exemplo de um campo que nao mostra `placeholder`.**
+   *
+   * Um `datetime-local` **nao mostra o `placeholder` em lado nenhum**: o browser
+   * desenha um selector com o calendario, e o texto do `placeholder` nunca
+   * aparece. Escrever o exemplo num `placeholder` e' escrever num sitio onde
+   * ninguem o ve — o campo fica vazio e nao ha forma de saber se e' bug.
+   *
+   * Por isso os campos de data trazem `defaultValue`, e aqui vai para o
+   * `value`. A diferenca entre os dois e' que o `value` e' o que a pessoa ve
+   * **e** o que o `build()` le, e por isso o exemplo **entra no payload**.
+   *
+   * E isso e' o que se quer: um evento com a data de hoje a serio e' um evento
+   * que a pessoa pode usar. Um evento de exemplo, com data de 2030, nao e'.
+   */
+  if (field.defaultValue && valor === undefined) {
+    input.value = field.defaultValue;
+  } else {
+    input.value = valor ?? '';
+  }
+
   input.addEventListener('input', atualizar);
 
   const label = document.createElement('label');

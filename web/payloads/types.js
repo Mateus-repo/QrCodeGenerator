@@ -29,15 +29,15 @@ export const CATEGORIES = [
   {
     id: 'texto',
     label: 'Texto',
-    fields: [{ key: 'texto', label: 'Texto', type: 'textarea' }],
+    fields: [{ key: 'texto', label: 'Texto', type: 'textarea', placeholder: 'Encontro na biblioteca municipal, quinta-feira às 18h.' }],
   },
   {
     id: 'email',
     label: 'Email',
     fields: [
       { key: 'mailTo', label: 'Destinatário', type: 'email', placeholder: 'ana@exemplo.pt' },
-      { key: 'mailSubject', label: 'Assunto' },
-      { key: 'mailBody', label: 'Mensagem', type: 'textarea' },
+      { key: 'mailSubject', label: 'Assunto', placeholder: 'Reunião de sexta' },
+      { key: 'mailBody', label: 'Mensagem', type: 'textarea', placeholder: 'Confirmo a presença. Trago a documentação.' },
     ],
   },
   {
@@ -45,7 +45,7 @@ export const CATEGORIES = [
     label: 'Telefone',
     fields: [
       { key: 'phonePrefix', label: 'País (indicativo)', placeholder: '+351' },
-      { key: 'phoneNumber', label: 'Número', type: 'tel' },
+      { key: 'phoneNumber', label: 'Número', type: 'tel', placeholder: '912 345 678' },
     ],
   },
   {
@@ -53,8 +53,8 @@ export const CATEGORIES = [
     label: 'SMS',
     fields: [
       { key: 'phonePrefix', label: 'País (indicativo)', placeholder: '+351' },
-      { key: 'phoneNumber', label: 'Número', type: 'tel' },
-      { key: 'smsMessage', label: 'Mensagem', type: 'textarea' },
+      { key: 'phoneNumber', label: 'Número', type: 'tel', placeholder: '912 345 678' },
+      { key: 'smsMessage', label: 'Mensagem', type: 'textarea', placeholder: 'Chego às 18h, está confirmado?' },
     ],
   },
   {
@@ -62,19 +62,19 @@ export const CATEGORIES = [
     label: 'WhatsApp',
     fields: [
       { key: 'phonePrefix', label: 'País (indicativo)', placeholder: '+351' },
-      { key: 'phoneNumber', label: 'Número', type: 'tel' },
-      { key: 'waMessage', label: 'Mensagem', type: 'textarea' },
+      { key: 'phoneNumber', label: 'Número', type: 'tel', placeholder: '912 345 678' },
+      { key: 'waMessage', label: 'Mensagem', type: 'textarea', placeholder: 'Chego às 18h, está confirmado?' },
     ],
   },
   {
     id: 'evento',
     label: 'Evento',
     fields: [
-      { key: 'eventTitle', label: 'Título' },
-      { key: 'eventStart', label: 'Data início', type: 'datetime-local' },
-      { key: 'eventEnd', label: 'Data fim', type: 'datetime-local' },
-      { key: 'eventLocation', label: 'Local' },
-      { key: 'eventDescription', label: 'Descrição', type: 'textarea' },
+      { key: 'eventTitle', label: 'Título', placeholder: 'Aula de guionização' },
+      { key: 'eventStart', label: 'Data início', type: 'datetime-local', defaultValue: '2026-09-29T18:30' },
+      { key: 'eventEnd', label: 'Data fim', type: 'datetime-local', defaultValue: '2026-09-29T20:30' },
+      { key: 'eventLocation', label: 'Local', placeholder: 'Biblioteca municipal, sala 3' },
+      { key: 'eventDescription', label: 'Descrição', type: 'textarea', placeholder: 'Trazer caderno. Duas horas, com pausa.' },
     ],
   },
   {
@@ -89,8 +89,8 @@ export const CATEGORIES = [
     id: 'wifi',
     label: 'WiFi',
     fields: [
-      { key: 'wifiSsid', label: 'Rede (SSID)' },
-      { key: 'wifiPass', label: 'Password', type: 'password' },
+      { key: 'wifiSsid', label: 'Rede (SSID)', placeholder: 'o nome da rede tal como aparece' },
+      { key: 'wifiPass', label: 'Password', type: 'password', placeholder: 'a password do router' },
       {
         key: 'wifiSec',
         label: 'Segurança',
@@ -104,17 +104,17 @@ export const CATEGORIES = [
     id: 'vcard',
     label: 'VCard',
     fields: [
-      { key: 'vcFirstName', label: 'Nome' },
-      { key: 'vcLastName', label: 'Apelido' },
-      { key: 'vcPhone', label: 'Telefone', type: 'tel' },
-      { key: 'vcPhone2', label: 'Telefone 2', type: 'tel' },
-      { key: 'vcEmail', label: 'Email', type: 'email' },
-      { key: 'vcOrg', label: 'Organização' },
-      { key: 'vcRole', label: 'Cargo' },
-      { key: 'vcStreet', label: 'Rua' },
-      { key: 'vcCity', label: 'Cidade' },
-      { key: 'vcZip', label: 'Código postal' },
-      { key: 'vcCountry', label: 'País' },
+      { key: 'vcFirstName', label: 'Nome', placeholder: 'Ana' },
+      { key: 'vcLastName', label: 'Apelido', placeholder: 'Silva' },
+      { key: 'vcPhone', label: 'Telefone', type: 'tel', placeholder: '+351 912 345 678' },
+      { key: 'vcPhone2', label: 'Telefone 2', type: 'tel', placeholder: '+351 213 456 789' },
+      { key: 'vcEmail', label: 'Email', type: 'email', placeholder: 'ana.silva@exemplo.pt' },
+      { key: 'vcOrg', label: 'Organização', placeholder: 'Oficina de Reparação de Becos' },
+      { key: 'vcRole', label: 'Cargo', placeholder: 'Técnica de manutenção' },
+      { key: 'vcStreet', label: 'Rua', placeholder: 'Rua da Bica 12, 3.º Esq' },
+      { key: 'vcCity', label: 'Cidade', placeholder: 'Lisboa' },
+      { key: 'vcZip', label: 'Código postal', placeholder: '1200-401' },
+      { key: 'vcCountry', label: 'País', placeholder: 'Portugal' },
     ],
   },
   {
@@ -122,12 +122,12 @@ export const CATEGORIES = [
     label: 'PIX',
     fields: [
       { key: 'pixKey', label: 'Chave PIX', placeholder: 'CPF, CNPJ, +55, email ou UUID' },
-      { key: 'pixName', label: 'Nome do recebedor' },
-      { key: 'pixCity', label: 'Cidade' },
+      { key: 'pixName', label: 'Nome do recebedor', placeholder: 'Oficina de Reparação de Becos' },
+      { key: 'pixCity', label: 'Cidade', placeholder: 'Lisboa' },
       { key: 'pixAmount', label: 'Valor (opcional)', placeholder: '25,75' },
-      { key: 'pixTxid', label: 'Txid (opcional)' },
-      { key: 'pixPostcode', label: 'CEP (opcional)' },
-      { key: 'pixDescription', label: 'Descrição (opcional)', type: 'textarea' },
+      { key: 'pixTxid', label: 'Txid (opcional)', placeholder: 'TXID-2026-0001' },
+      { key: 'pixPostcode', label: 'CEP (opcional)', placeholder: '1200-401' },
+      { key: 'pixDescription', label: 'Descrição (opcional)', type: 'textarea', placeholder: 'Reparação do telhão' },
       { key: 'pixSingleUse', label: 'Uso único', type: 'checkbox' },
     ],
   },
@@ -140,7 +140,13 @@ export function emptyFields(categoryId) {
   const category = CATEGORIES.find((c) => c.id === categoryId);
   const fields = {};
   for (const field of category?.fields ?? []) {
-    fields[field.key] = field.type === 'checkbox' ? false : '';
+    if (field.type === 'checkbox') {
+      fields[field.key] = false;
+    } else if (field.defaultValue !== undefined) {
+      fields[field.key] = field.defaultValue;
+    } else {
+      fields[field.key] = '';
+    }
   }
   if (categoryId === 'wifi') fields.wifiSec = 'WPA/WPA2';
   return fields;
@@ -310,13 +316,51 @@ export function build(categoryId, f) {
 
 function buildICalEvent(f) {
   const line = (name, value) => name + ':' + value + ICAL_NEWLINE;
+
+  /*
+   * **A hora sai como esta no campo, e nao convertida para UTC.**
+   *
+   * O `datetime-local` da interface nao tem fuso: quem escreve 18:30 esta a
+   * dizer "as 18h30 **aqui**". E a primeira versao fazia
+   *
+   *     const date = new Date('2026-09-29T18:30');   // hora LOCAL
+   *     date.getUTCHours()                          // lida como UTC
+   *
+   * que da `T173000Z` em vez de `T183000Z` — **uma hora de diferença** em
+   * Portugal, e o `Z` a dizer que e' UTC. O evento que a pessoa escreveu para
+   * as 18h30 aparecia no calendário dela para as 17h30, e ninguem sabia porque:
+   * o payload parecia correcto e a data estava uma hora errada.
+   *
+   * A razao de nao ser um bug de fuso e' mais profunda: **um `DTSTART` sem
+   * fuso e' um "flutuante"**, que o calendário interpreta na hora de quem abre.
+   * Um evento que o calendário de outra pessoa abre na hora de outra pessoa
+   * esta certo - e e' isso que se quer de um encontro marcado numa biblioteca.
+   *
+   * Com fuso (`DTSTART;TZID=...`) o evento marcava a hora num sitio, e quem
+   * estivesse noutro via-o na hora errada. **O flutuante e' a opcao correcta
+   * para o caso de uso**, e nao um atalho.
+   *
+   * A data de hoje, quando nao ha nada escrito, continua a ser **UTC** - essa
+   * e' o `DTSTAMP`, que marca quando o evento foi criado e nao quando acontece.
+   */
+  const pad = (n, width = 2) => String(n).padStart(width, '0');
+
   const stamp = (value) => {
-    const date = value ? new Date(value) : new Date();
-    const pad = (n, width = 2) => String(n).padStart(width, '0');
-    return (
-      `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}` +
-      `T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`
-    );
+    if (!value) {
+      // Sem data escrita: o `DTSTAMP` e' UTC, porque e' "quando isto foi feito".
+      const agora = new Date();
+      return (
+        `${agora.getUTCFullYear()}${pad(agora.getUTCMonth() + 1)}${pad(agora.getUTCDate())}` +
+        `T${pad(agora.getUTCHours())}${pad(agora.getUTCMinutes())}${pad(agora.getUTCSeconds())}Z`
+      );
+    }
+
+    // `2026-09-29T18:30` e' local, e as partes leem-se da propria cadeia.
+    // **Nao passar por `new Date`**: e' o que converte, e a conversao e' o bug.
+    const [data, hora = '00:00'] = String(value).split('T');
+    const [ano, mes, dia] = data.split('-');
+    const [h, m = '00'] = hora.split(':');
+    return `${ano}${mes}${dia}T${h}${m}00`;
   };
 
   let out = 'BEGIN:VCALENDAR' + ICAL_NEWLINE;
