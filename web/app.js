@@ -468,20 +468,45 @@ function dizerDoLogotipo(info, codigo, escala, modulos) {
    * uma coisa só, e o resto é silêncio.
    */
   if (largura < modulos || altura < modulos) {
+    // **O número que falta e' o da propria imagem.** A mensagem dizia "fecha-a
+    // para 70x70 px", mas nao dizia *de* quantos pixeis, e quem tem de a
+    // redimensionar e' quem vai ler a frase. `modulos` e' a medida em modulos e
+    // `pix` em pixeis, e sao numeros diferentes: e' a confusao entre as duas
+    // unidades que a `AGENTS.md` manda escrever nos dois termos.
     dom.ajudaFrameImagem.textContent =
-      `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem é menor do que a ` +
-      `caixa, por isso vai ser esticada e o logotipo fica a serrilhado — numa ` +
-      `etiqueta pequena vê-se a um metro. Fecha-a para ${modulos}×${modulos} px, ` +
-      'ou põe o logotipo mais pequeno.';
+      `${nome} tem ${medida}, e a caixa é ${ideal} — ou seja ${pix}×${pix} ` +
+      `píxeis na imagem exportada. O logótipo é menor do que a caixa, por isso ` +
+      `vai ser esticado e fica a serrilhado — numa etiqueta pequena vê-se a um ` +
+      `metro. Fecha a imagem para pelo menos ${pix}×${pix} px, ou põe um ` +
+      `logótipo mais pequeno.`;
     return;
   }
 
-  const folga = Math.max(largura, altura) / modulos;
-  dom.ajudaFrameImagem.textContent =
-    folga > 8
-      ? `${nome} tem ${medida}, e a caixa é ${ideal}. Está muito acima do ` +
-        'necessário, mas o resultado é o mesmo — o browser reduz sem se ver.'
-      : `${nome} tem ${medida}, e a caixa é ${ideal}. Está no tamanho certo.`;
+  /*
+   * Acima da medida ideal: **nao ha problema, e a razao importa.**
+   *
+   * A primeira versao dizia "está no tamanho certo — é grande, e o browser
+   * reduz", que e' uma frase que se contradiz a meio. A segunda so media a
+   * folga e nao dizia nada sobre a resolucao. **As duas sao incompletas**: o
+   * que a pessoa quer saber e' se o logótipo sai nitido na imagem exportada, e
+   * isso responde-se com `escala` — quantos pixeis do logótipo caem num modulo.
+   *
+   * Um logótipo com 8 pixeis por modulo ja e' nitido a olho nu; com 4, cada
+   * modulo e' um bloco de 4 pixeis da imagem original e o contorno treme.
+   */
+  const pxPorModulo = Math.min(largura, altura) / modulos;
+  const nitido = pxPorModulo >= 8;
+  const medidaPorModulo = `${pxPorModulo.toFixed(1)} px por módulo`;
+
+  dom.ajudaFrameImagem.textContent = nitido
+    ? `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem dá ` +
+      `${medidaPorModulo}, o que é nitido — e acima do necessário o browser ` +
+      `reduz sem se ver, por isso pode ser mais grande sem problema.`
+    : `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem dá só ` +
+      `${medidaPorModulo}, e o contorno do logótipo pode tremer na imagem ` +
+      `exportada. Acima de 8 px por módulo já é nitido; fecha a imagem para ` +
+      `uns ${Math.ceil(modulos * 8)}×${Math.ceil(modulos * 8)} px se quiser ` +
+      `o melhor resultado.`;
 }
 
 /**
@@ -1001,12 +1026,23 @@ function desenharQr(payload) {
       desenharLogotipo(contexto, codigo, state.logotipo, {
         escala: scale,
         /*
-         * A margem do codigo. Sem isto o logotipo sai 4 modulos a esquerda: a
-         * zona apagada e' dada em coordenadas do *codigo*, e o canvas desenha a
-         * partir da *margem*. Sao a mesma grelha com origens diferentes, e o
-         * logotipo saia torto — o QR continuava a ler, e nenhum teste falhava.
+         * **Isto e' `offset`, e nao `margem`.** A margem do codigo entra como
+         * deslocamento em modulos, porque a zona apagada e' dada em coordenadas
+         * do *codigo* e o canvas desenha a partir da *margem* — a mesma grelha
+         * com origens diferentes.
+         *
+         * **A chamada passou `margem: border` durante muito tempo, e o nome
+         * estava errado.** O `offset` ficava no seu valor por omissao de zero e
+         * o logotipo saia `border` modulos para a esquerda e para cima: medido,
+         * 40 px a 10 px por modulo, e o QR continuava a ler. Nenhum teste falhava
+         * porque o codigo estava certo — so o desenho saia torto.
+         *
+         * E' o bug que a `AGENTS.md` descreve com "o logotipo saiu 4 modulos a
+         * esquerda", e a correccao estava escrita no comentario **e** no sitio
+         * errado. Um comentario que explica a armadilha e' inofensivo; o que
+         * importa e' o nome do argumento, que e' o que o codigo le.
          */
-        margem: border,
+        offset: border,
       });
     }
 

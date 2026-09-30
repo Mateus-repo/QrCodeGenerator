@@ -230,7 +230,36 @@ export function dimensaoDoLogotipo(modulos, escala) {
  * um rectângulo — ou o contrário — deforma o logotipo, e um logotipo deformado
  * é pior do que um logotipo pequeno.
  */
-export function desenharLogotipo(contexto, codigo, imagem, { escala, offset = 0 }) {
+export function desenharLogotipo(contexto, codigo, imagem, opcoes) {
+  const { escala, offset = 0 } = opcoes;
+
+  /*
+   * **`margem` nao e' o mesmo nome que `offset`, e a confusao custou o
+   * desenho torto.**
+   *
+   * A chamada em `app.js` passou `margem: border` durante muito tempo, com o
+   * `offset` no seu valor por omissao de zero. O logotipo saia `border` modulos
+   * para a esquerda e para cima — medido, 40 pixeis a 10 pxeis por modulo — e
+   * **nada falhava**: o QR continuava a ler, a imagem estava centrada dentro de
+   * uma caixa que estava no sitio errado, e o unico sintoma era o desenho.
+   *
+   * **Uma funcao que ignora uma opcao desconhecida e' a pior forma de bug:** a
+   * assinatura promete, o corpo ignora. Por isso que aqui se recusa em vez de
+   * ignorar, e a recusa diz o que fazer.
+   *
+   * A razao de isto ser um `if` e nao um `assert` de teste e' que o aviso tem
+   * de aparecer **no browser**: o `offset` a zero e' um valor legitimo e um
+   * valor de esquecimento, e nada no desenho os distingue.
+   */
+  if ('margem' in opcoes) {
+    throw new Error(
+      "desenharLogotipo: a opção chama-se `offset`, não `margem`. A zona " +
+        'apagada é dada em coordenadas do código e o canvas desenha a partir ' +
+        'da margem, pelo que a margem entra como deslocamento em módulos. ' +
+        'Passar `margem` deixava o logotipo deslocado.',
+    );
+  }
+
   if (!imagem || !codigo || !codigo.zona) return;
 
   const { inicio, fim } = codigo.zona;
