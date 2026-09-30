@@ -16,13 +16,33 @@ uma spec que se cumpre. Um payload que difira num cliente e' um bug, mesmo que
 o teste desse cliente passe.
 """
 
+from .lineares import SIMBOLOGIAS_LINEARES, codabar, code39, itf, itf14
 from .upcean import SIMBOLOGIAS, SimbologiaError, digito_de_controlo, ean8, ean13, upca
+
+#: **O registo, com os dois grupos juntos.**
+#:
+#: Os UPC/EAN vivem no `upcean` e os de uma linha no `lineares`, e sao dois
+#: registos porque os dois ficheiros nao dependem um do outro. **A `AGENTS.md`
+#: avisa do que acontece quando o mesmo conjunto esta escrito duas vezes**: o
+#: GS1-128 entrou no registo com o encoder, a validacao, a altura e os casos
+#: lidos pelo ZXing, e nao aparecia no selector — porque nada ligava as listas.
+#:
+#: Nao ha segunda lista a acertar aqui, e' a **unica** entrada que o resto do core
+#: consulta. Um cliente novo, ou um registo que cresca, tem de acrescentar a esta
+#: e nao a uma copia sua.
+SIMBOLOGIAS_TODAS = {**SIMBOLOGIAS, **SIMBOLOGIAS_LINEARES}
 
 __all__ = [
     "SIMBOLOGIAS",
+    "SIMBOLOGIAS_LINEARES",
+    "SIMBOLOGIAS_TODAS",
     "SimbologiaError",
     "digito_de_controlo",
     "ean8",
     "ean13",
     "upca",
+    "code39",
+    "itf",
+    "itf14",
+    "codabar",
 ]
