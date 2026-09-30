@@ -557,12 +557,47 @@ export function toSvg(text, options = {}) {
    * com o mesmo nome e conteúdos diferentes, sem nenhum aviso. Já aconteceu.
    */
   let logotipo = '';
-  const { zona, escala = 1, logotipo: imagem } = options;
+  const { escala = 1, logotipo: imagem } = options;
+
+  /*
+   * **A zona vem de `qr.zona`, e nao de `options.zona`.**
+   *
+   * A versão anterior fazia `const { zona, ... } = options`, e `options` nunca
+   * teve `zona` — a zona apagada vive dentro de `qr`, que é `options.qr` ou o
+   * resultado de `encode`. **`imagem && zona` era sempre falso**, e o SVG saía
+   * sem logótipo nenhum: um ficheiro com o nome certo e o conteúdo diferente
+   * do PNG, que é exactamente o bug que o comentário logo acima descreve como
+   * "já aconteceu".
+   *
+   * **Não há sintoma nenhum disto**: um SVG sem `<image>` é um SVG válido, o
+   * botão de exportar funciona, o ficheiro abre, e o QR lê-se na mesma porque
+   * o logótipo é que falta — e o logótipo é uma imagem, não parte do código.
+   * Quem vai receber o ficheiro é que vê, e o sintoma é "o logo desapareceu",
+   * que ninguém reporta como bug do gerador.
+   */
+  const zona = qr.zona;
 
   if (imagem && zona) {
-    // Píxeis para módulos: a escala é a mesma nos dois sistemas, e é dividir.
-    const porModulo = 1 / escala;
-    const lado = (zona.fim - zona.inicio) * porModulo;
+    /*
+     * **O `viewBox` conta módulos, e as coordenadas também. A escala não entra.**
+     *
+     * A versão anterior dividia por `escala`, o que punha o logótipo a 1/9 do
+     * sítio e o mandava para o canto: com `escala: 9` e uma zona de 7 módulos,
+     * o logótipo saía em `x = 2.78` em vez de `25`, a vinte e cinco módulos do
+     * centro — que é quase o canto da zona apagada.
+     *
+     * **E não há sintoma nenhum**, porque a imagem fica *dentro* do `viewBox` e
+     * o SVG continua válido. O QR lê-se — a zona apagada é a mesma, e a imagem
+     * só tapa o canto do buraco. O sintoma é "o logotipo saiu torto", que é
+     * o mesmo que o bug do `offset` no canvas e pela mesma razão: **duas
+     * grelhas com origens diferentes**, aqui o `viewBox` em módulos e o
+     * `drawImage` em píxeis.
+     *
+     * `escala` fica na assinatura porque é o que o `app.js` passa e porque dá
+     * para o usar quando o SVG for gerado em píxeis — mas o valor não entra
+     * nesta conta, e por isso não é lido.
+     */
+    const lado = zona.fim - zona.inicio;
 
     const larguraImagem = imagem.naturalWidth / imagem.naturalHeight;
     let largura;
@@ -584,8 +619,8 @@ export function toSvg(text, options = {}) {
      * ao canto — o mesmo bug do canvas, nas mesmas coordenadas, e pela mesma
      * razão: duas grelhas com origens diferentes.
      */
-    const x0 = (zona.inicio + border) * porModulo + (lado - largura) / 2;
-    const y0 = (zona.inicio + border) * porModulo + (lado - altura) / 2;
+    const x0 = zona.inicio + border + (lado - largura) / 2;
+    const y0 = zona.inicio + border + (lado - altura) / 2;
 
     logotipo =
       `<image x="${x0.toFixed(4)}" y="${y0.toFixed(4)}" ` +

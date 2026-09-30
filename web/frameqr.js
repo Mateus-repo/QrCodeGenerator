@@ -37,7 +37,7 @@ import { alignmentPositions } from './qrcode.js';
  * chamado a cada tecla que o utilizador escreve, e percorrer a matriz duas
  * vezes por evento é desperdício que se nota num telemóvel.
  */
-function mascaraDeFuncao(size, version) {
+export function mascaraDeFuncao(size, version) {
   const reservado = Array.from({ length: size }, () => new Array(size).fill(false));
 
   const marcar = (x, y) => {
