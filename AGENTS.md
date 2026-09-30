@@ -172,6 +172,26 @@ grelha com origens diferentes. O logotipo saiu 4 módulos à esquerda, o QR
 único sintoma era um desenho torto. É a razão de o nível 3 existir mesmo quando
 o encoder não mudou: o que se exporta tem de se ler **e** estar no sítio.
 
+**E o mesmo bug voltou, com outro nome, depois de estar corrigido.** A causa era
+o *nome de um argumento*: `desenharLogotipo` recebia `offset` e a chamada
+passava `margem`. O `offset` ficava no zero do valor por omissão e o logotipo
+saía 4 módulos para a esquerda — a mesma falha, outro ficheiro, outra altura.
+Duas lições que valem mais do que o bug:
+
+**Uma função que ignora uma opção desconhecida é a pior forma de bug** — a
+assinatura promete e o corpo ignora. `desenharLogotipo` recusa `margem` com um
+erro que diz o nome certo, e o erro sai **no browser**, porque `offset` a zero é
+um valor legítimo e um valor de esquecimento e nada no desenho os distingue.
+
+**E um teste que prova que uma peça está boa não prova que a máquina liga.** Os
+cinco primeiros testes do ficheiro `frameqr-centragem.test.mjs` testavam a
+função e **passavam com o bug e sem ele** — verificado, reintroduzindo o erro.
+Importavam `frameqr.js` e não `app.js`, e o bug estava na *chamada*. O teste que
+o apanha é o que lê o fonte e procura a linha. É uma defesa imperfeita — não
+executa a aplicação, que nem se pode importar porque ela toca no DOM ao
+carregar — mas é a única que apanha um erro de nome numa chamada, e o erro de
+nome é precisamente o que nenhuma das outras peças vê.
+
 **E sobre o limite em píxeis do logotipo:** não é um número fixo, depende da
 escala, e a escala muda com o tamanho pedido e com a versão do QR. A mensagem
 tem de dizer a caixa nos dois termos — N×N **módulos** e N×escala **píxeis** —
