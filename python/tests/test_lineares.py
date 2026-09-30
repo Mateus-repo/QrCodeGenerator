@@ -58,9 +58,37 @@ from qrcode_core.simbologias.lineares import (
     ITF_PARAGEM,
     codabar,
     code39,
+    code128,
     itf,
     itf14,
 )
+
+
+def larguras_de(cadeia: str) -> list[int]:
+    """
+    As larguras dos elementos, lidas nas corridas.
+
+    **Repete de proposito o que `lineares._larguras_do_padrao` faz.** Um teste
+    que importasse a funcao do codigo estava a medir o codigo com a regra do
+    codigo: se a regra estivesse errada, os dois cairiam juntos e o teste
+    passaria. Escrever a conta aqui e' que a torna um teste.
+
+    **Vale para as tabelas em `0` e `1` do Code 39 e do Code 128.** Para as de
+    `NnWw` do ITF e do Codabar a conta e' outra, e cada teste usa a que lhe
+    cabe — ver `test_itf_nao_tem_separador_entre_os_pares`.
+    """
+    larguras: list[int] = []
+    atual = cadeia[0]
+    contagem = 1
+    for caractere in cadeia[1:]:
+        if caractere == atual:
+            contagem += 1
+        else:
+            larguras.append(contagem)
+            atual = caractere
+            contagem = 1
+    larguras.append(contagem)
+    return larguras
 
 #: O `python-barcode` e' so para os testes.
 #:
@@ -111,6 +139,58 @@ def test_codabar_bate_com_o_python_barcode():
     }
 
 
+def test_code128_bate_com_o_python_barcode():
+    """
+    Os 106 padroes de dados, entrada a entrada.
+
+    **A paragem fica de fora, e nao por esquecimento** — ver o teste seguinte.
+    """
+    from barcode.charsets import code128 as fonte
+
+    assert T.CODE128_PADROES == [str(p) for p in fonte.CODES]
+
+
+def test_a_paragem_do_code128_esta_truncada_na_fonte():
+    """
+    **A excepcao a regra, e o teste que a vigia.**
+
+    A `STOP` do `python-barcode` tem onze modulos e seis elementos. A paragem do
+    Code 128 sao treze e sete — falta a barra final de dois modulos. **A tabela
+    do repositorio tem a barra, e nao a cadeia da biblioteca.**
+
+    Este teste existe para tres coisas ao mesmo tempo, e nenhuma delas e' ""a
+    tabela esta certa"":
+
+    - **registar que a fonte esta errada**, que e' a razao de haver uma
+      excepcao a regra das tabelas;
+    - **falhar se a biblioteca for corrigida**, para a excepcao nao ficar la
+      depois de deixar de ser preciso — que e' como as excepcoes se tornam
+      parte do codigo sem ninguem saber porque;
+    - **impedir que alguém copie a cadeia da biblioteca** achando que e' a
+      mesma coisa, que e' o erro que a excepcao veio evitar.
+
+    **A prova de que a da biblioteca esta errada nao e' este teste** — e' a
+    leitura, e esta escrita no `spec/gerar-tabelas-lineares.py`: com a cadeia da
+    biblioteca o ZXing devolve "NAO LEU" para `Hi`, e com a barra final devolve
+    `Hi`. Um teste estrutural que provasse que uma tabela esta errada seria um
+    teste estrutural a fazer o trabalho do leitor.
+    """
+    from barcode.charsets import code128 as fonte
+
+    da_fonte = str(fonte.STOP)
+    nossa = T.CODE128_PARAGEM
+
+    assert len(da_fonte) == 11, (
+        "a STOP do python-barcode tem onze modulos e esta truncada — a "
+        "excepcao a regra das tabelas esta em `spec/gerar-tabelas-lineares.py`"
+    )
+    assert len(nossa) == 13
+    # **A nossa e' a da fonte com a barra final de dois modulos acrescentada.**
+    # Comparar as duas assim, em vez de so o comprimento, e' o que diz *onde* a
+    # barra falta.
+    assert nossa == da_fonte + "11"
+
+
 def test_cada_padrao_tem_o_numero_de_elementos_certo():
     """
     A contagem de elementos de cada entrada.
@@ -135,6 +215,17 @@ def test_cada_padrao_tem_o_numero_de_elementos_certo():
     ):
         assert len(entrada) == 7, entrada
         assert set(entrada) <= set("NnWw")
+
+    # **O Code 128: onze caracteres nos 106 padroes e treze na paragem.** Sao
+    # onze e nao seis, porque a cadeia e' a soma das larguras dos seis
+    # elementos. **E a paragem e' a excecao com treze**, porque tem sete
+    # elementos e nao seis.
+    for entrada in T.CODE128_PADROES:
+        assert len(entrada) == 11, entrada
+        assert set(entrada) <= {"0", "1"}
+
+    assert len(T.CODE128_PARAGEM) == 13
+    assert set(T.CODE128_PARAGEM) <= {"0", "1"}
 
 
 # --- as larguras, que nao sao tabelas ---------------------------------------
@@ -642,6 +733,173 @@ def test_codobar_molduras_sao_opcoes_e_nao_parte_do_texto():
 # --- o que o verificador de leitura cobre, e porque nao ha teste aqui --------
 
 
+# --- Code 128 ---------------------------------------------------------------
+
+
+def test_code128_tem_cada_valor_com_seis_elementos():
+    """
+    **Seis elementos, e a soma onze** — para os 106 valores de dados.
+
+    **A cadeia e' a soma das larguras, e nao os elementos.** `212222` tem seis
+    digitos e onze caracteres. Confundir os dois dava um encoder que tratava a
+    cadeia como elementos e produzia barras de largura 2, 1, 1, 2, 2 e 2 — a
+    silhueta errada com o comprimento certo, que e' o pior dos dois erros.
+    """
+    for valor, entrada in enumerate(T.CODE128_PADROES):
+        larguras = larguras_de(entrada)
+        assert len(larguras) == 6, f"o valor {valor} tem {len(larguras)} elementos"
+        assert sum(larguras) == 11, f"o valor {valor} soma {sum(larguras)}"
+
+
+def test_code128_comeca_a_barra():
+    """
+    As cadeias comecam todas em `1`.
+
+    **E' o que decide se um padrao e' desenhado com a primeira barra escura ou
+    clara.** Uma cadeia que comecasse em `0` desenhava-se ao contrario e o
+    codigo nao lia — e a razao de `modulosDe` usar a **posicao** e nao o digito
+    para dizer a cor.
+    """
+    for valor, entrada in enumerate(T.CODE128_PADROES):
+        assert entrada[0] == "1", f"o valor {valor} comeca a espaco"
+
+
+def test_code128_tem_a_paragem_com_a_barra_final():
+    """
+    A paragem: **sete** elementos, e treze modulos.
+
+    **A barra final de dois modulos e' a ancora do leitor.** O Code 128 nao tem
+    barras-guarda como o EAN, e a paragem e' a unica coisa que diz onde acaba o
+    codigo. E' a unica tabela deste repositorio que nao vem do `python-barcode`,
+    porque a da biblioteca esta truncada — e o teste ao lado explica porquê.
+    """
+    larguras = larguras_de(T.CODE128_PARAGEM)
+
+    assert larguras == [2, 3, 3, 1, 1, 1, 2]
+    assert sum(larguras) == 13
+
+
+def test_code128_tem_a_verificacao_ponderada_modulo_103():
+    """
+    A soma ponderada, e **porquê o resultado pode ser maior do que um digito**.
+
+    O valor de verificacao e' o inicio mais cada valor de conjunto multiplicado
+    pela sua posicao, modulo 103. **Pode valer de 0 a 102**, porque um valor de
+    troca de conjunto e' 101 e o `FNC1` e' 102.
+
+    **Um verificador de EAN aqui daria sempre um valor errado** — o do EAN tem
+    uma casa, e aqui o resultado e' um valor de conjunto. E o sintoma seria o
+    pior dos possiveis: o codigo desenha-se, o leitor le-o, e **recusa-o** por
+    o valor de verificacao, que e' a unica coisa que ele nao sabe corrigir.
+    """
+    r = code128("Code 128")
+
+    # **102, que e' o maximo possivel, e' de proposito.** Um numero escolhido ao
+    # acaso raramente chega ao topo da gama, e o bug que este teste apanha — um
+    # verificador de uma casa — nao se|Note com valores pequenos.
+    assert r["verificacao"] == 102
+
+    # A conta feita a maos, para o teste nao repetir a formula do encoder.
+    valores = r["valores"]
+    soma = valores[0] + sum(v * i for i, v in enumerate(valores[1:-2], start=1))
+    assert soma % 103 == r["verificacao"]
+
+    # **E o resultado cabe em 103.** Um teste que so repetisse a conta passaria
+    # com um modulo errado; e' este que apanha.
+    assert 0 <= r["verificacao"] < 103
+
+
+def test_code128_troca_de_conjunto_a_mudanca():
+    """
+    **A troca de conjunto, que e' a unica coisa realmente dificil deste encoder.**
+
+    Os tres conjuntos se sobrepoem — o `A` e o `B` usam o mesmo valor para as
+    maiusculas — e por isso que o leitor precisa de uma pista para saber em que
+    conjunto esta. A pista e' o caracter de troca, e **sem ele o codigo
+    desenha-se com o comprimento certo, o leitor le, e devolve outra coisa**:
+    `ABC123` volta como `ABC,3`.
+
+    **E' o primeiro bug que o ZXing apanhou a este repositorio, e nenhum teste
+    estrutural viu** — porque o comprimento batia certo.
+    """
+    r = code128("ABC123")
+    valores = r["valores"]
+
+    # 104 e' o inicio do B; 33, 34 e 35 sao A, B e C; **99 e' a troca para o C**;
+    # 12 e 19 sao '1' e '3' no conjunto C; e 100 e' a troca de volta para o B,
+    # para '2' e '3' irem como minusculas em vez de digitos.
+    assert valores == [104, 33, 34, 35, 99, 12, 100, 19, r["verificacao"], 106]
+
+    # **E o caracter de troca esta mesmo no meio, nao no fim.** Um encoder que
+    # so trocasse de conjunto uma vez daria um codigo valido e diferente.
+    assert valores.index(99) == 4
+    assert valores.index(100) == 6
+
+
+def test_code128_escolhe_c_com_quatro_digitos_seguidos():
+    """
+    **O `C` so paga a troca com quatro digitos seguidos.**
+
+    Com dois digitos o `C` poupa um caracter e a troca custa um: fica igual, e
+    nao vale a pena. Com quatro, cada par gasta um caracter em vez de dois, e o
+    ganho paga a troca.
+
+    **Este e' o unico teste que apanha um encoder que va' sempre para o `C`**:
+    o codigo seria lido, o texto seria certo, e o codigo seria maior.
+    """
+    assert code128("12345678")["conjunto"] == "C"
+    assert code128("12")["conjunto"] == "B"
+    assert code128("123")["conjunto"] == "B"
+
+    # **E o codigo com `C` e' mesmo mais curto.** E' a razao, e nao so o
+    # procedimento.
+    assert len(code128("12345678")["valores"]) < len(
+        code128("12345678", forcar_conjunto="B")["valores"]
+    )
+
+
+def test_code128_recusa_o_que_nao_e_ascii():
+    """
+    **O Code 128 transporta 128 caracteres, e nao mais.**
+
+    `a` acentuado e' um caractere, mas nao ASCII. Sem esta verificacao o
+    encoder pegava num valor que nao existe na tabela e rebentava com um
+    `IndexError` em vez de dizer o que estava errado — e a `AGENTS.md` chama a
+    isso a pior forma de bug: a assinatura promete, o corpo ignora.
+    """
+    with pytest.raises(SimbologiaError, match="QR"):
+        code128("caf\u00e9")
+
+
+def test_code128_recusa_o_valor_da_paragem():
+    """O 128 e' o da paragem, e nao pode estar nos dados."""
+    with pytest.raises(SimbologiaError, match="128"):
+        code128("Hi" + chr(128))
+
+
+def test_code128_recusa_o_vazio_e_o_conjunto_que_nao_existe():
+    with pytest.raises(SimbologiaError):
+        code128("")
+    with pytest.raises(SimbologiaError, match="A, B ou C"):
+        code128("AB", forcar_conjunto="Z")
+
+
+def test_code128_nao_tem_guardas():
+    """
+    **O Code 128 nao tem barras-guarda como o EAN.**
+
+    E' a barra final de dois modulos da paragem que serve de referencia, e
+    marcar as pontas como guardas fazia-as descer mais do que o leitor espera.
+    **Um `guardas: [0, len-1]` aqui dava um codigo que o ZXing lia e um leitor
+    de etiqueta recusava** — que e' o nivel tres da `AGENTS.md`, o que so se
+    descobre a exportar.
+    """
+    assert code128("ABC123")["guardas"] == []
+
+
+# --- o registo --------------------------------------------------------------
+
+
 def test_o_registro_tem_os_tres_formatos():
     """
     O registo dos de uma linha, e o registo de todos.
@@ -660,7 +918,13 @@ def test_o_registro_tem_os_tres_formatos():
     from qrcode_core.simbologias import SIMBOLOGIAS_TODAS
     from qrcode_core.simbologias.lineares import SIMBOLOGIAS_LINEARES
 
-    assert set(SIMBOLOGIAS_LINEARES) == {"code39", "itf", "itf14", "codabar"}
+    assert set(SIMBOLOGIAS_LINEARES) == {
+        "code39",
+        "itf",
+        "itf14",
+        "codabar",
+        "code128",
+    }
 
     # O registo de todos tem os dois grupos, e cada entrada e' uma funcao.
     assert set(SIMBOLOGIAS_TODAS) == {
@@ -671,6 +935,7 @@ def test_o_registro_tem_os_tres_formatos():
         "itf",
         "itf14",
         "codabar",
+        "code128",
     }
     assert all(callable(f) for f in SIMBOLOGIAS_TODAS.values())
 
@@ -690,6 +955,7 @@ def test_o_registro_tem_os_tres_formatos():
         "itf": "1234",
         "itf14": "1234567890128",
         "codabar": "123456",
+        "code128": "ABC123",
     }
 
     for nome, entrada in entradas.items():

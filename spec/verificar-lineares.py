@@ -56,7 +56,13 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "python"))
 
 from qrcode_core.simbologias.desenho import to_bitmap  # noqa: E402
-from qrcode_core.simbologias.lineares import codabar, code39, itf, itf14  # noqa: E402
+from qrcode_core.simbologias.lineares import (  # noqa: E402
+    codabar,
+    code39,
+    code128,
+    itf,
+    itf14,
+)
 
 #: O caractere de controlo do Code 39, para as expectativas.
 #:
@@ -120,6 +126,25 @@ CASOS: list[tuple[str, object, str, str]] = [
      "D12345D"),
     ("codabar-largo", lambda v: codabar(v, largo=True), "123456", "A123456A"),
     ("codabar-simbolos", codabar, "12-34$56/78:+9.0", "A12-34$56/78:+9.0A"),
+    # --- Code 128: quase todos estes casos existem pela troca de conjuntos. ---
+    #
+    # **Um Code 128 que nunca muda de conjunto e' o caso facil**, e o que um
+    # teste estrutural passaria sem reparo. O que apanha a troca ausente e' o
+    # `ABC123`: sem o caracter de troca o codigo desenha-se com o comprimento
+    # certo, o leitor le, e devolve `ABC,3`. E' o primeiro bug que o ZXing
+    # apanhou a este repositorio e nenhum teste estrutural viu.
+    ("code128-minimo", code128, "Hi", "Hi"),
+    ("code128-troca-para-c", code128, "ABC123", "ABC123"),
+    ("code128-setas-c", code128, "12345678", "12345678"),
+    ("code128-minusculas", code128, "abc-123", "abc-123"),
+    ("code128-espaco", code128, "Code 128", "Code 128"),
+    # **O conjunto C sozinho, que e' onde se ve que ele e' o que economiza.**
+    ("code128-conjunto-c", lambda v: code128(v, forcar_conjunto="C"), "1234",
+     "1234"),
+    ("code128-conjunto-a", lambda v: code128(v, forcar_conjunto="A"), "AB", "AB"),
+    ("code128-conjunto-b", lambda v: code128(v, forcar_conjunto="B"), "AB", "AB"),
+    # **Um numero par de digitos, que e' o caso em que o C nao paga a troca.**
+    ("code128-dois-digitos", code128, "12", "12"),
 ]
 
 
@@ -146,6 +171,11 @@ def aceitos(esperado: str, nome: str) -> set[str]:
     o devolva tambem.
     """
     if nome.startswith("itf"):
+        return {esperado}
+    if nome.startswith("code128"):
+        # **O Code 128 nao tem moldura com texto**, ao contrario do Code 39: o
+        # inicio e' um valor de conjunto, nao um caractere, e o leitor devolve
+        # so o texto. Nao ha asterisco nem nenhuma forma alternativa.
         return {esperado}
     return {esperado, f"*{esperado}*", f"*{esperado}"}
 

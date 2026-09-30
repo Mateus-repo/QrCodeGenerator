@@ -46,7 +46,12 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "python"))
 
 from qrcode_core.simbologias.desenho import to_bitmap  # noqa: E402
-from qrcode_core.simbologias.lineares import codabar, code39, itf  # noqa: E402
+from qrcode_core.simbologias.lineares import (  # noqa: E402
+    codabar,
+    code39,
+    code128,
+    itf,
+)
 
 #: Os casos que **sao iguais entre os dois clientes mas que nenhum leitor le**.
 #:
@@ -62,6 +67,25 @@ from qrcode_core.simbologias.lineares import codabar, code39, itf  # noqa: E402
 #: evidencia de que o codigo curto nao e' culpa do encoder.
 CURTOS_DEMAIS = {"itf|12"}
 
+#: O que o leitor **tem** de devolver, quando nao e' o texto de entrada.
+#:
+#: **Estes casos nao tem `legenda` igual ao esperado, e a razao e' o ZXing.**
+#: O Code 128 e' o unico formato deste grupo em que o leitor devolve os
+#: caracteres de controlo e os caracteres especiais **com a notacao dele**, e
+#: nao com a do encoder:
+#:
+#: - o espaco (32) volta como ` `, normal;
+#: - o `FNC1` e os de controlo saocousas que nao ha.
+#:
+#: **O que importa e' que o leitor devolva a string certa**, e a string certa
+#: aqui e' a do ZXing — medida, nao presumida. Um `DIVERGE` por causa de uma
+#: representacao diferente do mesmo texto seria um falso alarme, que e' o tipo
+#: de coisa que faz um verificador ser ignorado.
+ESPERADOS_ESPECIAIS: dict[str, set[str]] = {
+    "code128 com espaco|Code 128": {"Code 128"},
+    "code128|abc-123": {"abc-123"},
+}
+
 #: Como o Python monta cada caso, a partir do nome que o web usou.
 #:
 #: **O `|` separa o formato do texto, e nao um espaco.** Com um espaco, o nome
@@ -71,6 +95,31 @@ CURTOS_DEMAIS = {"itf|12"}
 #: separador explicito e' a razao de nao haver mal-entendido nenhum.
 def montar(nome: str) -> list[bool]:
     tipo, _, resto = nome.partition("|")
+    # **`tipo` ja vem sem o `|`**, porque e' o que o `partition` devolveu. A
+    # primeira versao comparava com o `|` incluido e **nenhum destes casos era
+    # montado** — o script acrescentava a linha, a leitura ficava a branco, e o
+    # verificador saia com 1 sem dizer porquê. E' o pior dos sintomas: parece
+    # que passou, e a coluna vazia e' a unica pista.
+    #
+    # **A comparacao e' exacta, e por isso que a ordem nao importa.** O que eu
+    # escrevi antes — que o `code128` generico apanhava todos os outros e tinha
+    # de vir no fim — era falso, e essa ideia errada foi o que me levou a
+    # procurar um bug que nao existia em vez do que existia. **Um comentario que
+    # explica uma armadilha que nao existe desvia da que existe.**
+    #
+    # O `forcarConjunto` do web nao se usa em producao, e mesmo assim e' um caso
+    # de paridade que vale: e' a unica forma de isolar a escolha do conjunto da
+    # logica da troca.
+    if tipo == "code128 com espaco":
+        return [bool(m) for m in code128(resto)["modulos"]]
+    if tipo == "code128 conjunto C":
+        return [bool(m) for m in code128(resto, forcar_conjunto="C")["modulos"]]
+    if tipo == "code128 conjunto A":
+        return [bool(m) for m in code128(resto, forcar_conjunto="A")["modulos"]]
+    if tipo == "code128 conjunto B":
+        return [bool(m) for m in code128(resto, forcar_conjunto="B")["modulos"]]
+    if tipo == "code128":
+        return [bool(m) for m in code128(resto)["modulos"]]
 
     if tipo == "code39":
         if resto == "":
@@ -153,7 +202,19 @@ def main() -> int:
                 if nome not in CURTOS_DEMAIS:
                     problemas.append(f"{nome}: o ZXing nao leu o codigo")
             else:
-                leitura = resultado.text
+                lido = resultado.text
+                leitura = lido
+
+                # **O verificador so compara a leitura com o esperado quando
+                # o caso o declara.** Sem esta separacao, um `DIVERGE` aqui seria
+                # sobre a representacao do ZXing e nao sobre o encoder — e um
+                # alarme falso que faz o verificador ser deixado de correr.
+                esperados = ESPERADOS_ESPECIAIS.get(nome)
+                if esperados is not None and lido not in esperados:
+                    problemas.append(
+                        f"{nome}: o ZXing devolveu {lido!r} e esperava "
+                        f"uma de {sorted(esperados)}"
+                    )
 
         print(f"{nome:18} {len(meu):7} {len(ref):6}  {estado:22} {leitura}")
 

@@ -44,6 +44,8 @@ from .tabelas_lineares import (
     COD39_ALFABETO,
     COD39_PADROES,
     COD39_PARAGEM,
+    CODE128_PADROES,
+    CODE128_PARAGEM,
     CODABAR_INICIO_PARAGEM,
     CODABAR_PADROES,
     ITF_INICIO,
@@ -498,6 +500,243 @@ def codabar(
     }
 
 
+# --- Code 128 ---------------------------------------------------------------
+
+#: Os valores de inicio, por conjunto.
+CODE128_INICIO = {"A": 103, "B": 104, "C": 105}
+
+#: Os valores que mudam de conjunto a meio da leitura.
+CODE128_IR = {"A": 101, "B": 100, "C": 99}
+
+#: A paragem, e o valor dela na tabela.
+CODE128_PARAGEM_VALOR = 106
+
+#: Os conjuntos, pela ordem em que se listam.
+CODE128_CONJUNTOS = ("A", "B", "C")
+
+
+def _larguras_do_padrao(cadeia: str) -> list[int]:
+    """
+    As larguras dos elementos, lidas nas corridas da cadeia.
+
+    **A cadeia e' a soma das larguras**, e nao os elementos: `212222` sao seis
+    elementos que somam onze modulos. Uma corrida de um e' um elemento estreito,
+    e uma de tres e' um largo.
+
+    **Esta e' a unica funcao deste ficheiro que converte `0` e `1` em larguras.**
+    O Code 39 nao precisa dela, porque a tabela dele ja vem com as larguras
+    aplicadas; a do Code 128 vem com a soma. Sao duas representacoes da mesma
+    ideia, e e' por isso que `spec/gerar-tabelas-lineares.py` confere cada uma
+    com o comprimento que lhe cabe.
+    """
+    larguras: list[int] = []
+    atual = cadeia[0]
+    contagem = 1
+    for caractere in cadeia[1:]:
+        if caractere == atual:
+            contagem += 1
+        else:
+            larguras.append(contagem)
+            atual = caractere
+            contagem = 1
+    larguras.append(contagem)
+    return larguras
+
+
+def _modulos_do_padrao(valor: int) -> list[bool]:
+    """
+    Os modulos de um valor, alternando barra e espaco a partir da barra.
+
+    **A posicao e' que diz a cor, e nao o digito da cadeia** — a cadeia so tem
+    `0` e `1` para dizer a largura, e a barra inicial e' sempre barra.
+    """
+    if not 0 <= valor <= CODE128_PARAGEM_VALOR:
+        raise SimbologiaError(f"Code 128: o valor {valor} nao existe")
+
+    cadeia = (
+        CODE128_PARAGEM
+        if valor == CODE128_PARAGEM_VALOR
+        else CODE128_PADROES[valor]
+    )
+
+    modulos: list[bool] = []
+    for posicao, largura in enumerate(_larguras_do_padrao(cadeia)):
+        modulos.extend([posicao % 2 == 0] * largura)
+    return modulos
+
+
+def _valor_no_conjunto(caractere: str, conjunto: str) -> int:
+    """
+    O valor de um caracter ASCII dentro de um conjunto.
+
+    **No `A`, os valores 0 a 63 sao o proprio ASCII e os 64 a 95 sao as
+    maiusculas com 32 subtraidos** — e' a diferenca entre o conjunto A e o B. `A`
+    vale 33 no A e 65 no B, e e' essa diferenca que torna a troca de conjunto
+    obrigatoria em vez de opcional.
+
+    **No `B` e sempre ASCII menos 32.** No `C` nao ha caracteres, so pares de
+    digitos: quem chama ja passou os digitos.
+    """
+    codigo = ord(caractere)
+    if conjunto == "A":
+        return codigo if codigo <= 63 else codigo - 32
+    return codigo - 32
+
+
+def _melhor_conjunto(texto: str, i: int) -> str:
+    """
+    O conjunto em que vale a pena codificar a partir desta posicao.
+
+    **Dois digitos seguidos vao em `C`**, porque dois caracteres cabem num so
+    valor de 0 a 99. Um digito isolado **nao**: sair de `B` para `C` e voltar
+    custa tres caracteres para gravar um, e o codigo fica maior sem ganho.
+    """
+    if i + 1 < len(texto) and texto[i].isdigit() and texto[i + 1].isdigit():
+        return "C"
+    if ord(texto[i]) < 32:
+        return "A"
+    return "B"
+
+
+def _conjunto_inicial(texto: str) -> str:
+    """
+    Com que conjunto se comeca.
+
+    **So o `C` vale a pena quando ha quatro digitos seguidos** — ai cada par
+    gasta um caracter em vez de dois, e o ganho paga a troca. Com dois digitos o
+    `C` poupa um caracter e a troca custa um: fica igual, e nao vale a pena.
+
+    **O `A` so quando o texto comeca por um controlo.** As maiusculas vivem em A
+    e em B com o mesmo valor, e o B tambem transporta os minusculos, portanto
+    comecar em A para uma letra nao traria nada.
+    """
+    if ord(texto[0]) < 32:
+        return "A"
+    for i in range(len(texto) - 3):
+        if all(c.isdigit() for c in texto[i : i + 4]):
+            return "C"
+    return "B"
+
+
+def _valores(texto: str, forcar: str | None) -> list[int]:
+    """
+    O texto na lista de valores, ja com as trocas de conjunto.
+
+    **A cada posicao pergunta-se qual e' o melhor conjunto para o que vem a
+    seguir, e se for diferente do em que estamos emite-se o caracter de troca.**
+
+    E' o passo que o primeiro bug deste encoder esquecia, e a razao de o erro
+    ser silencioso: o codigo tem o comprimento certo, o leitor le, e devolve
+    outra coisa.
+    """
+    conjunto = forcar or _conjunto_inicial(texto)
+    saida: list[int] = [CODE128_INICIO[conjunto]]
+
+    i = 0
+    while i < len(texto):
+        desejado = forcar if forcar else _melhor_conjunto(texto, i)
+
+        if desejado != conjunto:
+            saida.append(CODE128_IR[desejado])
+            conjunto = desejado
+
+        if conjunto == "C":
+            saida.append(int(texto[i : i + 2]))
+            i += 2
+        else:
+            saida.append(_valor_no_conjunto(texto[i], conjunto))
+            i += 1
+
+    return saida
+
+
+def code128(valor: str, *, forcar_conjunto: str | None = None) -> dict:
+    """
+    Code 128. Os 128 caracteres do ASCII, e mais, por troca de conjunto.
+
+    :param forcar_conjunto: fixa um conjunto (`"A"`, `"B"` ou `"C"`) em vez de o
+        escolher. **Serve para comparar com outra implementacao, nunca em
+        producao**: forcar o `C` sobre texto que nao e' todo de digitos da um
+        codigo maior sem ganho nenhum.
+
+    ## A troca de conjunto, que e' a unica coisa realmente dificil
+
+    Os tres conjuntos se sobrepoem. O `A` transporta os controlos e as
+    maiusculas, o `B` o ASCII imprimivel, e **ambos usam o mesmo valor para as
+    maiusculas**. O `C` so transporta digitos, dois por valor.
+
+    Como os valores se sobrepoem, **o leitor nao sabe em que conjunto le sem uma
+    pista**, e a pista e' o caracter de troca. Sem ele o codigo desenha-se
+    perfeito, o leitor le, e devolve caracteres completamente errados: `ABC123`
+    volta como `ABC,3`.
+
+    **Nenhum teste estrutural apanha a falta da troca** — o comprimento ate
+    batia certo. So a leitura a mostra, que e' o nivel dois da `AGENTS.md`.
+
+    ## O valor de verificacao nao e' um digito
+
+    E' a **soma ponderada dos valores de conjunto, modulo 103** — o inicio mais
+    cada valor multiplicado pela sua posicao, a primeira a valer 1. **Pode
+    valer de 0 a 102**, e por isso que nao e' um digito como o do EAN: um valor
+    de troca de conjunto pode valer 102, e um digito de controlo de EAN nunca
+    passaria de 10.
+
+    **Um verificador de EAN aplicado aqui daria sempre um valor errado**, e o
+    sintoma seria o pior dos possiveis: o codigo **desenha-se, o leitor le-o, e
+    recusa-o** por o valor de verificacao.
+    """
+    texto = str(valor)
+
+    if not texto:
+        raise SimbologiaError("Code 128: o texto esta vazio.")
+
+    for caractere in texto:
+        codigo = ord(caractere)
+        if codigo == 128:
+            raise SimbologiaError(
+                "Code 128: o valor 128 e' o da paragem e nao pode estar nos dados."
+            )
+        if codigo > 127:
+            raise SimbologiaError(
+                f"Code 128: so ASCII, e {caractere!r} (U+{codigo:04X}) nao e. "
+                "Para acentos e alfabetos nao latinos use o QR."
+            )
+
+    forcado: str | None = None
+    if forcar_conjunto:
+        forcado = forcar_conjunto.upper()
+        if forcado not in CODE128_INICIO:
+            raise SimbologiaError(
+                f"Code 128: o conjunto {forcar_conjunto!r} nao existe (A, B ou C)"
+            )
+
+    dados = _valores(texto, forcado)
+
+    soma = dados[0]
+    for i in range(1, len(dados)):
+        soma += dados[i] * i
+    verificacao = soma % 103
+
+    todos = [*dados, verificacao, CODE128_PARAGEM_VALOR]
+
+    modulos: list[bool] = []
+    for valor in todos:
+        modulos.extend(_modulos_do_padrao(valor))
+
+    return {
+        "simbologia": "Code 128",
+        "modulos": modulos,
+        # **O Code 128 nao tem barras-guarda como o EAN.** E' a barra final de
+        # dois modulos da paragem que serve de referencia, e marcar as pontas
+        # como guardas fazia-as descer mais do que o leitor espera.
+        "guardas": [],
+        "legenda": texto,
+        "valores": todos,
+        "verificacao": verificacao,
+        "conjunto": forcado or _conjunto_inicial(texto),
+    }
+
+
 #: O registo, pelo id que o selector usa.
 #:
 #: **A chave e' a mesma nos sete clientes**, e e' o que a `AGENTS.md` chama de
@@ -509,4 +748,5 @@ SIMBOLOGIAS_LINEARES = {
     "itf": itf,
     "itf14": itf14,
     "codabar": codabar,
+    "code128": code128,
 }

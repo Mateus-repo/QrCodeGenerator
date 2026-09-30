@@ -16,7 +16,14 @@ uma spec que se cumpre. Um payload que difira num cliente e' um bug, mesmo que
 o teste desse cliente passe.
 """
 
-from .lineares import SIMBOLOGIAS_LINEARES, codabar, code39, itf, itf14
+from .lineares import (
+    SIMBOLOGIAS_LINEARES,
+    codabar,
+    code39,
+    code128,
+    itf,
+    itf14,
+)
 from .upcean import SIMBOLOGIAS, SimbologiaError, digito_de_controlo, ean8, ean13, upca
 
 #: **O registo, com os dois grupos juntos.**
@@ -45,4 +52,5 @@ __all__ = [
     "itf",
     "itf14",
     "codabar",
+    "code128",
 ]

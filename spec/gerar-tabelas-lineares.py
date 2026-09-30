@@ -40,6 +40,19 @@ largura do espaco. O leitor devolve outra coisa sem dizer porquê.
 nome a dizer de onde vem — `LARGURA` no ITF, `NORMAL`/`LARGO` no Codabar. Sao
 poucas, estao escritas ao lado de onde sao usadas, e um valor errado nelas e'
 visivel num `git diff` de duas linhas em vez de escondido numa tabela de 43.
+
+## A excepcao, e porque e' o mais importante deste ficheiro
+
+**A paragem do Code 128 nao vem do `python-barcode`, porque a da biblioteca esta
+truncada** — onze modulos em vez de treze, sem a barra final de dois modulos. Com
+a cadeia da biblioteca o ZXing devolve "NAO LEU"; com a barra final devolve a
+string certa.
+
+**A regra da `AGENTS.md` e' "as tabelas nao se escrevem de memoria", e nao "as
+tabelas vem do `python-barcode`".** A segunda e' o meio. Quando o meio falha, o
+que manda e' a leitura, e o script acima tem uma guarda que da erro se a
+biblioteca um dia corrigir isto — para ninguem deixar a excepcao la depois de
+deixar de ser preciso.
 """
 
 from __future__ import annotations
@@ -49,6 +62,7 @@ from pathlib import Path
 
 try:
     from barcode.charsets import code39 as T39
+    from barcode.charsets import code128 as T128
     from barcode.charsets import codabar as TCODABAR
     from barcode.charsets import itf as TITF
 except ImportError:
@@ -123,6 +137,59 @@ def principal() -> int:
     conferir("codabar", list(padroescod.values()), 7, "NnWw")
     conferir("codabar/inicio", list(inicio_paragem.values()), 7, "NnWw")
 
+    # --- Code 128: 106 padroes de onze caracteres, mais o de paragem a parte. ---
+    #
+    # **O `python-barcode` separa a paragem dos outros 106**, e nao e' um
+    # detalhe: a paragem tem sete elementos e os outros tem seis. Juntados dao
+    # os 107 que o web tem num so.
+    padroes128 = [str(p) for p in T128.CODES]
+    paragem128 = str(T128.STOP)
+
+    if len(padroes128) != 106:
+        raise SystemExit(
+            f"o Code 128 tem {len(padroes128)} padroes e devia ter 106 — "
+            "a extracao esta desemparelhada"
+        )
+
+    # **Onze caracteres, e nao seis nem sete.** A cadeia e' a soma das larguras
+    # dos seis elementos, e as larguras vao de 1 a 4: 1+1+2+2+2+3 e 11. Um
+    # `conferir` escrito para os seis elementos do padrao — que e' como o web os
+    # descreve, em larguras — dava "tem 11 elementos, esperava 6" numa tabela
+    # perfeitamente correcta, que e' o mesmo engano do Code 39 ter vindo
+    # expandido.
+    conferir("code128", padroes128, 11, "01")
+
+    # **A UNICA vez que a tabela nao vem do `python-barcode`: a paragem do
+    # Code 128.**
+    #
+    # O `STOP` da biblioteca tem onze modulos e **seis** elementos. A paragem do
+    # Code 128 sao **treze modulos e sete** — `2331112` — e a diferenca e' a
+    # barra final de dois modulos. **A do `python-barcode` esta truncada.**
+    #
+    # Nao e' uma diferenca de opiniao: mediu-se. Com a cadeia da biblioteca o
+    # ZXing devolve "NAO LEU" para `Hi`, e com a barra final devolve `Hi`. A
+    # razao e' que essa barra e' a **ancora** do leitor — o Code 128 nao tem
+    # barras-guarda como o EAN, e sem ela o leitor nao sabe onde acaba o codigo.
+    #
+    # **A regra da `AGENTS.md` e' "as tabelas nao se escrevem de memoria", e nao
+    # "as tabelas vem do `python-barcode`".** A segunda e' o meio, e quando o
+    # meio falha o que manda e a leitura. Copiar a cadeia truncada porque veio da
+    # fonte seria levar um codigo que nao le para dentro do repositorio com a
+    # autoridade da fonte colada ao lado.
+    #
+    # Os 106 padroes de dados **sao** da biblioteca e **passam** na leitura, e
+    # por isso que so a paragem e' escrita aqui.
+    PARAGEM_CODE128 = "1100011101011"
+
+    conferir("code128/paragem", [PARAGEM_CODE128], 13, "01")
+
+    if len(paragem128) == 13:
+        raise SystemExit(
+            "a paragem do python-barcode tem agora treze modulos — a "
+            "biblioteca foi corrigida e esta excepcao ja nao e' necessaria. "
+            "Confirmar com o ZXing antes de a remover."
+        )
+
     conteudo = f'''"""
 As tabelas dos codigos de barras de uma linha, extraidas do `python-barcode`.
 
@@ -178,6 +245,37 @@ CODABAR_PADROES = {padroescod!r}
 
 #: Os quatro caracteres que so podem ser inicio ou paragem.
 CODABAR_INICIO_PARAGEM = {inicio_paragem!r}
+
+#: O Code 128: os 106 primeiros valores, por indice.
+#:
+#: **Cada entrada tem onze caracteres, ja expandidos**, e nao os seis elementos
+#: `NnWw` dos outros. A cadeia e' a soma das larguras dos seis elementos, e as
+#: larguras vao de 1 a 4. Os valores 0 a 102 sao dados, 103, 104 e 105 sao os
+#: caracteres de inicio dos conjuntos A, B e C, e 106 e' a paragem.
+CODE128_PADROES = {padroes128!r}
+
+#: A paragem do Code 128: treze modulos, sete elementos — `2331112`.
+#:
+#: ## A unica tabela deste ficheiro que nao vem do `python-barcode`
+#:
+#: **A `STOP` da biblioteca tem onze modulos e seis elementos. A paragem do Code
+#: 128 sao treze e sete.** Falta a barra final de dois modulos, e sem ela o
+#: codigo **nao e' lido por nada**: mediu-se, e o ZXing devolve "NAO LEU" para
+#: `Hi` com a cadeia da biblioteca e `Hi` com esta.
+#:
+#: A razao e' que essa barra e' a **ancora** do leitor. O Code 128 nao tem
+#: barras-guarda como o EAN, e a paragem e' a unica coisa que diz onde o codigo
+#: acaba — sem ela o leitor nao sabe, e o que le nao e' este codigo.
+#:
+#: **A regra da `AGENTS.md` e' nao escrever as tabelas de memoria.** O
+#: `python-barcode` e' o meio de o fazer, e nao a razao. Quando o meio falha, o
+#: que manda e' a leitura — e trazer a cadeia truncada porque veio da fonte seria
+#: levar para dentro do repositorio um codigo que nao le, com a autoridade da
+#: fonte colada ao lado.
+#:
+#: Os 106 padroes de dados sao da biblioteca e passam na leitura, e por isso que
+#: so a paragem e' escrita aqui.
+CODE128_PARAGEM = {PARAGEM_CODE128!r}
 '''
 
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
@@ -186,6 +284,7 @@ CODABAR_INICIO_PARAGEM = {inicio_paragem!r}
     print(f"  Code 39:  {len(padroes39)} caracteres x 9 elementos")
     print(f"  ITF:      {len(padroesitf)} digitos x 5 elementos")
     print(f"  Codabar:  {len(padroescod)} caracteres x 7 elementos")
+    print(f"  Code 128: {len(padroes128)} padroes x 6 elementos + paragem")
     print(f"  -> {DESTINO.relative_to(RAIZ)}")
     return 0
 
