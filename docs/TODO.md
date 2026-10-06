@@ -7,7 +7,7 @@
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR, e as
 4 simbologias de códigos de barras em **cinco** stacks — web, Python, Java, C# e
-o `:core` do Kotlin. **1056 testes** (292 site, 323 Python, 236 C#, 161 Java,
+o `:core` do Kotlin. **1075 testes** (295 site, 323 Python, 236 C#, 177 Java,
 44 Kotlin). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
@@ -249,6 +249,20 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > teria apanhado isto da primeira vez: CR, ESC, BEL, NUL, US, DEL e os 32
       > em fila. O ficheiro `gerar-code93.mjs` dizia na primeira linha que os
       > casos cobriam "caracteres de controlo", e não havia um único.
+      >
+      > **E depois em Java**, com 16 testes novos: 13 lidos pelo ZXing — dos
+      > quais seis têm caracteres de controlo, que é o que teria apanhado o bug
+      > do web — e três estruturais. A paridade sobe para **25 casos**, 8 deles
+      > de Code 93, e o Java e o Python dão os mesmos módulos.
+      >
+      > **A lista de casos passou a declarar quem implementa o quê.** Acrescentar
+      > o Code 93 aos casos rebentou as paridades do Kotlin e do C# com `tipo
+      > desconhecido: code93`, porque a lista é a união de tudo e cada
+      > consumidor tinha de implementar tudo. **A `STACKS` na
+      > `casos-barras.mjs` diz que stack tem cada formato**, e um invariant no
+      > arranque do módulo falha se um tipo ficar na lista sem ninguém que o
+      > implemente — porque o filtro esconde o caso, e um caso que ninguém
+      > verifica parece verificado.
       >
       > Três bugs anteriores, e **nenhum era de tabela**: os 9 bits lidos de três
       > maneiras diferentes, o asterisco ausente do código, e a barra de

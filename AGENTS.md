@@ -312,6 +312,41 @@ leitor que devolve duas representações tem uma que é para comparar e outra qu
 para mostrar a uma pessoa**, e adivinhar qual é qual é a maneira de "corrigir" o
 encoder que estava certo.
 
+**E uma lista partilhada que é a união de tudo obriga cada consumidor a
+implementar tudo — e a acrescentar uma entrada parte as paridades.** Os casos
+do Code 93 entraram na `casos-barras.mjs`, que é a fonte única, e as paridades do
+Kotlin e do C# rebentaram com `tipo desconhecido: code93`. **A lista estava no
+sítio certo e a regra estava errada**: ser a fonte única é o que impede a
+divergência, e não impede que alguém acrescente.
+
+A correção tem duas metades, e a segunda é a que fecha o buraco:
+
+1. **Cada stack declara os formatos que tem e filtra.** A lista fica a única, os
+   casos ficam a únicos, e uma stack que ainda não tem o Code 93 não é perguntada
+   sobre ele.
+2. **O filtro esconde o caso, e um caso que ninguém verifica parece verificado.**
+   Por isso que a tabela de quem implementa o quê vive **na lista partilhada** —
+   `STACKS` em `casos-barras.mjs` — e não em cada script. Com ela nas três, um
+   invariant tem de cruzar três ficheiros para descobrir uma coisa que está
+   escrita num; com ela num, a comparação é de dois conjuntos.
+
+**E o invariant corre no arranque do módulo, e não num teste.** Um guarda que só
+corre com um comando é um guarda que ninguém corre quando acrescenta uma
+entrada — que é exactamente quando faz falta. **Um invariant que se verifica ao
+carregar falha sempre, e não falha só quando alguém se lembra.**
+
+**E o guarda diz as duas coisas.** Um formato na lista sem ninguém que o
+implemente — o buraco do filtro — e um formato declarado sem nenhum caso, que é
+um `case` que nunca corre. **A segunda é a que se esquece**: a primeira tem
+sintoma de caso a menos, e a segunda passa com a suite toda a verde.
+
+**E foi um guarda deste tipo que apanhou o meu erro em segundos.** Escrevi `itf`
+nos `TIPOS` das três stacks porque o encoder existe nas três, e **o que existe é
+o encoder, não os casos** — a lista partilhada não tem `itf` e tem `itf14`, de
+propósito, porque um ITF de dois dígitos não é lido por aparelho de laboratório.
+**A distinção entre "esta stack sabe codificar isto" e "há casos para comparar"
+são coisas diferentes, e a segunda é a rara.**
+
 **E sobre o limite em píxeis do logotipo:** não é um número fixo, depende da
 escala, e a escala muda com o tamanho pedido e com a versão do QR. A mensagem
 tem de dizer a caixa nos dois termos — N×N **módulos** e N×escala **píxeis** —

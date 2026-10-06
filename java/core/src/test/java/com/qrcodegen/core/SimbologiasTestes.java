@@ -6,10 +6,12 @@ import com.google.zxing.DecodeHintType;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
-import com.qrcodegen.core.simbologias.CodigoDeBarras;
 import com.qrcodegen.core.simbologias.Code128;
+import com.qrcodegen.core.simbologias.Code93;
+import com.qrcodegen.core.simbologias.CodigoDeBarras;
 import com.qrcodegen.core.simbologias.Lineares;
 import com.qrcodegen.core.simbologias.SimbologiaException;
+import com.qrcodegen.core.simbologias.TabelasCode93;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -170,7 +173,192 @@ class SimbologiasTestes {
         assertEquals(esperado, ler(construcao.get(), formato));
     }
 
+    // --- Code 93 ------------------------------------------------------------
+
+    static Stream<Arguments> code93() {
+        // **O ZXing devolve o texto sem os dois digitos de controlo**, porque
+        // eles sao de controlo e nao fazem parte do dado — e e' por isso que a
+        // expectativa e' o `valor` e nao a legenda.
+        return Stream.of(
+                caso(BarcodeFormat.CODE_93, "ABC-1234", () -> Code93.code93("ABC-1234")),
+                caso(BarcodeFormat.CODE_93, "A", () -> Code93.code93("A")),
+                caso(BarcodeFormat.CODE_93, "999999999999999999999999999999",
+                        () -> Code93.code93("999999999999999999999999999999")),
+                caso(BarcodeFormat.CODE_93, "MAST-2024-0001-LOTE-MUITO-COMPRIDO-PARA-O-CONTROL-20",
+                        () -> Code93.code93("MAST-2024-0001-LOTE-MUITO-COMPRIDO-PARA-O-CONTROL-20")),
+
+                // **A minuscula e' o caso que prova a codificacao estendida.**
+                // `teste-93` vai no codigo como `dTdEdSdTdE-93`, e sao quinze
+                // modulos a mais do que uma cadeia de sete caracteres. **Um
+                // encoder que mande as minusculas tal e qual falha aqui, e falha
+                // bem** — com um comprimento diferente, que e' o erro de estrutura
+                // e nao o de dado.
+                caso(BarcodeFormat.CODE_93, "teste-93", () -> Code93.code93("teste-93")),
+                caso(BarcodeFormat.CODE_93, "Teste93Minusculas",
+                        () -> Code93.code93("Teste93Minusculas")),
+                caso(BarcodeFormat.CODE_93, "ABC $/%+-.",
+                        () -> Code93.code93("ABC $/%+-.")),
+
+                // **Os caracteres de controle, que e' o que teria apanhado o bug
+                // do web.** Vinte e quatro dos trinta e dois estavam errados e
+                // nao havia um unico caso — a tabela estava errada e verificada
+                // ao mesmo tempo, porque a verificacao nao a tocava.
+                //
+                // **Um caso por controlo critico, e nao os 32 em fila.** Um
+                // codigo com os 32 nao tem texto visivel para comparar, e a
+                // falha seria "nao leu nada" em vez de "leu `0` em vez de CR" —
+                // que e' a mensagem que diz onde esta o problema.
+                caso(BarcodeFormat.CODE_93, "A\u0000B", () -> Code93.code93("A\u0000B")),
+                caso(BarcodeFormat.CODE_93, "A\u0007B", () -> Code93.code93("A\u0007B")),
+                caso(BarcodeFormat.CODE_93, "A\rB", () -> Code93.code93("A\rB")),
+                caso(BarcodeFormat.CODE_93, "A\u001bB", () -> Code93.code93("A\u001bB")),
+                caso(BarcodeFormat.CODE_93, "A\u001fB", () -> Code93.code93("A\u001fB")),
+                caso(BarcodeFormat.CODE_93, "A\u007fB", () -> Code93.code93("A\u007fB")));
+    }
+
+    @ParameterizedTest(name = "{1}")
+    @MethodSource("code93")
+    @DisplayName("Code 93: o ZXing le o codigo que o Java desenhou")
+    void code93Elegivel(BarcodeFormat formato, String esperado,
+            Supplier<CodigoDeBarras> construcao) {
+        assertEquals(esperado, ler(construcao.get(), formato));
+    }
+
     // --- a estrutura, que e' o que a leitura sozinha nao diz ---------------
+
+        @Test
+        @DisplayName("a tabela do Code 93 tem 48 padroes e todos comecam em barra")
+        void tabelaDoCode93EstaCompleta() {
+            // **O invariante de que o leitor depende.** O ZXing ancora cada
+            // caractere na primeira barra, e um padrao que comece em espaco
+            // desenha-se bem e **nao e' lido por nada**.
+            //
+            // **E o `spec/gerar-tabelas-code93.py` verifica o mesmo nos 48
+            // valores**, antes de os escrever. Aqui e' a segunda verificacao do
+            // mesmo invariante, e nao e' redundancia: o gerador protege a
+            // tabela, e isto protege o codigo de uma tabela que um dia chegue
+            // errada de outra fonte.
+            assertEquals(48, TabelasCode93.PADROES.length);
+            assertEquals(48, TabelasCode93.ALFABETO.length());
+            assertEquals(128, TabelasCode93.CONTROLES.length);
+
+            for (int i = 0; i < TabelasCode93.PADROES.length; i++) {
+                int padrao = TabelasCode93.PADROES[i];
+
+                assertTrue(padrao >= 0 && padrao <= 0x1FF,
+                        "CODE93_PADROES[" + i + "] = 0x" + Integer.toHexString(padrao)
+                                + " tem mais de nove bits: a tabela nao e' do Code 93");
+
+                assertTrue((padrao & 0x100) != 0,
+                        "CODE93_PADROES[" + i + "] = 0x" + Integer.toHexString(padrao)
+                                + " ('" + TabelasCode93.ALFABETO.charAt(i)
+                                + "') comeca em espaco, e o leitor precisa de uma barra "
+                                + "para ancorar");
+            }
+        }
+
+        @Test
+        @DisplayName("o modulo do checksum do Code 93 e' 47 e nao 43")
+        void moduloDoChecksumDoCode93EQuarentaESete() {
+            // **47 e nao 43**, porque contam o asterisco e os quatro de
+            // controle. E a razao de os dois parecerem tao diferentes a quem os
+            // compara: o Code 39 tem 43 e nao conta o asterisco.
+            assertEquals(47, TabelasCode93.MODULO_CHECKSUM);
+            assertEquals(47, TabelasCode93.PADROES.length - 1);
+            assertEquals(47, TabelasCode93.ASTERISCO);
+            assertEquals('*', TabelasCode93.ALFABETO.charAt(TabelasCode93.ASTERISCO));
+        }
+
+        @Test
+        @DisplayName("o peso dos digitos do Code 93 reinicia no indice vinte")
+        void pesoDosDigitosReiniciaNoIndiceVinte() {
+            // **O sintoma do que nao reinicia e' o mais enganador de todos os
+            // codigos de barras**: o codigo desenha-se bem, o primeiro digito
+            // bate certo e o segundo nao, e o leitor recusa por checksum **sem
+            // dizer qual dos dois**.
+            //
+            // **O teste refaz a conta, e nao le o resultado.** Um `substring` da
+            // legenda com uma conclusao em cima e' um teste que parece medir o
+            // peso e nao mede nada — e nao ha como o distinguir de um bom a
+            // ler. Por isso que a conta e' aqui, sobre o texto ja estendido.
+            //
+            // **E o texto tem de tornar a diferenca visivel.** As cinco letras
+            // estao no **inicio** da cadeia porque o checksum le de tras para a
+            // frente, e com vinte e cinco caracteres o primeiro e' o de peso
+            // 21. Um `0` no indice 0 da tabela contribui zero e nao distingue
+            // nada — que foi o que aconteceu na primeira versao deste teste.
+            String texto = "ABCDE" + "0".repeat(20);
+            assertEquals(25, texto.length(),
+                    "o texto de teste tem de passar o indice vinte para separar as "
+                            + "duas formulas, e tem " + texto.length());
+
+            CodigoDeBarras codigo = Code93.code93(texto);
+            String legenda = codigo.legenda();
+
+            assertEquals(27, legenda.length(),
+                    "a legenda e' o texto mais os dois digitos, e tem "
+                            + legenda.length() + " caracteres para " + texto.length()
+                            + " de texto");
+
+            Map<Character, Integer> indice = TabelasCode93.indice();
+
+            // **A conta certa: o peso vai de 1 a 20 e volta a 1.**
+            int comReinicio = somaPonderada(texto.toCharArray(), 20, indice);
+
+            // **A conta que produz o digito errado: o peso cresce sem parar.**
+            int semReinicio = somaComPesosDecrescentes(texto.toCharArray(), indice);
+
+            assertEquals((char) TabelasCode93.ALFABETO.charAt(comReinicio % 47),
+                    legenda.charAt(25),
+                    "o primeiro digito tem de ser o que a conta com reinicio da");
+
+            // **E as duas contas tem de dar numeros diferentes**, senao o texto
+            // de teste nao separa as duas formulas e o teste nao prova nada.
+            assertNotEquals(semReinicio % 47, comReinicio % 47,
+                    "o texto de teste nao separa as duas formulas: escolher outro");
+        }
+
+        /**
+         * A soma ponderada, com o peso a reiniciar no maximo.
+         *
+         * @param texto os caracteres da cadeia
+         * @param maximo o peso antes de recomecar
+         * @param indice o indice de cada caracter da tabela
+         * @return a soma, ainda sem o modulo
+         */
+        private static int somaPonderada(char[] texto, int maximo,
+                Map<Character, Integer> indice) {
+            int peso = 1;
+            int total = 0;
+
+            for (int i = texto.length - 1; i >= 0; i--) {
+                total += peso * indice.get(texto[i]);
+                peso += 1;
+                if (peso > maximo) {
+                    peso = 1;
+                }
+            }
+
+            return total;
+        }
+
+        /**
+         * A soma com o peso a crescer sem parar, que e' o bug.
+         *
+         * @param texto os caracteres da cadeia
+         * @param indice o indice de cada caracter da tabela
+         * @return a soma, ainda sem o modulo
+         */
+        private static int somaComPesosDecrescentes(char[] texto,
+                Map<Character, Integer> indice) {
+            int total = 0;
+
+            for (int i = texto.length - 1; i >= 0; i--) {
+                total += (texto.length - i) * indice.get(texto[i]);
+            }
+
+            return total;
+        }
 
     @Nested
     @DisplayName("a estrutura dos modulos")

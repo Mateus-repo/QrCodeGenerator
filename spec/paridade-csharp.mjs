@@ -20,7 +20,7 @@
 // onde e' o encoder que desenha.
 
 import { spawnSync } from 'node:child_process';
-import { CASOS_BARRAS } from './casos-barras.mjs';
+import { casosDe } from './casos-barras.mjs';
 
 // --- as pontas --------------------------------------------------------------
 
@@ -152,7 +152,7 @@ function divergencia(a, b) {
   return null;
 }
 
-const casos = CASOS_BARRAS.map(([tipo, texto, opcoes]) => [tipo, texto, opcoes]);
+const casos = casosDe("csharp");
 
 console.log(`${'caso'.padEnd(36)}${'modulos'.padStart(9)}  estado`);
 console.log('-'.repeat(72));

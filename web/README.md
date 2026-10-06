@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 8 simbologias 1D · ✅ 292 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 8 simbologias 1D · ✅ 295 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -322,7 +322,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 292 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
+# 295 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?

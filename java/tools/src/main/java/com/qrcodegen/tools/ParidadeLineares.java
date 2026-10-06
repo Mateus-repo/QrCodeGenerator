@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.qrcodegen.core.simbologias.Code93;
 import com.qrcodegen.core.simbologias.CodigoDeBarras;
 import com.qrcodegen.core.simbologias.Code128;
 import com.qrcodegen.core.simbologias.Lineares;
@@ -16,8 +17,8 @@ import java.nio.charset.StandardCharsets;
  *
  * <p>Existe para o {@code spec/paridade-java.mjs}: e' a ponta de Java da
  * comparacao que decide se o Java e o Python produzem a mesma coisa. O
- * comprimentosegue igual e a silhueta errada, e so a comparacao dos modulos
- * as distingue.
+ * comprimento e' igual e a silhueta esta errada, e so a comparacao dos
+ * modulos as distingue.
  *
  * <p><strong>E' uma ferramenta de verificacao, nao parte da app.</strong> Por
  * isso vive em {@code tools/} e nao no core: a biblioteca nao ganha um
@@ -75,6 +76,7 @@ public final class ParidadeLineares {
                     opcoes.has("paragem") ? opcoes.get("paragem").getAsString() : "A",
                     opcoes.has("largo") && opcoes.get("largo").getAsBoolean());
             case "code128" -> codigo = Code128.code128(texto);
+            case "code93" -> codigo = Code93.code93(texto);
             default -> throw new IllegalArgumentException(
                     "tipo desconhecido: " + tipo);
         }
@@ -87,7 +89,7 @@ public final class ParidadeLineares {
      *
      * <p><strong>Os modulos saem como 0 e 1, e nao como {@code true} e
      * {@code false}.</strong> O Python devolve {@code bool} e o gson le um
-     * {@code bool} de um numero, mas o outro sentido da a lattices: o script
+     * {@code bool} de um numero, mas o outro sentido da uma lattice: o script
      * compara posicao a posicao e um {@code true} onde se espera um {@code 1}
      * contaria como divergencia num codigo que esta certo. Os dois lados
      *accordam em 0 e 1, que e' o unico valor que nao da duvida.

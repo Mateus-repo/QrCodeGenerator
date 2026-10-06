@@ -18,7 +18,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { CASOS_BARRAS } from './casos-barras.mjs';
+import { casosDe } from './casos-barras.mjs';
 
 // --- os casos, que vem de uma fonte so ---------------------------------------
 
@@ -41,6 +41,7 @@ import { CASOS_BARRAS } from './casos-barras.mjs';
 const PYTHON = `
 import json, sys
 sys.path.insert(0, "python")
+from qrcode_core.simbologias.code93 import code93
 from qrcode_core.simbologias.lineares import codabar, code39, code128, itf, itf14
 
 casos = json.load(sys.stdin)
@@ -60,6 +61,8 @@ for tipo, texto, opcoes in casos:
                     largo=opcoes.get("largo", False))
     elif tipo == "code128":
         c = code128(texto)
+    elif tipo == "code93":
+        c = code93(texto)
     else:
         raise SystemExit("tipo desconhecido: " + tipo)
     saida.append({"modulos": [1 if m else 0 for m in c["modulos"]],
@@ -151,7 +154,7 @@ function divergencia(a, b) {
   return null;
 }
 
-const casos = CASOS_BARRAS;
+const casos = casosDe("java");
 
 console.log(`${'caso'.padEnd(36)}${'modulos'.padStart(9)}  estado`);
 console.log('-'.repeat(72));
