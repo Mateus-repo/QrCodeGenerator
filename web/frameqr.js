@@ -347,7 +347,7 @@ const QUOCIENTE_POR_FORMA = {
   losango: 0.5,
   arredondado: 0.409,
   hexagono: 0.832,
-  estrela: 0.386,
+  estrela: 0.24,
 };
 
 export function modulosMaximos(size, ecl, margem = MARGEM, forma = 'quadrado') {

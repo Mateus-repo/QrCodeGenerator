@@ -52,7 +52,7 @@
  * numero alterado — e e' o que o `tests/sw.test.mjs` nao pode apanhar,
  * porque o numero nao tem relacao com o conteudo dos ficheiros.
  */
-const VERSAO = 'v3';
+const VERSAO = 'v4';
 const CACHE = `qrcode-${VERSAO}`;
 
 /**
