@@ -31,8 +31,28 @@
  * recebe a versao nova no primeiro carregamento.
  *
  * **Quando mudar este numero, mudar a estrategia tambem.** Nao chega.
+ *
+ * ## E' por isso que o numero tem de subir a cada alteracao
+ *
+ * O `activate` so apaga os caches velhos quando o `sw.js` **muda**, porque e' o
+ * navegador que decide se ha um service worker novo pela leitura do ficheiro.
+ * **Mexer em `app.js`, `qrcode.js` ou `frameqr.js` nao muda o `sw.js`, e por isso
+ * nao chega para nada.**
+ *
+ * **Aconteceu outra vez com o logotipo do FieldQR.** O `app.js` passou a chamar
+ * `desenharLogotipo` com `offset` em vez de `margem`, e o site continuou a
+ * mostrar o logotipo 4 modulos ao lado porque o `fetch`respondia com o
+ * `app.js` do cache — que e' a estrategia "cache primeiro". O servidor servia a
+ * versao certa e o browser servia a de antes, e o unico sintoma era o desenho
+ * torto: o encoder estava certo, a correccao de erros estava certa, e o codigo
+ * lia-se na mesma.
+ *
+ * **Reparar obriga a limpar a cache a mao, e ninguem o faz.** Por isso que
+ * qualquer alteracao a um ficheiro da lista `RECURSOS` tem de vir com este
+ * numero alterado — e e' o que o `tests/sw.test.mjs` nao pode apanhar,
+ * porque o numero nao tem relacao com o conteudo dos ficheiros.
  */
-const VERSAO = 'v2';
+const VERSAO = 'v3';
 const CACHE = `qrcode-${VERSAO}`;
 
 /**
