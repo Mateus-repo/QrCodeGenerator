@@ -95,6 +95,7 @@ public static class Program
                 paragem: Opcao("paragem", "A"),
                 largo: Bandeira("largo")),
             "code128" => Code128.Gerar(texto),
+        "code93" => Code93.Codificar(texto),
             _ => throw new ArgumentException("tipo desconhecido: " + tipo),
         };
     }

@@ -4,7 +4,7 @@ O cliente mais antigo e o único com interface gráfica completa. Serve
 também de referência de UI para as outras stacks.
 
 **Stack:** C# / .NET 8 / WinForms / QRCoder 1.8
-**Estado:** ✅ 11 tipos (10 + PIX) · ✅ 236 testes · ✅ sem bugs conhecidos
+**Estado:** ✅ 11 tipos (10 + PIX) · ✅ 252 testes · ✅ sem bugs conhecidos
 
 ## Estrutura
 
@@ -24,7 +24,7 @@ csharp/
 │   ├── Program.cs
 │   ├── MainForm.cs          ← formulários por categoria
 │   └── QrRenderer.cs        ← única parte que usa System.Drawing
-└── tests/                   ← 236 testes (xunit)
+└── tests/                   ← 252 testes (xunit)
 ```
 
 ## Executar
@@ -41,7 +41,7 @@ cd csharp
 dotnet test
 ```
 
-236 testes, em três grupos:
+252 testes, em três grupos:
 
 | Ficheiro | O que garante |
 |---|---|

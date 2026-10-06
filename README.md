@@ -6,14 +6,14 @@ regras** partilhado.
 | Pasta | O que é | Stack | Estado |
 |---|---|---|---|
 | [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 9 simbologias · 295 testes · Lighthouse 100/100/100 |
-| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 236 testes |
+| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 252 testes |
 | [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 177 testes |
 | [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ 11 tipos · 323 testes |
-| [`kotlin/core`](kotlin/core) | Núcleo JVM, app Android a seguir | Kotlin / Gradle / ZXing | ✅ 11 tipos · 44 testes |
+| [`kotlin/core`](kotlin/core) | Núcleo JVM, app Android a seguir | Kotlin / Gradle / ZXing | ✅ 11 tipos · 60 testes |
 | [`kotlin/android`](kotlin/android) | App Android | Kotlin / Compose / ZXing | ⬜ por fazer |
 | [`go`](go) | App terminal, **por último** | Go | ⬜ por decidir |
 
-**1075 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
+**1107 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
 um leitor independente (ZXing).
 
 ---

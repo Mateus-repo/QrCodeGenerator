@@ -53,8 +53,8 @@
  */
 export const STACKS = {
   java: ["code39", "itf14", "codabar", "code128", "code93"],
-  kotlin: ["code39", "itf14", "codabar", "code128"],
-  csharp: ["code39", "itf14", "codabar", "code128"],
+  kotlin: ["code39", "itf14", "codabar", "code128", "code93"],
+  csharp: ["code39", "itf14", "codabar", "code128", "code93"],
 };
 
 export const CASOS_BARRAS = [

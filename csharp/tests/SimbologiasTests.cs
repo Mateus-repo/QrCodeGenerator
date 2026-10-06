@@ -83,7 +83,158 @@ public class SimbologiasTests
     public void Code128Elegivel(string texto) =>
         Assert.Equal(texto, Ler(Code128.Gerar(texto), BarcodeFormat.CODE_128));
 
+    /// <summary>Code 93: o ZXing le o codigo que o C# desenhou.</summary>
+    /// <remarks>
+    /// <para><b>O ZXing devolve o texto sem os dois digitos de controlo</b>,
+    /// porque eles sao de controlo e nao fazem parte do dado — e e' por isso que a
+    /// expectativa e' o <c>texto</c> e nao a legenda.</para>
+    ///
+    /// <para><b>A minuscula e' o caso que prova a codificacao estendida.</b>
+    /// <c>teste-93</c> vai no codigo como <c>dTdEdSdTdE-93</c>, e sao quinze modulos
+    /// a mais do que uma cadeia de sete caracteres. <b>Um encoder que mande as
+    /// minusculas tal e qual falha aqui, e falha bem</b> — com um comprimento
+    /// diferente, que e' o erro de estrutura e nao o de dado.</para>
+    ///
+    /// <para><b>Os caracteres de controlo sao o que teria apanhado o bug do
+    /// web.</b> Vinte e quatro dos trinta e dois estavam errados e nao havia um
+    /// unico caso — a tabela estava errada e verificada ao mesmo tempo, porque a
+    /// verificacao nao a tocava.</para>
+    /// </remarks>
+    [Theory]
+    [InlineData("ABC-1234")]
+    [InlineData("A")]
+    [InlineData("999999999999999999999999999999")]
+    [InlineData("MAST-2024-0001-LOTE-MUITO-COMPRIDO-PARA-O-CONTROL-20")]
+    [InlineData("teste-93")]
+    [InlineData("Teste93Minusculas")]
+    [InlineData("ABC $/%+-.")]
+    // **Um caso por controlo critico, e nao os 32 em fila.** Um codigo com os 32
+    // nao tem texto visivel para comparar, e a falha seria "nao leu nada" em vez
+    // de "leu `0` em vez de CR".
+    [InlineData("A\u0000B")]
+    [InlineData("A\u0007B")]
+    [InlineData("A\rB")]
+    [InlineData("A\u001bB")]
+    [InlineData("A\u001fB")]
+    [InlineData("A\u007fB")]
+    public void Code93Elegivel(string texto) =>
+        Assert.Equal(texto, Ler(Code93.Codificar(texto), BarcodeFormat.CODE_93));
+
     // --- a estrutura, que e' o que a leitura sozinha nao diz ---------------
+
+    /// <summary>A tabela do Code 93 tem 48 padroes e todos comecam em barra.</summary>
+    /// <remarks>
+    /// <para><b>O invariante de que o leitor depende.</b> O ZXing ancora cada
+    /// caractere na primeira barra, e um padrao que comece em espaco desenha-se
+    /// bem e <b>nao e' lido por nada</b>.</para>
+    ///
+    /// <para><b>E o <c>spec/gerar-tabelas-code93.py</c> verifica o mesmo nos 48
+    /// valores</b>, antes de os escrever. Aqui e' a segunda verificacao do mesmo
+    /// invariante, e nao e' redundancia: o gerador protege a tabela, e isto
+    /// protege o codigo de uma tabela que um dia chegue errada de outra fonte.</para>
+    /// </remarks>
+    [Fact]
+    public void TabelaDoCode93EstaCompleta()
+    {
+        Assert.Equal(48, TabelasCode93.PADROES.Length);
+        Assert.Equal(48, TabelasCode93.ALFABETO.Length);
+        Assert.Equal(128, TabelasCode93.Controles.Length);
+
+        for (int i = 0; i < TabelasCode93.PADROES.Length; i++)
+        {
+            int padrao = TabelasCode93.PADROES[i];
+
+            Assert.InRange(padrao, 0, 0x1FF);
+            Assert.True(
+                (padrao & 0x100) != 0,
+                $"CODE93_PADROES[{i}] ('{TabelasCode93.ALFABETO[i]}') comeca em espaco, "
+                + "e o leitor precisa de uma barra para ancorar");
+        }
+    }
+
+    /// <summary>O modulo do checksum do Code 93 e' 47 e nao 43.</summary>
+    /// <remarks>
+    /// <b>47 e nao 43</b>, porque contam o asterisco e os quatro de controle.
+    /// </remarks>
+    [Fact]
+    public void ModuloDoChecksumDoCode93EQuarentaESete()
+    {
+        Assert.Equal(47, TabelasCode93.MODULO_CHECKSUM);
+        Assert.Equal(47, TabelasCode93.PADROES.Length - 1);
+        Assert.Equal(47, TabelasCode93.ASTERISCO);
+        Assert.Equal('*', TabelasCode93.ALFABETO[TabelasCode93.ASTERISCO]);
+    }
+
+    /// <summary>O peso dos digitos do Code 93 reinicia no indice vinte.</summary>
+    /// <remarks>
+    /// <para><b>O sintoma do que nao reinicia e' o mais enganador de todos os
+    /// codigos de barras</b>: o codigo desenha-se bem, o primeiro digito bate
+    /// certo e o segundo nao, e o leitor recusa por checksum <b>sem dizer qual
+    /// dos dois</b>.</para>
+    ///
+    /// <para><b>O teste refaz a conta, e nao le o resultado.</b> Cortar a legenda
+    /// com uma conclusao em cima e' um teste que parece medir o peso e nao mede
+    /// nada — e nao ha como o distinguir de um bom a ler.</para>
+    ///
+    /// <para><b>E o texto tem de tornar a diferenca visivel.</b> As cinco letras
+    /// estao no <b>inicio</b> da cadeia porque o checksum le de tras para a frente,
+    /// e com vinte e cinco caracteres o primeiro e' o de peso 21. Um <c>0</c> no
+    /// indice 0 da tabela contribui zero e nao distingue nada.</para>
+    /// </remarks>
+    [Fact]
+    public void PesoDosDigitosReiniciaNoIndiceVinte()
+    {
+        string texto = "ABCDE" + new string('0', 20);
+        Assert.Equal(25, texto.Length);
+
+        string legenda = Code93.Codificar(texto).Legenda;
+        Assert.Equal(27, legenda.Length);
+
+        int comReinicio = SomaPonderada(texto, 20);
+        int semReinicio = SomaSemReinicio(texto);
+
+        Assert.Equal(
+            TabelasCode93.ALFABETO[comReinicio % 47],
+            legenda[25]);
+
+        // **E as duas contas tem de dar numeros diferentes**, senao o texto de teste
+        // nao separa as duas formulas e o teste nao prova nada.
+        Assert.NotEqual(semReinicio % 47, comReinicio % 47);
+    }
+
+    /// <summary>A soma com o peso a reiniciar no maximo.</summary>
+    private static int SomaPonderada(string texto, int maximo)
+    {
+        int peso = 1;
+        int total = 0;
+
+        for (int i = texto.Length - 1; i >= 0; i--)
+        {
+            total += peso * TabelasCode93.Indice[texto[i]];
+            peso += 1;
+            if (peso > maximo)
+            {
+                peso = 1;
+            }
+        }
+
+        return total;
+    }
+
+    /// <summary>A soma com o peso a crescer sem parar, que e' o bug.</summary>
+    private static int SomaSemReinicio(string texto)
+    {
+        int total = 0;
+        int peso = 1;
+
+        for (int i = texto.Length - 1; i >= 0; i--)
+        {
+            total += peso * TabelasCode93.Indice[texto[i]];
+            peso += 1;
+        }
+
+        return total;
+    }
 
     [Theory]
     [InlineData("Hi")]

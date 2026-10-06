@@ -6,10 +6,13 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.LuminanceSource
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.common.HybridBinarizer
-import com.qrcodegen.core.simbologias.CodigoDeBarras
 import com.qrcodegen.core.simbologias.Code128
+import com.qrcodegen.core.simbologias.Code93
+import com.qrcodegen.core.simbologias.CodigoDeBarras
 import com.qrcodegen.core.simbologias.Lineares
 import com.qrcodegen.core.simbologias.SimbologiaException
+import com.qrcodegen.core.simbologias.TabelasCode93
+import org.junit.jupiter.api.Assertions.assertTrue as afirmar
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -93,6 +96,43 @@ class SimbologiasTestes {
             "ABC12345678901234567890" to { Code128.code128("ABC12345678901234567890") },
         ))
 
+    @TestFactory
+    fun `o Code 93 e' lido pelo ZXing`(): List<DynamicTest> =
+        casos("Code 93", BarcodeFormat.CODE_93, listOf(
+            // **O ZXing devolve o texto sem os dois digitos de controlo**, porque
+            // eles sao de controlo e nao fazem parte do dado — e e' por isso que a
+            // expectativa e' o `valor` e nao a legenda.
+            "ABC-1234" to { Code93.code93("ABC-1234") },
+            "A" to { Code93.code93("A") },
+            "999999999999999999999999999999" to { Code93.code93("999999999999999999999999999999") },
+            "MAST-2024-0001-LOTE-MUITO-COMPRIDO-PARA-O-CONTROL-20" to
+                { Code93.code93("MAST-2024-0001-LOTE-MUITO-COMPRIDO-PARA-O-CONTROL-20") },
+
+            // **A minuscula e' o caso que prova a codificacao estendida.**
+            // `teste-93` vai no codigo como `dTdEdSdTdE-93`, e sao quinze modulos
+            // a mais do que uma cadeia de sete caracteres. **Um encoder que mande
+            // as minusculas tal e qual falha aqui, e falha bem** — com um
+            // comprimento diferente, que e' o erro de estrutura e nao o de dado.
+            "teste-93" to { Code93.code93("teste-93") },
+            "Teste93Minusculas" to { Code93.code93("Teste93Minusculas") },
+            "ABC $/%+-." to { Code93.code93("ABC $/%+-.") },
+
+            // **Os caracteres de controlo, que e' o que teria apanhado o bug do
+            // web.** Vinte e quatro dos trinta e dois estavam errados e nao havia
+            // um unico caso — a tabela estava errada e verificada ao mesmo tempo,
+            // porque a verificacao nao a tocava.
+            //
+            // **Um caso por controlo critico, e nao os 32 em fila.** Um codigo
+            // com os 32 nao tem texto visivel para comparar, e a falha seria "nao
+            // leu nada" em vez de "leu `0` em vez de CR".
+            "A\u0000B" to { Code93.code93("A\u0000B") },
+            "A\u0007B" to { Code93.code93("A\u0007B") },
+            "A\rB" to { Code93.code93("A\rB") },
+            "A\u001bB" to { Code93.code93("A\u001bB") },
+            "A\u001fB" to { Code93.code93("A\u001fB") },
+            "A\u007fB" to { Code93.code93("A\u007fB") },
+        ))
+
     private fun casos(
         nome: String,
         formato: BarcodeFormat,
@@ -104,6 +144,101 @@ class SimbologiasTestes {
     }
 
     // --- a estrutura, que e' o que a leitura sozinha nao diz ---------------
+
+    @Test
+    fun `a tabela do Code 93 tem 48 padroes e todos comecam em barra`() {
+        // **O invariante de que o leitor depende.** O ZXing ancora cada caractere
+        // na primeira barra, e um padrao que comece em espaco desenha-se bem e
+        // **nao e' lido por nada**.
+        //
+        // **E o `spec/gerar-tabelas-code93.py` verifica o mesmo nos 48 valores**,
+        // antes de os escrever. Aqui e' a segunda verificacao do mesmo invariante,
+        // e nao e' redundancia: o gerador protege a tabela, e isto protege o
+        // codigo de uma tabela que um dia chegue errada de outra fonte.
+        assertEquals(48, TabelasCode93.PADROES.size)
+        assertEquals(48, TabelasCode93.ALFABETO.length)
+        assertEquals(128, TabelasCode93.CONTROLES.size)
+
+        for (i in TabelasCode93.PADROES.indices) {
+            val padrao = TabelasCode93.PADROES[i]
+            afirmar(padrao in 0..0x1FF,
+                "CODE93_PADROES[$i] = 0x${padrao.toString(16)} tem mais de nove bits")
+            afirmar(padrao and 0x100 != 0,
+                "CODE93_PADROES[$i] ('${TabelasCode93.ALFABETO[i]}') comeca em espaco, "
+                    + "e o leitor precisa de uma barra para ancorar")
+        }
+    }
+
+    @Test
+    fun `o modulo do checksum do Code 93 e' 47 e nao 43`() {
+        // **47 e nao 43**, porque contam o asterisco e os quatro de controle.
+        assertEquals(47, TabelasCode93.MODULO_CHECKSUM)
+        assertEquals(47, TabelasCode93.PADROES.size - 1)
+        assertEquals(47, TabelasCode93.ASTERISCO)
+        assertEquals('*', TabelasCode93.ALFABETO[TabelasCode93.ASTERISCO])
+    }
+
+    @Test
+    fun `o peso dos digitos do Code 93 reinicia no indice vinte`() {
+        // **O sintoma do que nao reinicia e' o mais enganador de todos os codigos
+        // de barras**: o codigo desenha-se bem, o primeiro digito bate certo e o
+        // segundo nao, e o leitor recusa por checksum **sem dizer qual dos dois**.
+        //
+        // **O teste refaz a conta, e nao le o resultado.** Cortar a legenda com
+        // uma conclusao em cima e' um teste que parece medir o peso e nao mede
+        // nada — e nao ha como o distinguir de um bom a ler.
+        //
+        // **E o texto tem de tornar a diferenca visivel.** As cinco letras estao
+        // no **inicio** da cadeia porque o checksum le de tras para a frente, e
+        // com vinte e cinco caracteres o primeiro e' o de peso 21. Um `0` no
+        // indice 0 da tabela contribui zero e nao distingue nada.
+        val texto = "ABCDE" + "0".repeat(20)
+        assertEquals(25, texto.length)
+
+        val legenda = Code93.code93(texto).legenda
+        afirmar(legenda.length == 27,
+            "a legenda e' o texto mais os dois digitos, e tem ${legenda.length}")
+
+        val comReinicio = somaPonderada(texto, 20)
+        val semReinicio = somaSemReinicio(texto)
+
+        afirmar(legenda[25] == TabelasCode93.ALFABETO[comReinicio % 47],
+            "o primeiro digito tem de ser o que a conta com reinicio da, e e' "
+                + "'${legenda[25]}' em vez de "
+                + "'${TabelasCode93.ALFABETO[comReinicio % 47]}'")
+
+        // **E as duas contas tem de dar numeros diferentes**, senao o texto de
+        // teste nao separa as duas formulas e o teste nao prova nada.
+        afirmar(semReinicio % 47 != comReinicio % 47,
+            "o texto de teste nao separa as duas formulas: escolher outro")
+    }
+
+    /** A soma com o peso a reiniciar no maximo. */
+    private fun somaPonderada(texto: String, maximo: Int): Int {
+        var peso = 1
+        var total = 0
+
+        for (caractere in texto.reversed()) {
+            total += peso * TabelasCode93.INDICE[caractere]!!
+            peso += 1
+            if (peso > maximo) peso = 1
+        }
+
+        return total
+    }
+
+    /** A soma com o peso a crescer sem parar, que e' o bug. */
+    private fun somaSemReinicio(texto: String): Int {
+        var total = 0
+        var peso = 1
+
+        for (caractere in texto.reversed()) {
+            total += peso * TabelasCode93.INDICE[caractere]!!
+            peso += 1
+        }
+
+        return total
+    }
 
     @Test
     fun `o Code 128 mede 11 modulos por simbolo, mais 13 de paragem`() {

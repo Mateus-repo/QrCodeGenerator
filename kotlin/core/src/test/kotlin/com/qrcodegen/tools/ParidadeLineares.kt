@@ -3,6 +3,7 @@ package com.qrcodegen.tools
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.qrcodegen.core.simbologias.Code93
 import com.qrcodegen.core.simbologias.CodigoDeBarras
 import com.qrcodegen.core.simbologias.Code128
 import com.qrcodegen.core.simbologias.Lineares
@@ -72,6 +73,7 @@ private fun codigoDe(caso: JsonArray): JsonObject {
             largo = opcoes.has("largo") && opcoes["largo"].asBoolean,
         )
         "code128" -> Code128.code128(texto)
+        "code93" -> Code93.code93(texto)
         else -> throw IllegalArgumentException("tipo desconhecido: $tipo")
     }
 

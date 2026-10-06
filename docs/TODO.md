@@ -7,8 +7,8 @@
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR, e as
 4 simbologias de códigos de barras em **cinco** stacks — web, Python, Java, C# e
-o `:core` do Kotlin. **1075 testes** (295 site, 323 Python, 236 C#, 177 Java,
-44 Kotlin). A
+o `:core` do Kotlin. **1107 testes** (295 site, 323 Python, 252 C#, 177 Java,
+60 Kotlin). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
@@ -250,10 +250,16 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > em fila. O ficheiro `gerar-code93.mjs` dizia na primeira linha que os
       > casos cobriam "caracteres de controlo", e não havia um único.
       >
-      > **E depois em Java**, com 16 testes novos: 13 lidos pelo ZXing — dos
-      > quais seis têm caracteres de controlo, que é o que teria apanhado o bug
-      > do web — e três estruturais. A paridade sobe para **25 casos**, 8 deles
-      > de Code 93, e o Java e o Python dão os mesmos módulos.
+      > **E depois em Java, Kotlin e C#**, com 16 testes novos em cada: 13
+      > lidos pelo ZXing — dos quais sete têm caracteres de controlo, que é o
+      > que teria apanhado o bug do web — e três estruturais. **A paridade sobe
+      > para 25 casos nas três**, 8 deles de Code 93, e todas dão os mesmos
+      > módulos que o Python.
+      >
+      > **Os três encoders foram escritos um a partir do outro e verificados um
+      > a um**, e em cada um os dois bugs do Code 93 foram reintroduzidos para
+      > confirmar que os testes apanham: o peso do checksum que não reinicia e o
+      > CR trocado por `0`. Nos três, os dois apanham.
       >
       > **A lista de casos passou a declarar quem implementa o quê.** Acrescentar
       > o Code 93 aos casos rebentou as paridades do Kotlin e do C# com `tipo
