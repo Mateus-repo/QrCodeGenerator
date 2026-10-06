@@ -370,11 +370,38 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
 ### 2D da família QR
 
 - [x] **FrameQR** — `web/frameqr.js`, ligado à interface. Não é uma simbologia
-      nova: é pós-processamento sobre o QR, apagar um quadrado centrado e pôr
+      nova: é pós-processamento sobre o QR, apagar uma área no centro e pôr
       o logótipo lá dentro. A correcção de erros é que reconstrói os módulos
-      apagados. Tem 12 testes de estrutura e os **oito logótipos que a aplicação
+      apagados. Tem 23 testes de estrutura e os **oito logótipos que a aplicação
       recomenda foram lidos por leitor independente** — mais o PNG que o browser
       exportou.
+      >
+      > **Com forma, ângulo e posição, que é o que a DENSO promete.** O que o
+      > site deles diz é que "the canvas area does not interfere with code
+      > reading", e a verdade é mais estreita: **não é que a forma seja segura
+      > em si, é que algumas formas apagam menos área com o mesmo logótipo.**
+      > Medido numa caixa de onze módulos: o quadrado apaga 101 módulos e a
+      > estrela 30. **Por isso que o limite é por forma, e o mesmo QR aguenta um
+      > logótipo de 14 módulos em estrela contra 7 em quadrado** — verificado
+      > com o ZXing, não deduzido.
+      >
+      > **O quociente de cada forma é medido, e não é `π/4`.** A área do círculo
+      > é π/4 da caixa, mas o número de módulos **escuros** dentro dela é outra
+      > coisa, porque cerca de metade dos módulos de um QR já é clara e apagá-la
+      > não custa nada. `spec/medir-quocientes.mjs` mede a razão, e ela é
+      > diferente.
+      >
+      > **O limite divide pela raiz quadrada do quociente, e não pelo
+      > quociente.** O quociente é uma razão de áreas e o limite é um
+      > comprimento. A primeira versão multiplicava pelo quociente, que é o
+      > inverso: dava um limite *menor* a quem escolheu a forma que apaga menos,
+      > e uma estrela que nunca passava de dois módulos.
+      >
+      > **O ângulo e a posição não mudam quantos módulos se apagam — mudam
+      > quais.** Por isso que só a leitura diz se servem, e por isso que
+      > mover o logótipo baixa o limite: um módulo apagado à mais junto de um
+      > padrão de localização vale por mais do que um no meio.
+      >
       > **Feito, e com a imagem.** O upload está ligado, a caixa é calculada a
       > partir da escala, e o ficheiro exportado pelo browser foi lido por um
       > leitor independente.

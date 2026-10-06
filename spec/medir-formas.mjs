@@ -69,15 +69,15 @@ console.log('');
 console.log('ECC   forma        modulos   area apagada');
 console.log('-'.repeat(56));
 
-for (const ecc of ['M', 'Q', 'H']) {
-  const infoEcl = encode(PAYLOAD, { ecl });
+for (const nivel of ['M', 'Q', 'H']) {
+  const infoEcl = encode(PAYLOAD, { ecl: nivel });
   const alturas = [];
 
   for (const [id, nome] of FORMAS) {
-    const max = modulosMaximos(infoEcl.size, ecc, 2, id);
+    const max = modulosMaximos(infoEcl.size, nivel, 2, id);
     const apagados = max > 0 ? contarApagados(infoEcl, max, id) : 0;
     alturas.push(
-      `  ${ecc}   ${nome.padEnd(12)} ${String(max).padStart(6)}   ` +
+      `  ${nivel}   ${nome.padEnd(12)} ${String(max).padStart(6)}   ` +
         `${(apagados / (infoEcl.size ** 2) * 100).toFixed(2).padStart(6)}%`,
     );
   }

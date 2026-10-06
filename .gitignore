@@ -94,6 +94,22 @@ web/tests/.pdf417-reduzir.json
 web/tests/.pw.json
 web/dist/
 
+## Artefactos dos medidores em spec/
+#
+# **Estes ficheiros não são fonte: são o resultado de correr um script.** São as
+# matrizes que o `spec/verificar-*.mjs` deixa para o Python mandar ao ZXing, e o
+# peso deles é o de uma imagem de barcode por caso — com duzentos casos, dá
+# mega e enters no repositorio.
+#
+# O `.gitignore` é a segunda metade de uma regra: o script escreve, o
+# `.gitignore` apanha. **Sem ele o primeiro `git add -A` depois de correr um
+# verificador commita as matrizes todas**, e o commit fica ilegível sem que
+# nada tenha dado erro.
+spec/_formas/
+spec/_frameqr-*.json
+spec/_zona-frameqr.json
+spec/_centragem.json
+
 ## Editores
 *.swp
 .vscode/
