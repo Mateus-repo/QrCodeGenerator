@@ -71,18 +71,30 @@ public final class Lineares {
     /**
      * Converte {@code NnWw} em larguras.
      *
-     * <p><strong>Maiuscula e' largo, minuscula e' estreito â€” e nao barra e
-     * espaco.</strong> O que diz se o elemento e' barra ou espaco e' a
-     * <strong>posicao</strong>: as posicoes 0, 2 e 4 sao barras, e 1 e 3 sao
-     * espacos.
+     * <p><strong>E' a letra que decide a largura, e nao a caixa.</strong> {@code W}
+     * e {@code w} sao largos, {@code N} e {@code n} sao estreitos. A caixa
+     * existia so por legibilidade — o {@code n} minúsculo distinguia o espaço
+     * estreito da barra estreita, e as posicoes é que dizem qual é qual.
+     *
+     * <p><strong>Decidir pela caixa dava o ITF errado, e o sintoma era um
+     * código que o ZXing não lia.</strong> A moldura de início do ITF é
+     * {@code "NnNn"}, e os quatro elementos têm de ser estreitos. Lidos pela
+     * caixa, davam largo-estreito-largo-estreito: 45 módulos a mais num ITF-14
+     * de 14 dígitos, e a moldura de paragem errada pelo mesmo motivo.
+     *
+     * <p>O Python decide pela letra — o dicionário dele é
+     * {@code {"N": 1, "n": 1, "W": 2, "w": 2}} — e as duas implementações têm
+     * de decidir o mesmo, ou a paridade não fecha.
+     *
+     * <p><strong>E o que diz se o elemento é barra ou espaço é a
+     * <strong>posição</strong>: 0, 2 e 4 são barras, 1 e 3 são espaços.</p>
      *
      * @param medidas a largura do elemento largo e do estreito
      */
     private static List<Boolean> modulosDe(String elementos, int[] medidas) {
         List<Boolean> saida = new ArrayList<>(elementos.length() * 2);
         for (int posicao = 0; posicao < elementos.length(); posicao++) {
-            char letra = elementos.charAt(posicao);
-            int largura = Character.isUpperCase(letra) ? medidas[1] : medidas[0];
+            int largura = medidas[largura(elementos.charAt(posicao))];
             boolean escuro = posicao % 2 == 0;
             for (int k = 0; k < largura; k++) {
                 saida.add(escuro);
@@ -182,10 +194,12 @@ public final class Lineares {
             throw new SimbologiaException("Code 39: o texto esta vazio.");
         }
 
-        if (texto.equals("*")) {
+        if (texto.indexOf('*') >= 0) {
             throw new SimbologiaException(
                 "Code 39: o asterisco e' o caracter de inicio e de paragem, e nao "
-                    + "pode estar nos dados.");
+                    + "pode estar nos dados. O encoder poe-o nas duas pontas, "
+                    + "por isso nao faz falta escreve-lo: passou \"" + texto
+                    + "\" e o codigo seria \"" + texto + "\" com asteriscos a mais.");
         }
 
         for (int i = 0; i < texto.length(); i++) {
@@ -384,8 +398,15 @@ public final class Lineares {
         return new CodigoDeBarras("ITF", paraArray(modulos), toIntArray(guardas), digitos);
     }
 
+    /**
+     * O índice da largura: 1 para largo, 0 para estreito.
+     *
+     * <p><strong>Decide pela letra e não pela caixa</strong>, e a razão está em
+     * {@link #modulosDe}. {@code W}/{@code w} são largos; {@code N}/{@code n}
+     * são estreitos.
+     */
     private static int largura(char letra) {
-        return Character.isUpperCase(letra) ? 1 : 0;
+        return letra == 'W' || letra == 'w' ? 1 : 0;
     }
 
     // --- Codabar ------------------------------------------------------------

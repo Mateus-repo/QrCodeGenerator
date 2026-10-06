@@ -114,6 +114,41 @@ def _fechar(modulos: list[bool], n: int) -> None:
     modulos.extend([False] * n)
 
 
+def _acrescentar_guarda(modulos: list[bool], guardas: list[int], novos: list[bool]) -> None:
+    """
+    Acrescenta uma moldura e marca os modulos que ela ocupa como guarda.
+
+    **As guardas sao os indices de modulo, e nao de elemento.** E' a distincao que
+    estava errada, e ela custava em duas direcoes:
+
+      - **No Codabar**, a moldura do inicio ocupava 23 modulos e a conta dizia
+        35. As 12 colunas a mais eram do **primeiro caractere de dados**,
+        pintadas mais altas do que deviam — e no Codabar a moldura e' de onde o
+        leitor tira a razao larga/estreita, portanto um dado com a altura da
+        moldura embaralha essa razao.
+      - **No ITF**, a moldura de paragem (`WnN`) tem 3 elementos e ocupa 4
+        modulos. A conta dizia 3, e a ultima barra da paragem ficava com a
+        altura de um dado.
+
+    **Porque se mede em vez de se contar.** As versoes anteriores usavam
+    `len(elementos)` no Code 39 e no ITF, e `len(elementos) * medidas["largo"]` no
+    Codabar. A primeira acerta por acaso, porque no Code 39 um elemento e' um
+    modulo — e acerta no ITF tambem, na moldura de inicio, porque os quatro
+    elementos sao estreitos. A segunda nunca acerta, porque assume que todos os
+    elementos da moldura sao largos.
+
+    A regra correcta nao e' uma conta melhor: e' **medir**. A guarda vai de onde
+    a moldura comeca ate onde ela acaba, e isso sabe-se porque se acabou de
+    acrescentar. E' o que o Java faz, e sem isto as duas stacks divergem sem que
+    nenhuma diga.
+
+    @param novos os modulos da moldura, ja' calculados
+    """
+    inicio = len(modulos)
+    modulos.extend(novos)
+    guardas.extend(range(inicio, len(modulos)))
+
+
 # --- Code 39 ---------------------------------------------------------------
 
 
@@ -191,8 +226,8 @@ def code39(valor: str, *, com_controlo: bool = True, full_ascii: bool = False) -
         # ancora que o leitor usa para localizar o codigo — um Code 39 sem ela
         # desenha-se e le-se, mas "as vezes", que e' o tipo de falha que a
         # `AGENTS.md` diz que nunca entra.
-        guardas.extend(range(len(modulos), len(modulos) + len(COD39_PARAGEM)))
-        modulos.extend(bit == "1" for bit in COD39_PARAGEM)
+        _acrescentar_guarda(modulos, guardas,
+                            [bit == "1" for bit in COD39_PARAGEM])
         # **O separador entre caracteres.** A tabela acaba em barra e a seguinte
         # comeca em barra; sem este espaco as duas somam-se numa barra larga a
         # mais, e o codigo tem o aspecto certo e nao le.
@@ -270,9 +305,11 @@ def _itf(digitos: str) -> dict:
     modulos: list[bool] = []
     guardas: list[int] = []
 
-    # **A moldura de inicio**, que e' guarda.
-    guardas.extend(range(0, len(ITF_INICIO)))
-    modulos.extend(_modulos_de(ITF_INICIO, ITF_LARGURA))
+    # **A moldura de inicio**, que e' guarda. Mede-se, e nao se conta: aqui os
+    # quatro elementos sao estreitos e a conta antiga acertava por acaso, mas a
+    # moldura de paragem mais abaixo tem 3 elementos e 4 modulos, e ai nao
+    # acertava.
+    _acrescentar_guarda(modulos, guardas, _modulos_de(ITF_INICIO, ITF_LARGURA))
 
     for i in range(0, len(digitos), 2):
         barras = ITF_PADROES[int(digitos[i])]
@@ -306,8 +343,13 @@ def _itf(digitos: str) -> dict:
         # acrescentar onde e'.
 
     # A moldura de paragem, com os seus **tres** elementos — e tambem guarda.
-    guardas.extend(range(len(modulos), len(modulos) + len(ITF_PARAGEM)))
-    modulos.extend(_modulos_de(ITF_PARAGEM, ITF_LARGURA))
+    #
+    # **E' aqui que a conta antiga errava.** `len(ITF_PARAGEM)` e' 3, e a
+    # moldura ocupa 4 modulos: `WnN` e' uma barra larga, um espaco estreito e
+    # uma barra estreita, 2 + 1 + 1. A guarda ficava uma coluna curta e a
+    # ultima barra da paragem saia com a altura de uma barra de dados — que e'
+    # exactamente a barra que distingue a paragem.
+    _acrescentar_guarda(modulos, guardas, _modulos_de(ITF_PARAGEM, ITF_LARGURA))
 
     return {
         "simbologia": "ITF",
@@ -471,9 +513,13 @@ def codabar(
     # A moldura de inicio, que e' guarda. **O Codabar tem a moldura mais
     # informativa dos tres** — e' dela que o leitor tira a razao larga/estreita
     # e a separa-la do resto e' o que mantem essa razao certa em todo o codigo.
+    # A moldura de inicio. **A conta anterior era `len(moldura) * largo`**, que
+    # assume que todos os elementos sao largos. Nao sao: a moldura do `A` ocupa
+    # 23 modulos e a conta dava 35, e as 12 colunas a mais eram do primeiro
+    # caractere de dados — pintadas com a altura da moldura, que e' de onde o
+    # leitor tira a razao larga/estreita. Ver `_acrescentar_guarda`.
     moldura_inicio = elementos_de(inicio)
-    guardas.extend(range(0, len(moldura_inicio) * medidas["largo"]))
-    modulos.extend(modulos_de(moldura_inicio))
+    _acrescentar_guarda(modulos, guardas, modulos_de(moldura_inicio))
     _fechar(modulos, medidas["espaco"])
 
     # Os dados, cada um seguido do seu intervalo — inclusive o ultimo, que e' o
@@ -484,10 +530,7 @@ def codabar(
 
     # A moldura de paragem, sem intervalo atras: e' a ultima coisa do codigo.
     moldura_paragem = elementos_de(paragem)
-    guardas.extend(
-        range(len(modulos), len(modulos) + len(moldura_paragem) * medidas["largo"])
-    )
-    modulos.extend(modulos_de(moldura_paragem))
+    _acrescentar_guarda(modulos, guardas, modulos_de(moldura_paragem))
 
     return {
         "simbologia": "Codabar",

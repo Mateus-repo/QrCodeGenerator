@@ -84,24 +84,38 @@ public final class Code128 {
         // **As larguras leem-se nas corridas**: a cadeia e' a soma das larguras dos
         // seis elementos, e nao os elementos. Uma corrida de um e' um elemento
         // estreito, e uma de tres e' um largo.
-        int atual = 0;
-        int contagem = 1;
-        for (int i = 0; i < cadeia.length(); i++) {
-            if (cadeia.charAt(i) == cadeia.charAt(atual)) {
-                contagem++;
-            } else {
-                empurrar(cadeia.charAt(atual), contagem, i, saida);
-                atual = i;
-                contagem = 1;
+        //
+        // E o que separa barra de espaco e' **o numero do elemento**, que e' o
+        // mesmo que o numero da corrida. Nao e' o indice do caracter dentro da
+        // cadeia: passar esse dava a cor errada sempre que uma corrida tinha mais
+        // de um caracter, e um simbolo de 11 modulos saia com 12 — o Code 128 do
+        // Java desenhava-se com uma barra larga a mais no inicio de cada
+        // simbolo, e o ZXing devolvia `ABC123` por um codigo que parecia estar
+        // certo.
+        int elementos = 0;
+        int i = 0;
+        while (i < cadeia.length()) {
+            char bit = cadeia.charAt(i);
+            int largura = 0;
+            while (i < cadeia.length() && cadeia.charAt(i) == bit) {
+                largura++;
+                i++;
             }
+            empurrar(largura, elementos, saida);
+            elementos++;
         }
-        empurrar(cadeia.charAt(atual), contagem, cadeia.length(), saida);
 
         return saida;
     }
 
-    private static void empurrar(char bit, int largura, int posicao, List<Boolean> saida) {
-        boolean escuro = posicao % 2 == 0;
+    /**
+     * Acrescenta um elemento, com a cor que a sua posicao decide.
+     *
+     * @param largura quantos modulos o elemento ocupa
+     * @param elemento o numero do elemento, a partir de zero; par e' barra
+     */
+    private static void empurrar(int largura, int elemento, List<Boolean> saida) {
+        boolean escuro = elemento % 2 == 0;
         for (int k = 0; k < largura; k++) {
             saida.add(Boolean.valueOf(escuro));
         }

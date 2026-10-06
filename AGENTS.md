@@ -232,6 +232,36 @@ versão no nome do cache, e a lista de recursos passou a ser explícita e
 completa. **Ao acrescentar um módulo, acrescentá-lo à lista**, ou o site não
 funciona offline.
 
+**E um filtro de nome de classe em inglês salta os testes em português, sem
+aviso nenhum.** O JUnit descobre `.*Tests?$` por omissão — `Test` ou `Tests` — e
+uma classe chamada `SimbologiasTestes` **não bate**: não é descoberta, não corre,
+e o build passa. Não há aviso, não há falha, o número de testes é que é menor e
+ninguém compara. O `SimbologiasTestes.java` esteve compilado no directório de
+classes durante uma sessão inteira sem correr uma vez, e foi por isso que os
+três bugs que ele apanha lá estavam: a largura do ITF decidida pela caixa da
+letra, o Code 128 a contar a corrida pelo índice errado, e as guardas a marcar
+colunas de dados. A `AGENTS.md` manda que os testes se chamem em português e o
+JUnit só conhece o inglês, por isso o `build.sh` diz as duas:
+`--include-classname='.*(Test|Tests|Teste|Testes)$'`. **Ao acrescentar um ficheiro
+de testes, confirmar que o número de testes subiu.**
+
+**E duas contas da mesma coisa divergem em silêncio, mesmo escritas no mesmo
+ficheiro.** O dígito de controlo do Code 39 é o exemplo vivo: o comentário da
+classe descrevia a regra ISO — a letra que torna a soma múltipla de 43 — e o
+código uma linha abaixo fazia o resto da divisão. Nas duas stacks. E o
+`spec/verificar-lineares.py` fazia a conta à maneira ISO, o que não apareceu
+nenhum teste porque ninguém comparou as contas: **comparou-se os módulos, e os
+módulos eram iguais porque as duas implementações estavam igualmente erradas.**
+Quando duas peças fazem a mesma conta, uma delas não chega; é preciso uma
+terceira que faça a conta à mão.
+
+**E os testes de leitura têm de ser do encoder, não da biblioteca.** O
+`RenderTests` desenha o QR com o ZXing e lê com o ZXing, e o próprio ficheiro
+reconhece que isso é mais fraco: um erro comum aos dois passos passa. Nas
+simbologias o teste faz o inverso — **o Java desenha e o ZXing lê** — e é essa a
+versão que apanha a largura errada e o elemento errado. Um encoder que só passa
+nos testes próprios não está verificado.
+
 **E um script que reescreve a documentação estraga-a melhor do que a mão.** O
 `docs/TODO.md` passou de 612 para 32 958 linhas num `git diff --stat`, e a
 razão foi `"\n".join(uma_cadeia)`, que junta **cada caractere** com uma quebra

@@ -16,27 +16,12 @@
 // le a matriz, e a matriz e' o que se compara aqui; acrescentar a leitura seria
 // verificar duas vezes a mesma coisa e dar a ilusao de mais cobertura.
 
-import { writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { encode } from '../web/qrcode.js';
-import { code39, codabar, itf, itf14 } from '../web/qrcode.js';
-
-// --- o web, para o caso de um dia se comparar tambem ------------------------
-
-/*
- * **O web nao e' o arbrito: o Python e'.**
- *
- * As tabelas de Python e de Java vem do mesmo gerador, e o gerador le o
- * `python-barcode`. O web tem as suas proprias, e a comparacao com o web ja
- * existe em `spec/paridade-lineares.py`. Aqui o que interessa e' que **as duas
- * stacks novas que escreveram o codigo a partir da mesma fonte deem o mesmo
- * resultado** — que e' a propriedade de que a `AGENTS.md` fala quando diz que o
- * arbrito e' a spec e nao qualquer uma das apps.
- */
+import { existsSync } from 'node:fs';
 
 // --- os casos, que sao os mesmos do verificador de leitura -----------------
 
-/** O nome, o texto, e a forma de o pedir a cada stack. */
+/** O nome, o texto, e as opcoes que o Python e o Java tem de receber iguais. */
 const CASOS = [
   ['code39', 'CODE-39', {}],
   ['code39', 'ABC123', {}],
@@ -54,11 +39,14 @@ const CASOS = [
 /*
  * **Os casos do Code 128 vao a parte, e nao por esquecimento.**
  *
- * Sao os que o Java tem em `Code128.java` mas o script de leitura do Python
- * ainda nao cobre com o mesmo texto — e o `ABC123` e' o caso que mostra a
- * troca de conjunto. Cada caso aqui e' uma string que **da o mesmo codigo nas
- * tres stacks**, e a lista esta escrita a mao para isso ser visivel: um caso
- * acrescentado a uma stack e' um bug de paridade a espera de acontecer.
+ * Cada um e' uma string que **da o mesmo codigo no Java e no Python**, e a
+ * lista esta escrita a mao para isso ser visivel: um caso acrescentado a uma
+ * stack e' um bug de paridade a espera de acontecer.
+ *
+ * E o `ABC123` e' o caso que mostra a troca de conjunto. Sem os caracteres de
+ * troca, o Code 128 desenha-se perfeito e devolve `ABC,3` em vez de `ABC123` —
+ * foi assim que o bug apareceu da primeira vez, e nenhum teste estrutural o
+ * apanha.
  */
 const CASOS_128 = [
   'Hi',
@@ -68,12 +56,19 @@ const CASOS_128 = [
   'Code 128',
 ];
 
-// --- o Python ---------------------------------------------------------------
+/** Tudo o que corre de uma ponta a outra, e a ordem em que corre. */
+const TODOS = [
+  ...CASOS.map(([tipo, texto, opcoes]) => ({ tipo, texto, opcoes })),
+  ...CASOS_128.map((texto) => ({ tipo: 'code128', texto, opcoes: {} })),
+];
 
+// --- as pontas --------------------------------------------------------------
+
+/** O Python, que e' a implementacao de referencia e por isso o arbrito. */
 const PYTHON = `
 import json, sys
 sys.path.insert(0, "python")
-from qrcode_core.simbologias.lineares import codabar, code39, code128, itf14
+from qrcode_core.simbologias.lineares import codabar, code39, code128, itf, itf14
 
 casos = json.load(sys.stdin)
 saida = []
@@ -81,6 +76,8 @@ saida = []
 for tipo, texto, opcoes in casos:
     if tipo == "code39":
         c = code39(texto)
+    elif tipo == "itf":
+        c = itf(texto)
     elif tipo == "itf14":
         c = itf14(texto)
     elif tipo == "codabar":
@@ -88,6 +85,8 @@ for tipo, texto, opcoes in casos:
                     inicio=opcoes.get("inicio", "A"),
                     paragem=opcoes.get("paragem", "A"),
                     largo=opcoes.get("largo", False))
+    elif tipo == "code128":
+        c = code128(texto)
     else:
         raise SystemExit("tipo desconhecido: " + tipo)
     saida.append({"modulos": [1 if m else 0 for m in c["modulos"]],
@@ -97,19 +96,29 @@ for tipo, texto, opcoes in casos:
 print(json.dumps(saida))
 `;
 
-// --- correr o Java ----------------------------------------------------------
-
 /**
  * Corre o Java e le os modulos em JSON.
  *
- * **Um ficheiro e um `class` temporario, e nao `jshell`.** O `jshell` execução
- * do Java nao é compativel com aFlags e o `classpath` como se quer, e a
- * alternativa — compilar para uma pasta temporaria — é o que o `build.sh` ja faz.
+ * **Os casos vao por stdin, nunca por argumento.** Passar JSON num `argv` e'
+ * fragil e ja falhou: o Git Bash faz expansao de chaves em `{"inicio":"B"}` e
+ * parte o array ao meio, porque a virgula dentro das chaves parece uma lista.
+ * Por stdin nao ha shell a mexer no meio. O `build.sh run-linear` compila o
+ * core e as ferramentas e passa o stdin tal e qual ao `java`.
  */
 function modulosDoJava(casos) {
-  const resultado = spawnSync('bash', ['build.sh', 'run-linear', JSON.stringify(casos)], {
+  // O Git Bash e' o caminho no Windows; nos outros Sistemas o `bash` esta no
+  // PATH. Tentar os dois evita a mensagem "o Java nao correu" num sitio em que
+  // o Java esta bem instalado.
+  const bash = process.platform === 'win32' &&
+    existsSync('C:\\Program Files\\Git\\bin\\bash.exe')
+    ? 'C:\\Program Files\\Git\\bin\\bash.exe'
+    : 'bash';
+
+  const resultado = spawnSync(bash, ['build.sh', 'run-linear'], {
     cwd: 'java',
+    input: JSON.stringify(casos),
     encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
   });
 
   if (resultado.status !== 0) {
@@ -120,67 +129,99 @@ function modulosDoJava(casos) {
   return JSON.parse(resultado.stdout);
 }
 
+function modulosDoPython(casos) {
+  const py = spawnSync('python', ['-c', PYTHON], {
+    input: JSON.stringify(casos),
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+  });
+
+  if (py.status !== 0) {
+    console.error(py.stderr);
+    throw new Error('o Python nao correu');
+  }
+
+  return JSON.parse(py.stdout);
+}
+
 // --- a comparacao ----------------------------------------------------------
 
-console.log(`${'caso':34} {'python':>8} {'java':>6}  modulos`);
-console.log('-'.repeat(64));
+/**
+ * Diz onde dois casos divergem, e porque.
+ *
+ * **A comprimento vem primeiro, e o motivo nao e' o mesmo que o motivo do
+ * modulo.** Um comprimento diferente e' uma tabela ou uma moldura diferente — um
+ * erro de estrutura. Um modulo diferente e' a mesma estrutura com outro conteudo
+ * — um erro de dado. Confundir os dois faz com que um erro de dado se leia
+ * como um erro de estrutura, e a busca pelo culpado vai ao sitio errado.
+ */
+function divergencia(a, b) {
+  if (a.modulos.length !== b.modulos.length) {
+    return `DIVERGE (comprimento ${a.modulos.length} vs ${b.modulos.length})`;
+  }
+
+  for (let i = 0; i < a.modulos.length; i++) {
+    if (a.modulos[i] !== b.modulos[i]) {
+      return `DIVERGE (modulo ${i}: python ${a.modulos[i]}, java ${b.modulos[i]})`;
+    }
+  }
+
+  if (a.legenda !== b.legenda) {
+    return `DIVERGE (legenda: python "${a.legenda}", java "${b.legenda}")`;
+  }
+
+  if (JSON.stringify(a.guardas) !== JSON.stringify(b.guardas)) {
+    return `DIVERGE (guardas: python ${JSON.stringify(a.guardas)}, `
+      + `java ${JSON.stringify(b.guardas)})`;
+  }
+
+  return null;
+}
+
+const casos = TODOS.map((c) => [c.tipo, c.texto, c.opcoes]);
+
+console.log(`${'caso'.padEnd(36)}${'modulos'.padStart(9)}  estado`);
+console.log('-'.repeat(72));
+
+const doPython = modulosDoPython(casos);
+const doJava = modulosDoJava(casos);
+
+if (doPython.length !== doJava.length || doPython.length !== casos.length) {
+  console.error(`numero de resultados diferente: `
+    + `${casos.length} casos, ${doPython.length} do Python, ${doJava.length} do Java`);
+  process.exit(1);
+}
 
 let problemas = 0;
-let n = 0;
 
-// As tabelas do Code 128 vem do mesmo gerador, e os casos de texto sao os
-// mesmos — por isso que a comparacao e' feita sobre `Code128`.
-const py = spawnSync('python', ['-c', PYTHON + '\n'], {
-  input: JSON.stringify(CASOS),
-  encoding: 'utf8',
-});
+for (let i = 0; i < casos.length; i++) {
+  const [tipo, texto] = casos[i];
+  const rotulo = `${tipo} ${texto}`.slice(0, 35);
 
-if (py.status !== 0) {
-  console.error(py.stderr);
-  throw new Error('o Python nao correu');
-}
+  const problema = divergencia(doPython[i], doJava[i]);
+  const modulos = String(doPython[i].modulos.length).padStart(9);
 
-const doPython = JSON.parse(py.stdout);
-const doJava = modulosDoJava(CASOS);
-
-for (let i = 0; i < CASOS.length; i++) {
-  const [tipo, texto, opcoes] = CASOS[i];
-  const rotulo = `${tipo} ${texto}`.slice(0, 33);
-
-  const a = doPython[i].modulos;
-  const b = doJava[i].modulos;
-  n++;
-
-  if (a.length !== b.length) {
-    console.log(`${rotulo.padEnd(34)} ${String(a.length).padStart(8)} ${String(b.length).padStart(6)}  DIVERGE (comprimento)`);
+  if (problema) {
     problemas++;
-    continue;
-  }
-
-  let onde = -1;
-  for (let k = 0; k < a.length; k++) {
-    if (a[k] !== b[k]) { onde = k; break; }
-  }
-
-  if (onde >= 0) {
-    console.log(`${rotulo.padEnd(34)} ${String(a.length).padStart(8)} ${String(b.length).padStart(6)}  DIVERGE (modulo ${onde})`);
-    problemas++;
+    console.log(`${rotulo.padEnd(36)}${modulos}  ${problema}`);
   } else {
-    console.log(`${rotulo.padEnd(34)} ${String(a.length).padStart(8)} ${String(b.length).padStart(6)}  identicos`);
-  }
-
-  // E a legenda, que e' o que o leitor devolve.
-  if (doPython[i].legenda !== doJava[i].legenda) {
-    console.log(`  legenda: python ${doPython[i].legenda} | java ${doJava[i].legenda}`);
-    problemas++;
-  }
-
-  // E as guardas, que sao indices e nao caracteres.
-  if (JSON.stringify(doPython[i].guardas) !== JSON.stringify(doJava[i].guardas)) {
-    console.log(`  guardas: python ${doPython[i].guardas} | java ${doJava[i].guardas}`);
-    problemas++;
+    console.log(`${rotulo.padEnd(36)}${modulos}  identicos`);
   }
 }
 
-console.log('-'.repeat(64));
-console.log(`${n} casos de codigo de barras comparados`);
+console.log('-'.repeat(72));
+
+const porTipo = {};
+for (const [tipo] of casos) {
+  porTipo[tipo] = (porTipo[tipo] || 0) + 1;
+}
+console.log(`${casos.length} casos: `
+  + Object.entries(porTipo).map(([t, n]) => `${n} ${t}`).join(', '));
+
+if (problemas) {
+  console.error(`\n${problemas} caso(s) divergem. Um payload diferente num cliente `
+    + 'e um bug, mesmo que o teste desse cliente passe.');
+  process.exit(1);
+}
+
+console.log('Java e Python dao os mesmos modulos.');

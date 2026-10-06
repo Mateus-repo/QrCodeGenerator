@@ -10,6 +10,8 @@
 #   ./build.sh run        corre a linha de comandos
 #   ./build.sh app        corre a interface gráfica
 #   ./build.sh package    gera o instalador nativo (jpackage)
+#   ./build.sh run-linear <casos-json>   devolve os módulos de códigos de barras
+#                                         em JSON, para o spec/paridade-java.mjs
 
 set -euo pipefail
 
@@ -98,6 +100,7 @@ ROOT_NATIVE="$(to_native "$PWD")"
 CORE_CLASSES="$ROOT_NATIVE/core/build/classes"
 CORE_TESTS="$ROOT_NATIVE/core/build/test-classes"
 APP_CLASSES="$ROOT_NATIVE/desktop-javafx/build/classes"
+TOOLS_CLASSES="$ROOT_NATIVE/tools/build/classes"
 
 # Lista de ficheiros .java num formato que o javac aceite.
 source_list() {
@@ -125,11 +128,20 @@ compile_core_tests() {
     @"core/build/test-sources.txt"
 }
 
+# **O filtro de nome de classe e' o mesmo para toda a gente, e por omissao so
+# reconhece o ingles.** O JUnit descobre `.*Tests?$` — "Test" ou "Tests" — e uma
+# classe chamada `SimbologiasTestes` **nao bate**: nao e' descoberta, nao corre, e
+# nao diz nada. Nao ha aviso, nao ha falha, o build passa.
+#
+# A `AGENTS.md` manda que os testes se chamem em portugues, e `Testes` e' a forma
+# portuguesa de `Tests`. As duas coisas sao verdade e o JUnit so conhece uma,
+# por isso o filtro diz as duas.
 test_core() {
   echo "==> testes"
   "$JAVA" -jar "$CACHE_NATIVE/junit-1.11.3.jar" execute \
     -cp "$CORE_CLASSES${SEP}$CORE_TESTS$SEP$(core_cp)" \
     --select-package=com.qrcodegen.core \
+    --include-classname='.*(Test|Tests|Teste|Testes)$' \
     --details=summary --disable-ansi-colors
 }
 
@@ -141,6 +153,17 @@ compile_app() {
   "$JAVAC" -encoding UTF-8 -d "$(to_native desktop-javafx/build/classes)" \
     -cp "$CORE_CLASSES$SEP$(core_cp)$SEP$(javafx_cp)" \
     @"desktop-javafx/build/sources.txt"
+}
+
+# As ferramentas de verificação. Não são app nem biblioteca: existem para o
+# spec/ comparar módulos, e por isso vivem em `tools/` e não dentro do core.
+compile_tools() {
+  echo "==> ferramentas"
+  mkdir -p tools/build/classes
+  source_list tools/src/main/java > tools/build/sources.txt
+  "$JAVAC" -encoding UTF-8 -d "$(to_native tools/build/classes)" \
+    -cp "$CORE_CLASSES$SEP$(core_cp)" \
+    @"tools/build/sources.txt"
 }
 
 # --- Comandos --------------------------------------------------------------
@@ -162,6 +185,26 @@ case "${1:-test}" in
     shift || true
     exec "$JAVA" -cp "$APP_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
       com.qrcodegen.app.Cli "$@"
+    ;;
+
+  # A ponta de Java da comparação de módulos. Os casos vêm em JSON e a saída
+  # é JSON, para o spec/paridade-java.mjs comparar sem interpretar nada pelo
+  # caminho.
+  #
+  # **Compila o core e as ferramentas, e nada mais.** Não precisa do JavaFX nem
+  # da app, e trazer o JavaFX para uma comparação de módulos custaria um
+  # download de 200 MB a cada vez que a spec muda.
+  run-linear)
+    fetch_jars
+    # O progresso da compilação vai para stderr, para o stdout ficar só com o
+    # JSON. Sem isto, o `==>` do core entra no meio da resposta e o
+    # spec/paridade-java.mjs recebe um array pela metade — que é a falha mais
+    # confusa de diagnosticar que há, porque o erro aparece em Node e a causa
+    # está num `echo` do build.
+    { compile_core; compile_tools; } >&2
+    shift || true
+    exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
+      com.qrcodegen.tools.ParidadeLineares "$@"
     ;;
 
   app)
@@ -209,7 +252,7 @@ case "${1:-test}" in
     ;;
 
   *)
-    echo "uso: $0 {compile|test|run|app|package}" >&2
+    echo "uso: $0 {compile|test|run|app|package|run-linear}" >&2
     exit 1
     ;;
 esac
