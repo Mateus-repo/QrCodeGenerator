@@ -6,7 +6,7 @@ A app Windows e o núcleo de payloads partilhado.
 csharp/
 ├── core/                    ← net8.0 puro, sem dependências
 ├── desktop-winforms/        ← app Windows (UI + PNG)
-└── tests/                   ← 137 testes (xunit)
+└── tests/                   ← 236 testes (xunit)
 ```
 
 Detalhe de cada pasta no seu próprio README.

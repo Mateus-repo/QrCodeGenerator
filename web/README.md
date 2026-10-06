@@ -5,7 +5,7 @@ ou telemóvel, sem instalar nada.
 
 **Stack:** HTML + CSS + ES modules + Canvas. Sem framework, sem build,
 **zero dependências**.
-**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 8 simbologias 1D · ✅ 193 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
+**Estado:** ✅ 11 tipos de QR + FrameQR (com logótipo) + PDF417 + Data Matrix + 8 simbologias 1D · ✅ 292 testes · ✅ 9 temas × 3 modos · ✅ encoder verificado com o ZXing · Lighthouse 100/100/100 **nas 18 combinações**
 
 Guia de uso e partilha: [`../docs/COMO-USAR.md`](../docs/COMO-USAR.md)
 
@@ -57,12 +57,18 @@ web/
 │   ├── code39.js         Code 39, com controlo mod 43
 │   ├── itf.js            ITF e ITF-14
 │   ├── codabar.js        Codabar
+│   ├── code93.js         Code 93, com dois dígitos de controlo
+│   ├── code93-tabelas.js os 48 padrões e os pares de escape — **gerado**
 │   ├── gs1-128.js        GS1-128, o Code 128 com campos separados
 │   ├── gs1-tabelas.js    os 541 AIs da GS1 — **gerado**
 │   ├── pdf417.js         PDF417, o empilhado, com nove níveis de correcção
 │   ├── pdf417-tabelas.js os 3 × 929 padrões e os factores — **gerado**
 │   ├── datamatrix.js     Data Matrix ECC200, 24 tamanhos quadrados
 │   ├── datamatrix-tabelas.js  os símbolos e os factores de RS — **gerado**
+│   ├── datamatrix-modos-tabelas.js  os 24 modos de codificação — **gerado**
+│   ├── gs1-datamatrix.js GS1-Data Matrix, com AI e GTIN
+│   ├── rmqr.js           rMQR, o QR de módulo reduzido
+│   ├── rmqr-tabelas.js   as versões e as tabelas de decisão — **gerado**
 │   ├── index.js          registo: validação e altura por simbologia
 │   └── linear.js         desenho em canvas e SVG, com a legenda
 ├── payloads/
@@ -316,7 +322,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 193 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
+# 292 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?

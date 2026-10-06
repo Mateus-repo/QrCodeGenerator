@@ -5,13 +5,15 @@ regras** partilhado.
 
 | Pasta | O que é | Stack | Estado |
 |---|---|---|---|
-| [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 54 testes · Lighthouse 100/100/100 |
-| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 137 testes |
-| [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 119 testes |
-| [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ PIX · 108 testes |
+| [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 9 simbologias · 292 testes · Lighthouse 100/100/100 |
+| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 236 testes |
+| [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 161 testes |
+| [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ 11 tipos · 323 testes |
+| [`kotlin/core`](kotlin/core) | Núcleo JVM, app Android a seguir | Kotlin / Gradle / ZXing | ✅ 11 tipos · 44 testes |
 | [`kotlin/android`](kotlin/android) | App Android | Kotlin / Compose / ZXing | ⬜ por fazer |
+| [`go`](go) | App terminal, **por último** | Go | ⬜ por decidir |
 
-**418 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
+**1056 testes** no total, mais **29 matrizes de QR confirmadas** por leitura com
 um leitor independente (ZXing).
 
 ---
@@ -105,8 +107,17 @@ estrutural via**. Os QR saíam visualmente perfeitos e ninguém os conseguia ler
 |---|---|
 | ✅ em todas as stacks | Link, Texto, Email, Telefone, SMS, WhatsApp, Evento, Localização, WiFi, VCard |
 | ✅ em todas as stacks | **PIX** (BR Code) — com leitura, validação de chave e reparação de CRC |
+| ✅ nas cinco stacks | **8 códigos de barras 1D** — EAN-13, EAN-8, UPC-A, Code 128, Code 39, Code 93, ITF-14 e Codabar |
+| ✅ só no web | **GS1-128** (Code 128 com FNC1) — 541 regras de AI, ainda por propagar |
+
+> São **8 simbologias e 9 entradas no registo**: o GS1-128 é uma variante do
+> Code 128, não uma nona simbologia. As duas contagens estão certas e medem
+> coisas diferentes, e é por isso que este número é escrito com a diferença
+> explicitada em vez de escolhido de uma das maneiras.
+| ✅ só no web | FrameQR (com logótipo), PDF417, Data Matrix, GS1-Data Matrix, rMQR |
 | ⬜ a seguir | Crypto, GS1, Redes sociais, Deep link, PDF, Cupão, MeCard, Fidelidade |
-| ⬜ stretch | Códigos de barras, Data Matrix, PDF417, Aztec, QR dinâmico |
+| ⬜ nas outras stacks | Data Matrix, PDF417, rMQR — a propagar a partir do web |
+| ⬜ stretch | QR dinâmico, Aztec |
 
 O que cada tipo faz quando alguém lê: ver
 [`docs/COMO-USAR.md`](docs/COMO-USAR.md).
@@ -118,14 +129,31 @@ Detalhes e armadilhas de cada um: [`docs/TIPOS-QR.md`](docs/TIPOS-QR.md).
 ## Testes
 
 ```bash
-cd csharp && dotnet test                          # 137
-cd java && ./build.sh test                        # 119
-cd python && python -m pytest tests -q            # 108
-node --test "web/tests/*.test.mjs"                #  54
+cd python && python -m pytest tests -q            # 323
+node --test "web/tests/*.test.mjs"                # 292
+cd csharp && dotnet test                          # 236
+cd java && ./build.sh test                        # 161
+cd kotlin && ./gradlew.bat :core:test             #  44
 
-# o teste que apanha bugs de verdade:
+# o teste que apanha bugs de verdade — o leitor independente:
 node web/tests/cross-check.mjs && python web/tests/descodificar.py
+
+# os códigos de barras: um cliente desenha, o ZXing lê
+python web/tests/descodificar-lineares.py
+python web/tests/descodificar-code93.py           # Code 93, web
+python web/tests/descodificar-code93-python.py    # Code 93, Python
+
+# a paridade entre clientes, módulo a módulo
+node spec/paridade-java.mjs
+node spec/paridade-kotlin.mjs
+node spec/paridade-csharp.mjs
+python web/tests/paridade-code93.py
 ```
+
+**Os números são contados, não escritos.** Correr `python .opencode/…` não —
+contam-se com o comando de cada stack, que é o único que sabe. Um número de
+testes transcrito diverge em silêncio e ninguém dá por isso, que é o mesmo
+motivo pelo qual as tabelas dos códigos de barras são geradas.
 
 ---
 
