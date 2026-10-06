@@ -11,10 +11,11 @@ spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
 O que bloqueia: **o Kotlin e o Go ainda não têm as simbologias de barras**, e o
-Go nem sequer existe como pasta — é o último da fila, por decisão e não por
-dificuldade. A ordem de propagação é **Java → mobile (Kotlin) → C# → Python →
-e Go no fim**, porque cada uma aproveita o que a anterior deixou feito. Ver
-«Simbologias nas outras stacks» abaixo.
+Go está em branco — tem a pasta e o README, mas zero linhas de Go. É o
+último da fila, por decisão e não por dificuldade. A ordem de propagação é
+**Java → mobile (Kotlin) → C# → Python → e Go no fim**, porque cada uma
+aproveita o que a anterior deixou feito. Ver «Simbologias nas outras stacks»
+abaixo.
 
 ---
 
@@ -597,7 +598,7 @@ o ZXing a ler o resultado.
 2. kotlin/     → core JVM, e depois a app Android
 3. csharp/     → core, e depois a app WinForms
 4. python/     → ✅ é a implementação de referência; falta a CLI
-5. go/         → por fazer, e por último
+5. go/         ⬜ pasta e README prontos; código por fazer, e por último
 ```
 
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
@@ -616,7 +617,7 @@ o ZXing a ler o resultado.
 4. java/                → ✅ core + app + CLI + jpackage, 120 testes
 5. kotlin/android       → Compose + scan de câmara
 6. extras               → ✅ 7 simbologias 1D (ver BLOQUEIO 6) · falta 2D e PDF
-7. go/                  → ⬜ a fazer, e por último
+7. go/                  ⬜ pasta e README prontos; código a fazer, e por último
 ```
 
 Cada passo só avança quando os vetores passam nessa stack.

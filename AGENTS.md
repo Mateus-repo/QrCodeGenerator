@@ -40,7 +40,7 @@ java/        JDK 21 + JavaFX, sem Maven nem Gradle
 python/      a implementação de referência
 web/         HTML/CSS/JS sem framework, sem build, sem dependências
 kotlin/      core JVM + app Android, com o Gradle wrapper versionado
-go/          a fazer, e por último
+go/          a pasta e o README; sem código, e por último
 ```
 
 **A app em Go é a última, e é uma decisão de ordem e não de dificuldade.**
