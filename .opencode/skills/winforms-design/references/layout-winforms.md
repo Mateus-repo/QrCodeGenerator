@@ -61,7 +61,7 @@ static void AcrescentarLinha(TableLayoutPanel painel, Label rotulo, Control camp
 ```
 
 **`RowCount++` no fim e nunca mais mexer.** É a diferença entre isto e
-`_fieldY`: aqui não há um inteiro que alguém tem de和维护, e a ordem de
+`_fieldY`: aqui não há um inteiro que alguém tem de manter, e a ordem de
 inserção é a ordem visual.
 
 ### Os dois pontos

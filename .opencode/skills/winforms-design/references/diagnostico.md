@@ -40,19 +40,26 @@ _fieldY += height + 12;
 
 **24 + 12 = 36 px por campo**, contra **280 px** disponíveis:
 
-| Categoria | Campos | Altura | Estado |
-|---|---:|---:|---|
-| Link | 1 | 36 px | cabe |
-| Texto | 1 | 36 px | cabe |
-| Email | 3 | 108 px | cabe |
-| Telefone | 2 | 72 px | cabe |
-| SMS | 3 | 108 px | cabe |
-| WhatsApp | 3 | 108 px | cabe |
-| Evento | 5 | 180 px | cabe |
-| Localização | 2 | 72 px | cabe |
-| WiFi | 4 | 144 px | cabe |
-| **VCard** | **11** | **396 px** | **excede 116 px** |
-| **PIX** | **8** | **288 px** | **excede 8 px** |
+A coluna do meio é a soma, que inclui o espaço depois do último campo. **A
+coluna que decide é a do fundo**: é onde o último campo acaba, e um campo só
+sai do painel quando o **topo** passa os 280 px.
+
+| Categoria | Campos | Soma | Fundo do último | Estado |
+|---|---:|---:|---:|---|
+| Link | 1 | 36 px | 24 px | cabe |
+| Texto | 1 | 36 px | 24 px | cabe |
+| Email | 3 | 108 px | 96 px | cabe |
+| Telefone | 2 | 72 px | 60 px | cabe |
+| SMS | 3 | 108 px | 96 px | cabe |
+| WhatsApp | 3 | 108 px | 96 px | cabe |
+| Evento | 5 | 180 px | 168 px | cabe |
+| Localização | 2 | 72 px | 60 px | cabe |
+| WiFi | 4 | 144 px | 132 px | cabe |
+| **VCard** | **11** | **396 px** | **384 px** | **3 campos invisíveis** |
+| PIX | 8 | 288 px | 276 px | cabe, sobra 4 px |
+
+**Só o VCard perde campos.** O PIX tem a soma mais apertada de todas as
+categorias que cabem — 4 px de folga — e por isso parece o caso perigoso. Não é.
 
 **Num `Panel` sem `AutoScroll`, os filhos fora dos limites são cortados.** Não
 há como lhes chegar com o rato nem com o teclado.
@@ -88,15 +95,21 @@ mexer no outro, e nada avisa.
 
 ### O mesmo conjunto escrito duas vezes
 
-43 declarações no topo (`MainForm.cs:9-58`) e 39 `yield return` em
-`FieldControls()` (`MainForm.cs:223-264`).
+43 declarações no topo (até `MainForm.cs:60`) e 39 `yield return` em
+`FieldControls()` (a partir de `MainForm.cs:223`) — **163 linhas de distância**.
+
+**E não são a mesma lista:** 43 declarados, 39 na lista. Os quatro que faltam
+são os controlos que não são campos (`_cmbCategory`, `_cmbSize`, `_cmbEcc`,
+`_chkAuto`), que ficam de fora de propósito. É essa diferença que torna a
+armadilha mais fácil de não notar: as listas *parecem* iguais, e por isso
+ninguém as confere.
 
 **Nada liga as duas listas.** Acrescentar um campo em cima e esquecer a lista de
 baixo dá um campo que existe, nunca é observado, e **o código regenera com o
 valor antigo sem dar erro nenhum** — que é a mesma armadilha do selector do
 site que a `AGENTS.md` documenta com o GS1-128.
 
-### `RowsFor` tem 80 linhas de `switch` com uma conversão por linha
+### `RowsFor` tem 82 linhas de `switch` com uma conversão por linha
 
 ```csharp
 QrCategory.Link => new[] { ("Link", (Control)_txtUrl) },
@@ -118,7 +131,7 @@ Sem `MainForm.Designer.cs` e sem `MainForm.resx`:
 
 ## O que não está errado, e convém não partir
 
-- **`QrRenderer.cs` tem 92 linhas e está limpo.** Separa o desenho da
+- **`QrRenderer.cs` tem 100 linhas e está limpo.** Separa o desenho da
   interface, e é a razão de o código de barras não estar espalhado pelo
   formulário.
 - **O `core` não tem nada a ver com isto.** `csharp/core/` é independente de

@@ -7,7 +7,7 @@ description: Construir e rever a interface WinForms em C#, com o layout declarad
 
 Este repositório tem uma app WinForms com **43 campos** e **onze
 categorias**, e a interface está inteira escrita à mão em `MainForm.cs` — sem
-`.resx`, sem `Designer.cs`, sem `TableLayoutPanel`. **Dois campos são
+`.resx`, sem `Designer.cs`, sem `TableLayoutPanel`. **Três campos são
 invisíveis**, e ninguém reparou porque nenhum teste olha para a interface.
 
 Esta skill existe porque esse caso é o mais comum e o mais barato de não ver.
@@ -62,8 +62,9 @@ _fieldHost = new Panel { Location = new Point(120, 44), Size = new Size(280, 280
 36 px = **396 px**. Os campos 9, 10 e 11 ficam **fora do painel, sem scrollbar
 e inalcançáveis**: a pessoa vê 8 campos e não há forma de chegar aos outros 3.
 
-A categoria PIX, com 8 campos, excede em 8 px — o último campo fica cortado ao
-meio.
+A categoria PIX é a mais apertada de todas as que cabem — 8 campos, com
+**4 px de folga** — e por isso parece o caso perigoso. Não é. **Só o VCard
+perde campos.**
 
 > **Um contentor com altura fixa e conteúdo variável é sempre um bug
 > adiado.** Ou o contentor cresce com o conteúdo (`AutoSize`), ou tem
@@ -103,10 +104,12 @@ As 43 declarações de campo no topo do ficheiro:
 ```csharp
 private readonly TextBox _txtUrl = new();
 private readonly TextBox _txtText = new();
-// ... 46 mais
+// ... 41 mais
 ```
 
-E a lista de volta, 120 linhas abaixo:
+E a lista de volta, **163 linhas** abaixo — com 39 `yield return` em vez
+de 43, porque os quatro controlos que não são campos ficam de fora de
+propósito:
 
 ```csharp
 private IEnumerable<Control> FieldControls()
@@ -205,5 +208,5 @@ níveis irem juntos.
 5. Se a categoria ficou mais alta, **o painel tem de ter crescido** — e se não
    cresceu, é porque tem altura fixa, e o campo está fora.
 
-O ponto 5 é o que teria apanhado os dois campos invisíveis, e custa dez
+O ponto 5 é o que teria apanhado os três campos invisíveis, e custa dez
 segundos.
