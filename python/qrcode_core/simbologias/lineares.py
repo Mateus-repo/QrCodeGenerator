@@ -202,10 +202,21 @@ def code39(valor: str, *, com_controlo: bool = True, full_ascii: bool = False) -
                 f"(sao {''.join(COD39_ALFABETO)})"
             )
 
-    # **O digito de controlo, modulo 43.** A soma e' dos indices **do texto sem
-    # o proprio digito** — que e' o truque, e da' o nome ao formato: cada
-    # caractere vale o seu indice, a soma dividida por 43 da o indice da letra
-    # que falta para a soma dar inteiro.
+    # **O digito de controlo, modulo 43.** A soma e' dos indices das letras, a
+    # divisao por 43 da um resto, e o digito e' a letra desse indice.
+    #
+    # **Este comentario dizia antes "a soma dividida por 43 da o indice da letra
+    # que falta para a soma dar inteiro", que e' a regra complementar — e essa
+    # nao e' a do formato.** A regra e' o resto. A autoridade e' a documentacao
+    # do ZPL da Zebra, com o exemplo trabalhado: `12345ABCDE/` soma 115,
+    # `115 / 43 = 2` com resto 29, e 29 e' a letra `T`. O ZXing lido com o
+    # `Code39Reader(true)`, que valida o digito, aceita este e rejeita o
+    # complementar.
+    #
+    # **A distincao entre "o resto" e "o que falta para dar inteiro" e' o que
+    # mudou o payload de tres stacks uma vez.** Um comentario ao contrario
+    # convida a corrigir, e o que estava a ser observado como possivel bug era
+    # o proprio bug: o comentario.
     dados = texto
     if com_controlo:
         soma = sum(_COD39_INDICE[c] for c in texto)

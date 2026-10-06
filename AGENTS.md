@@ -245,15 +245,29 @@ JUnit só conhece o inglês, por isso o `build.sh` diz as duas:
 `--include-classname='.*(Test|Tests|Teste|Testes)$'`. **Ao acrescentar um ficheiro
 de testes, confirmar que o número de testes subiu.**
 
-**E duas contas da mesma coisa divergem em silêncio, mesmo escritas no mesmo
-ficheiro.** O dígito de controlo do Code 39 é o exemplo vivo: o comentário da
-classe descrevia a regra ISO — a letra que torna a soma múltipla de 43 — e o
-código uma linha abaixo fazia o resto da divisão. Nas duas stacks. E o
-`spec/verificar-lineares.py` fazia a conta à maneira ISO, o que não apareceu
-nenhum teste porque ninguém comparou as contas: **comparou-se os módulos, e os
-módulos eram iguais porque as duas implementações estavam igualmente erradas.**
-Quando duas peças fazem a mesma conta, uma delas não chega; é preciso uma
-terceira que faça a conta à mão.
+**E um comentário que descreve a regra ao contrário é pior do que nenhum
+comentário.** O dígito de controlo do Code 39 chegou a parecer um bug em três
+stacks por causa disso: o comentário da classe Java afirmava que a regra do
+formato é «a letra que torna a soma múltipla de 43» e que o repositório se
+desviava dela. O código estava certo e o comentário estava errado — a regra é o
+**resto** da divisão por 43, como a Zebra dá no exemplo trabalhado do ZPL
+(`12345ABCDE/` soma 115, resto 29, letra `T`) e como o `Code39Reader(true)` do
+ZXing confirma ao validar. O comentário do Python descrevia a regra complementar
+e o código fazia a outra, no mesmo ficheiro.
+
+Um comentário errado não dá erro: **convida a «corrigir»**, e a correcção quebra
+três stacks para um problema que não existe. Custa mais do que o silêncio.
+
+> **A mesma razão pela qual as tabelas dos códigos de barras vêm de um
+> gerador.** Uma regra que se sabe de cor merece um exemplo publicado que a
+> confirme. O `SimbologiasTestes` afirma agora o exemplo da Zebra, e a regra
+> complementar faz o teste falhar — verificado reintroduzindo-a.
+
+E a armadilha de raciocinar por analogia: «o dígito de controlo torna a soma
+múltipla de N» é a regra do **EAN-13** e do **ITF-14**, e é `(10 - soma % 10) % 10`.
+O Code 39 é `soma % 43`, o oposto, e o Code 128 também é o resto, módulo 103.
+**Três simbologias, três fórmulas, e a do Code 39 é a contrária das outras
+duas.**
 
 **E os testes de leitura têm de ser do encoder, não da biblioteca.** O
 `RenderTests` desenha o QR com o ZXing e lê com o ZXing, e o próprio ficheiro

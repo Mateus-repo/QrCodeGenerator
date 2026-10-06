@@ -155,6 +155,32 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
 **Feito e verificado.** Cada um com o ZXing a devolver a string certa. São
 28 casos de teste, todos legíveis por leitor independente.
 
+### O dígito de controlo do Code 39 é o resto da divisão, e está decidido
+
+> **Isto está aqui para não ser re-investigado.** O comentário da classe Java
+> afirmava que a regra do formato é «a letra que torna a soma múltipla de 43» —
+> ou seja `(43 - soma % 43) % 43` — e que o repositório se desviava dela. Isso
+> chegou a ponto de parecer um bug em três stacks, e **o que estava errado era o
+> comentário**.
+>
+> **A regra é o resto.** Soma-se o índice de cada letra, divide-se por 43, e o
+> dígito é a letra desse índice. Duas autoridades independentes:
+>
+> 1. **A Zebra**, na documentação do ZPL, dá o exemplo trabalhado: `12345ABCDE/`
+>    soma 115, `115 / 43 = 2` com resto 29, e 29 é a letra `T`.
+> 2. **O ZXing**, lido com o `Code39Reader(true)` — que valida o dígito — aceita
+>    este e **rejeita** o complementar. Testado, não de memória.
+>
+> O `python-barcode`, de onde vêm as tabelas, faz o mesmo, e as três stacks e o
+> `spec/verificar-lineares.py` concordam. O `SimbologiasTestes` afirma agora o
+> exemplo da Zebra, e a regra complementar faz o teste falhar — verificado
+> reintroduzindo-a.
+>
+> **A lição, e é a mesma das tabelas:** uma regra que se sabe de cor merece um
+> exemplo publicado que a confirme. Um comentário que descreve a regra ao
+> contrário convida a «corrigir» três stacks, e o custo de o não fazer é um
+> bloco de trabalho inteiro à procura de um bug que não existe.
+
 ### 1D — 7 de 11
 
 - [x] EAN-13 — `web/symbologies/upcean.js`

@@ -167,17 +167,31 @@ public final class Lineares {
     /**
      * Code 39. Os 43 caracteres do alfabeto, mais o asterisco de moldura.
      *
-     * <p><strong>O digito de controlo, e porque se liga por omissao.</strong> E'
-     * a soma dos indices das letras, dividida por 43, e a letra que fica nessa
-     * posicao do alfabeto. Vem ligado porque e' o que o web faz, e o arbrito e'
-     * o web.
+     * <p><strong>O digito de controlo e' o resto da divisao por 43.</strong>
+     * Soma-se o indice de cada letra, divide-se por 43, e o digito e' a letra
+     * que fica na posicao do resto. Vem ligado porque e' o que o web faz, e o
+     * arbrito e' o web.
      *
-     * <p><strong>A regra que este formato usa nao e' a propriedade classica.</strong>
-     * O digito de controlo que torna a soma multipla de 43 e' a regra completa do
-     * formato, e a implementacao de referencia nao a cumpre: poe a letra do resto
-     * da divisao. Os dois coexistiram durante anos em leitores reais e o ZXing
-     * aceita os dois â— e um teste que afirmasse a propriedade do multiplo de 43
-     * estaria a testar a norma, nao o codigo.
+     * <p><strong>Este comentario dizia antes o contrario, e foi quase um bug.</strong>
+     * Afirmava que "a implementacao de referencia nao cumpre a regra", e a
+     * regra que descrevia — a letra que torna a soma multipla de 43, ou seja
+     * {@code (43 - soma % 43) % 43} — <strong>nao e' a do formato</strong>. A
+     * regra e' o resto, e ha autoridade independente a provar:
+     *
+     * <ul>
+     *   <li>A <strong>Zebra</strong>, na documentacao do ZPL, da o exemplo
+     *       trabalhado: {@code 12345ABCDE/} soma 115, e {@code 115 / 43 = 2}
+     *       com resto 29, e 29 e' a letra {@code T}.
+     *   <li>O <strong>ZXing</strong>, lido com o {@code Code39Reader(true)} que
+     *       valida o digito, aceita este e rejeita o complementar.
+     *   <li>O <strong>python-barcode</strong>, de onde vem a tabela, faz o mesmo.
+     * </ul>
+     *
+     * <p><strong>Anearly: as tres stacks e o script de leitura concordam.</strong>
+     * Um comentario que descreve a regra ao contrario convida a "corrigir" tres
+     * stacks para um erro, e foi o que aconteceu quando se leu este ficheiro sem
+     * verificar. <strong>Uma regra que se sabe de cor merece um exemplo
+     * publicado que a confirme</strong>, e nao uma confianca.
      *
      * <p><strong>O texto sobe a maiusculas, e nao e' opcional.</strong> O Code 39
      * e' caixa alta por desenho, e escrever minusculas nao dava um codigo

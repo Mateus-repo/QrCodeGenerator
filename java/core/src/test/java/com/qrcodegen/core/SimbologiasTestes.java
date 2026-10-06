@@ -264,27 +264,44 @@ class SimbologiasTestes {
         }
 
         @Test
-        @DisplayName("o Code 39 acrescenta um digito de controlo mod 43")
+        @DisplayName("o Code 39 cumpre o exemplo publicado do digito de controlo")
+        void code39CumpreOExemploPublicado() {
+            // **O exemplo vem da documentacao do ZPL da Zebra**, que da o
+            // algoritmo com numeros:
+            //
+            //   dados `12345ABCDE/`
+            //   1+2+3+4+5 = 15;  A..E = 10+11+12+13+14 = 60;  `/` = 40
+            //   soma = 115
+            //   115 / 43 = 2, resto 29
+            //   29 e' a letra `T`   ->   o digito e' `T`
+            //
+            // **Por que um exemplo publicado e nao uma constante escrita a mao.**
+            // Este repositorio ja descobriu que a regra e' o resto, e nao "o
+            // que falta para a soma dar inteiro", por causa de um comentario que
+            // dizia o contrario. Um comentario ao contrario convida a corrigir
+            // tres stacks, e e' um teste com um numero de fora que trava isso.
+            // **O mesmo motivo pelo qual as tabelas dos codigos de barras vem
+            // de uma gerador e nao de memoria.**
+            assertEquals(115, somaDe("12345ABCDE/"), "a soma do exemplo tem de dar 115");
+            assertEquals(29, 115 % 43, "o resto tem de ser 29");
+            assertEquals("T", digitoDeControlo39("12345ABCDE/"));
+        }
+
+        @Test
+        @DisplayName("o Code 39 liga o digito de controlo e o ITF-14 tambem")
         void code39TomaDigitoDeControlo() {
-            // **A conta que o repositorio usa hoje, afirmada em codigo.**
-            //
-            // **Isto e' `soma % 43`, e nao `(43 - soma % 43) % 43`, que e' o que
-            // a ISO/IEC 16388 prescreve.** Vem do `python-barcode`, que e' a
-            // fonte das tabelas, e as tres stacks copiam. O leitor nao valida o
-            // digito, por isso o codigo le-se — le-se com outra letra no fim.
-            //
-            // **A affirmacao esta aqui, e nao num comentario, para que mudar a
-            // regra quebre este teste.** Um teste que so verifica que ha um
-            // digito deixa passar as duas regras.
+            // **A regra esta aqui, e nao so num comentario, para que mudar quebre
+            // este teste.** Um teste que so verificasse que ha um digito deixaria
+            // passar as duas regras — o resto e o complementar — e sao precisamente
+            // as duas que este repositorio ja confundiu uma vez.
             String texto = "CODE-39";
             String legenda = Lineares.code39(texto).legenda();
 
-            assertEquals("CODE-39P", legenda,
-                    "o digito de controlo do Code 39 hoje e' a letra do resto da divisao "
-                            + "da soma por 43 — ver o comentario sobre a ISO/IEC 16388");
             assertTrue(legenda.startsWith(texto), "a legenda comeca pelo texto");
             assertEquals(texto.length() + 1, legenda.length(),
                     "o digito de controlo e' exactamente um caractere");
+            assertEquals(texto + digitoDeControlo39(texto), legenda,
+                    "a legenda tem de ser o texto com o digito do exemplo publicado");
         }
     }
 
@@ -349,6 +366,28 @@ class SimbologiasTestes {
     }
 
     // --- implementado ------------------------------------------------------
+
+    /**
+     * A soma dos indices, para o exemplo publicado da Zebra.
+     *
+     * <p>Escrito aqui, e nao copiado do encoder: se os dois fossem a mesma
+     * chamada, o teste nao provaria nada.
+     */
+    private static int somaDe(String texto) {
+        String alfabeto = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%";
+        int soma = 0;
+        for (int i = 0; i < texto.length(); i++) {
+            int indice = alfabeto.indexOf(texto.charAt(i));
+            assertTrue(indice >= 0, "'" + texto.charAt(i) + "' nao existe no Code 39");
+            soma += indice;
+        }
+        return soma;
+    }
+
+    /** O digito pela regra publicada: o resto da divisao por 43. */
+    private static String digitoDeControlo39(String texto) {
+        return "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%".charAt(somaDe(texto) % 43) + "";
+    }
 
     /**
      * Desenha os modulos e devolve o que o ZXing le.
