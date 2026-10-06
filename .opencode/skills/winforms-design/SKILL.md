@@ -1,11 +1,11 @@
 ---
 name: winforms-design
-description: Construir e rever a interface WinForms em C#, com o layout declarado em vez de contagens de píxeis. Usar quando se acrescenta um campo, uma categoria ou um ecrã a uma app WinForms, quando um formulário fica torto ou um campo não aparece, ou quando se revê um `MainForm` — este repositório tem 48 campos numa tabela desenhada à mão e dois deles estão invisíveis.
+description: Construir e rever a interface WinForms em C#, com o layout declarado em vez de contagens de píxeis. Usar quando se acrescenta um campo, uma categoria ou um ecrã a uma app WinForms, quando um formulário fica torto ou um campo não aparece, ou quando se revê um `MainForm` — este repositório tem 43 campos numa tabela desenhada à mão e três deles estão fora do ecrã.
 ---
 
 # Design de app WinForms
 
-Este repositório tem uma app WinForms com **48 campos** e **onze
+Este repositório tem uma app WinForms com **43 campos** e **onze
 categorias**, e a interface está inteira escrita à mão em `MainForm.cs` — sem
 `.resx`, sem `Designer.cs`, sem `TableLayoutPanel`. **Dois campos são
 invisíveis**, e ninguém reparou porque nenhum teste olha para a interface.
@@ -98,7 +98,7 @@ Consequências que não se vêem mas se pagam:
 
 ### 4. O mesmo conjunto escrito duas vezes
 
-As 48 declarações de campo no topo do ficheiro:
+As 43 declarações de campo no topo do ficheiro:
 
 ```csharp
 private readonly TextBox _txtUrl = new();

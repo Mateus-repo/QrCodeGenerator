@@ -7,8 +7,8 @@ estimado** — todos saem de ler o código e de contar.
 
 | | |
 |---|---|
-| Linhas em `MainForm.cs` | 451 |
-| Campos declarados | **48** |
+| Linhas em `MainForm.cs` | 498 |
+| Campos declarados | **43** |
 | Categorias | 11 |
 | `.Designer.cs` | **não existe** |
 | `.resx` | **não existe** |
@@ -17,7 +17,7 @@ estimado** — todos saem de ler o código e de contar.
 | `AutoScroll` | **nenhum** |
 | `AccessibleName` | **nenhum** |
 | `SuspendLayout` | **nenhum** |
-| **Campos invisíveis** | **2 de 48** |
+| **Campos fora do ecrã** | **3 de 43** |
 
 ## O defeito que custa dados ao utilizador
 
@@ -61,9 +61,9 @@ há como lhes chegar com o rato nem com o teclado.
 o e-mail, vê o formulário calado, e concludes que o nome do campo estava
 errado. Não está — está 116 px abaixo do fundo.
 
-> **Reparar isto é `AutoScroll = true` mais `Dock = DockStyle.Fill`, e fifteen
-> segundos.** O que custa é descobri-lo: a app abre em `Link`, que tem um campo e
-> cabe sempre, e a primeira categoria com problema é a décima.
+> **Reparar isto é `AutoScroll = true` mais `Dock = DockStyle.Fill`, e são
+> quinze segundos.** O que custa é descobri-lo: a app abre em `Link`, que tem um
+> campo e cabe sempre, e a primeira categoria com problema é a décima.
 
 ## Os outros quatro, por gravidade
 
@@ -88,7 +88,7 @@ mexer no outro, e nada avisa.
 
 ### O mesmo conjunto escrito duas vezes
 
-48 declarações no topo (`MainForm.cs:9-58`) e 48 `yield return` em
+43 declarações no topo (`MainForm.cs:9-58`) e 39 `yield return` em
 `FieldControls()` (`MainForm.cs:223-264`).
 
 **Nada liga as duas listas.** Acrescentar um campo em cima e esquecer a lista de
@@ -133,7 +133,7 @@ Sem `MainForm.Designer.cs` e sem `MainForm.resx`:
    perdidos. É o que causa dano ao utilizador.
 2. **`TableLayoutPanel` em vez de `_fieldY`** — o que garante que o passo 1 não
    volta a ser preciso quando aparecer uma categoria nova.
-3. **Um registo único dos 48 campos**, e as duas listas a lêrem dele.
+3. **Um registo único dos 43 campos**, e as duas listas a lêrem dele.
 4. **`AccessibleName` em todos os 48** e `TabIndex` explícito.
 5. **`Anchor`/`Dock`**, para o formulário acompanhar a janela.
 6. **Passar ao designer**, com o `resx`, o que dá pré-visualização, DPI e
