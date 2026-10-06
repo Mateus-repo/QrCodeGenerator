@@ -65,12 +65,45 @@ categorias que cabem — 4 px de folga — e por isso parece o caso perigoso. N�
 há como lhes chegar com o rato nem com o teclado.
 
 **O VCard perde os campos 9, 10 e 11.** A pessoa escreve o nome, o telefone e
-o e-mail, vê o formulário calado, e concludes que o nome do campo estava
+o e-mail, vê o formulário calado, e conclui que o nome do campo estava
 errado. Não está — está 116 px abaixo do fundo.
 
-> **Reparar isto é `AutoScroll = true` mais `Dock = DockStyle.Fill`, e são
-> quinze segundos.** O que custa é descobri-lo: a app abre em `Link`, que tem um
-> campo e cabe sempre, e a primeira categoria com problema é a décima.
+> **Reparar isto é `AutoScroll = true`, e foram quinze segundos.** *Só*
+> `AutoScroll`: o `Dock = DockStyle.Fill` que a primeira versão desta nota
+> sugeria **taparia os botões**, porque o formulário é todo de posições
+> absolutas e os botões estão em `y = 490`. A receita estava certa no
+> diagnóstico e a meio caminho na correcção, e é por isso que se segue o código.
+
+## O que foi feito, e o que a medição passou a ser
+
+**Corrigido, e a medição passou a ser um teste** — o `InterfaceTestes`, nos
+testes do C#. Um teste que abre a janela e mede os controlos foi o que
+descobriu o terceiro defeito, e não havia receita que o apanhasse.
+
+| Defeito | Onde | O que se fez |
+|---|---|---|
+| Painel de 280 px sem barra | `_fieldHost` | `AutoScroll`, e a altura subiu para os 436 px livres até aos botões |
+| Coluna dos campos em `x = 90` | `RebuildFields` | A coluna passa a ser a do rótulo mais largo, medida |
+| Etiqueta da `CheckBox` duplicada | `RebuildFields` | Uma caixa não recebe etiqueta: traz o próprio texto |
+
+**O do `x = 90` é o mesmo defeito do painel, noutra dimensão.** Um contentor
+com altura fixa e conteúdo variável corta campos; uma coluna com largura fixa
+e rótulos variáveis tapa-os. **Os dois se resolvem da mesma maneira: medir em
+vez de contar**, que é a regra que o `lineares.py` dos códigos de barras também
+usa para as guardas.
+
+**E o `90` estava errado por margem larga:** "Nome do recebedor", no `Pix`,
+mede 115 px. O texto entrava no campo.
+
+**A medição é `TextRenderer.MeasureText` e não `Graphics.MeasureString`,** e a
+diferença não é de gosto: `MeasureString` é GDI+, e um `Label` desenha-se com
+as métricas do GDI. Os dois medem o mesmo texto e dão números diferentes, e
+**medir com a métrica errada é pior do que não medir.**
+
+**Fica por fazer** a receita que a skill descreve: `TableLayoutPanel` em vez
+da contagem de pixeis, um registo único dos 43 campos, `AccessibleName` em
+todos, e passar ao designer. Nenhum dos três defeitos acima se resolve sozinho
+com isso — mas nenhum volta a aparecer depois.
 
 ## Os outros quatro, por gravidade
 
@@ -135,15 +168,15 @@ Sem `MainForm.Designer.cs` e sem `MainForm.resx`:
   interface, e é a razão de o código de barras não estar espalhado pelo
   formulário.
 - **O `core` não tem nada a ver com isto.** `csharp/core/` é independente de
-  WinForms e tem 188 testes — e nenhum deles falha por causa da interface, que
-  é precisamente o que este diagnóstico vem mostrar.
+  WinForms, e os testes do payload não desenham nada — que é precisamente o que
+  este diagnóstico vem mostrar.
 - **As cores estão certas.** Não há tema escuro nem cor de fundo no canvas, e a
   `AGENTS.md` exige preto sobre branco em qualquer tema. **Não mexer.**
 
 ## A ordem que faz sentido
 
-1. **`AutoScroll` no `_fieldHost`** — quinze segundos, e acaba com os campos
-   perdidos. É o que causa dano ao utilizador.
+1. ~~**`AutoScroll` no `_fieldHost`**~~ — **feito.** Quinze segundos, e acabou
+   com os campos perdidos. É o que causava dano ao utilizador.
 2. **`TableLayoutPanel` em vez de `_fieldY`** — o que garante que o passo 1 não
    volta a ser preciso quando aparecer uma categoria nova.
 3. **Um registo único dos 43 campos**, e as duas listas a lêrem dele.
@@ -152,24 +185,47 @@ Sem `MainForm.Designer.cs` e sem `MainForm.resx`:
 6. **Passar ao designer**, com o `resx`, o que dá pré-visualização, DPI e
    tradução de uma vez.
 
-## Como provar cada passo
+## Como se prova cada passo
 
-**Nenhum destes se prova num teste de payload.** O que prova:
+**Nenhum se prova num teste de payload.** O que prova é um teste que **abre a
+janilha** — o `InterfaceTestes`, nos testes do C# — e isto:
 
 ```csharp
-// O contentor cresce com o conteúdo.
-foreach (var categoria in Todas)
-{
-    Abrir(categoria);
-    var necessario = SomarAlturas();
-    Assert.That(necessario, Is.LessThanOrEqualTo(_fieldHost.ClientSize.Height),
-        $"{categoria} precisa de {necessario} px e o painel tem {_fieldHost.ClientSize.Height}");
-}
+// Não cabe E não há forma de lá chegar = um campo que a pessoa
+// não consegue preencher. É um bug de dados perdidos sem mensagem.
+Assert.True(
+    necessario <= host.ClientSize.Height || host.AutoScroll,
+    $"{categoria} precisa de {necessario} px e o painel tem "
+    + $"{host.ClientSize.Height}, sem `AutoScroll`.");
 ```
 
-E depois, **uma captura por categoria** — porque um teste de altura passa com o
-formulário bonito e o campo invisível.
+**O `|| host.AutoScroll` é o ponto todo, e a versão anterior deste ficheiro não
+o tinha.** Um teste que afirma só "o conteúdo cabe" é um teste que obriga a
+crescer o contentor para sempre; um teste que afirma "se não cabe, há forma de
+chegar lá" aceita a barra de scroll como resposta. **O primeiro transforma cada
+categoria nova numa alteração de código; o segundo transforma-a só num número
+que se lê.**
+
+**E a sobreposição se prova com dois eixos, não um.** Compara-se o rectângulo
+inteiro:
+
+```csharp
+bool cruzam = rotulo.Right > campo.Left && rotulo.Left < campo.Right
+           && rotulo.Bottom > campo.Top && rotulo.Top < campo.Bottom;
+```
+
+Só os X dão falsos positivos por controlos que **partilham a coluna e estão
+em linhas diferentes** — e foi o que aconteceu da primeira vez, com o `WiFi`.
 
 > **O teste tem de percorrer as onze categorias.** Abrir a que está por omissão
 > dá `Link`, um campo, e verde. O problema é na décima, e nenhuma abertura
 > manual a encontra.
+>
+> **E tem de ser pelo índice, não pelo item.** O combo está preenchido com
+> `QrCategoryNames.All`, que são cadeias; `SelectedItem = QrCategory.VCard` não
+> corresponde a nenhum item e o WinForms ignora em silêncio — o `SelectedIndex`
+> fica no 0 e o teste passa a olhar para o `Link` em todas as iterações. **Foi
+> exactamente o que aconteceu, e o teste deu verde com o bug presente.**
+
+**E uma captura por categoria, porque um teste de altura passa com o
+formulário bonito e o campo invisível.**

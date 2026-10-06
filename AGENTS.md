@@ -201,6 +201,59 @@ executa a aplicação, que nem se pode importar porque ela toca no DOM ao
 carregar — mas é a única que apanha um erro de nome numa chamada, e o erro de
 nome é precisamente o que nenhuma das outras peças vê.
 
+**E um `ComboBox` cheio de cadeias ignora um `SelectedItem` de outro tipo, em
+silêncio.** O teste da interface do C# punha a categoria com
+`SelectedItem = QrCategory.VCard`, e o combo está preenchido com
+`QrCategoryNames.All`, que são **cadeias**. Não corresponde a nenhum item, o
+WinForms não dá erro, o `SelectedIndex` fica no **0** — que é `Link`, um campo,
+que cabe sempre — e o teste passou a medir a categoria errada nas onze
+iterações. Com os campos do VCard perdidos, **236 testes a verde**.
+
+**A diferença entre passar e não passar foi reintroduzir o bug**, que é o
+único jeito de saber se um teste afirma alguma coisa. Passou com o bug, passou
+sem ele, e portanto não afirmava nada: foi a segunda vez que um teste deste
+repositório saía vazio, e a primeira foi o `frameqr-centragem.test.mjs`, que
+importava a função e não a aplicação. **As duas têm a mesma raiz** — o teste
+correu, e o que ele exercita não era a coisa defeituosa.
+
+A correcção é pôr a categoria pelo **índice** — que é como o `RebuildFields` a
+lê, `(QrCategory)_cmbCategory.SelectedIndex` — e **afirmar que ela ficou posta**.
+Se o combo deixar de estar sincronizado com o enum, o teste passa a dizer
+isso, em vez de medir a categoria anterior e dar verde.
+
+**E o mesmo ficheiro estava partido noutra dimensão:** a coluna dos campos
+estava num `x = 90` escrito à mão, e o rótulo "Nome do recebedor" do Pix mede
+115 px. **É o defeito do painel de altura fixa, outra vez** — um contentor com
+medida fixa e conteúdo variável corta campos, uma coluna com medida fixa e
+rótulos variáveis tapa-os — e resolve-se igual: **medindo**. A coluna passa a
+ser a do rótulo mais largo, medido com `TextRenderer.MeasureText` e não com
+`Graphics.MeasureString`, porque o `Label` desenha-se com as métricas do GDI e
+**medir com a métrica errada é pior do que não medir**.
+
+**E o terceiro defeito só apareceu porque o teste abre a janela:** a etiqueta de
+uma `CheckBox` era desenhada em `x = 0`, uma linha abaixo da própria caixa, e o
+texto via-se duas vezes. Não há receita que apanhe isso, e a receita
+`winforms-design` deste repositório não apanhava. **Há um teste que abre o
+formulário e mede os controlos.**
+
+**E um `Form` precisa de um `STAThread`,** que o runner do xUnit não é. O
+corpo do teste corre numa thread dedicada, e é por isso que o ficheiro tem três
+`Fact` e não um `Theory` por categoria: **a construção do formulário é mais cara
+do que o teste**, e abrir catorze vezes a mesma janela não é testar catorze
+coisas.
+
+**E o teste de interface tem de medir em duas dimensões.** A primeira versão
+afirmava `rotulo.Right <= campo.Left` e deu um falso positivo com o WiFi — dois
+controlos que **partilham a coluna e estão em linhas diferentes** não se
+sobrepõem. Sobrepor é `a.Right > b.Left && a.Left < b.Right && a.Bottom >
+b.Top && a.Top < b.Bottom`, e o eixo que falta é sempre o que dá o falso
+positivo.
+
+**E o `Dock = DockStyle.Fill` que a skill sugeria não servia** — o formulário é
+todo de posições absolutas, com os botões em `y = 490`, e um `Fill` no painel
+tapava-os. **A skill estava certa no diagnóstico e a meio caminho na receita,**
+que é a razão de se seguir o código e não a receita.
+
 **E sobre o limite em píxeis do logotipo:** não é um número fixo, depende da
 escala, e a escala muda com o tamanho pedido e com a versão do QR. A mensagem
 tem de dizer a caixa nos dois termos — N×N **módulos** e N×escala **píxeis** —

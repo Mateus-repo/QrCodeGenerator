@@ -7,10 +7,19 @@
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR, e as
 4 simbologias de códigos de barras em **cinco** stacks — web, Python, Java, C# e
-o `:core` do Kotlin. **1013 testes** (292 site, 283 Python, 233 C#, 161 Java,
+o `:core` do Kotlin. **1016 testes** (292 site, 283 Python, 236 C#, 161 Java,
 44 Kotlin). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
+
+**A app do C# tem agora testes de interface** — o `InterfaceTestes`, que abre o
+`MainForm` de verdade. Foi ele que corrigiu três defeitos de desenho: os campos
+9 a 11 do VCard estavam **por baixo do fundo de um painel de 280 px, sem barra e
+sem atalho**, e quem preenchesse o nome, o telefone e o e-mail via o formulário
+calado; a coluna dos campos estava num `90` escrito à mão, por onde o rótulo
+"Nome do recebedor" do Pix entrava 25 px; e a etiqueta de uma caixa de
+verificação era desenhada na mesma linha da caixa, com o texto duas vezes.
+**Todos medidos, nenhum inventado.** Ver a skill `winforms-design`.
 
 O que bloqueia: **o Go ainda não tem as simbologias de barras**, e o Go está
 em branco — tem a pasta e o README, mas zero linhas de Go. É o último da

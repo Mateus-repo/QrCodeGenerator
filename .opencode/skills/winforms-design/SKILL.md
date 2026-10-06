@@ -7,8 +7,15 @@ description: Construir e rever a interface WinForms em C#, com o layout declarad
 
 Este repositório tem uma app WinForms com **43 campos** e **onze
 categorias**, e a interface está inteira escrita à mão em `MainForm.cs` — sem
-`.resx`, sem `Designer.cs`, sem `TableLayoutPanel`. **Três campos são
-invisíveis**, e ninguém reparou porque nenhum teste olha para a interface.
+`.resx`, sem `Designer.cs`, sem `TableLayoutPanel`.
+
+**Já corrigido:** o painel de altura fixa sem barra (`AutoScroll`), a coluna dos
+campos com um `90` escrito à mão, e a etiqueta duplicada das caixas de
+verificação. **Fica:** o `TableLayoutPanel`, o registo único dos 43 campos,
+`AccessibleName` e o designer.
+
+E há **um teste que abre a janela** — `InterfaceTestes`, nos testes do C#. Foi
+ele que encontrou a etiqueta duplicada, que o diagnóstico escrito à mão não via.
 
 Esta skill existe porque esse caso é o mais comum e o mais barato de não ver.
 Um bug de layout não dá erro, não falha o build, e não aparece num teste que

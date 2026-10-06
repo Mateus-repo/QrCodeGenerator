@@ -69,7 +69,29 @@ public sealed class MainForm : Form
         BackColor = SystemColors.Control;
         Font = new Font("Segoe UI", 9F);
 
-        _fieldHost = new Panel { Location = new Point(120, 44), Size = new Size(280, 280) };
+        // **O painel tem `AutoScroll` porque o conteudo cresce e o espaco nao.**
+        //
+        // A categoria VCard tem 11 campos de 36 px, e 396 nao cabem nos 280 que
+        // o painel tinha. **Num `Panel` os filhos que ficam fora sao cortados**, e
+        // sem `AutoScroll` nao ha barra nem atalho que os traga de volta: os
+        // campos 9, 10 e 11 eram inalcancaveis. A pessoa preenchia o nome, o
+        // telefone e o email, via o formulario calado, e concluia que o campo
+        // estava errado.
+        //
+        // **O `AutoScroll` e' o minimo, e nao `Dock = Fill`.** O formulario e' todo
+        // de posicoes absolutas — os botoes estao em y=490 e a pre-visualizacao em
+        // x=450 — e um `Dock = Fill` aqui tapa tudo o que esta por cima. E a
+        // correccao de fundo, que e' um `TableLayoutPanel`, e' outra alteracao.
+        //
+        // **E o espaco aproveitado ao mesmo tempo:** de y=44 aos botoes em y=480
+        // cabem 436 px, e nao 280. Com isso o VCard cabe sem barra — a barra
+        // fica para o que vier a crescer, que e' o que a torna a ultima defence.
+        _fieldHost = new Panel
+        {
+            Location = new Point(120, 44),
+            Size = new Size(280, 436),
+            AutoScroll = true,
+        };
 
         BuildLayout();
         PopulateCombos();
@@ -350,23 +372,66 @@ public sealed class MainForm : Form
         _fieldY = 0;
 
         var category = (QrCategory)_cmbCategory.SelectedIndex;
-        foreach (var (label, control) in RowsFor(category))
+        var linhas = RowsFor(category).ToArray();
+
+        // **A coluna dos campos e' tao larga quanto o rotulo mais largo.**
+        //
+        // Era um `90` escrito a mao, e o `Pix` provou que estava errado: "Nome do
+        // recebedor" mede 115 px e o texto entrava no campo. **E' o mesmo defeito
+        // do painel de altura fixa, noutra dimensao** — um contentor com medida
+        // fixa e conteudo variavel corta; uma coluna com medida fixa e rotulos
+        // variaveis tapa.
+        //
+        // **A regra e' a das guardas dos codigos de barras: medir em vez de
+        // contar.** E medir aqui tem uma propriedade que o numero nao tinha:
+        // um rotulo novo nao obriga a mexer em lado nenhum. O `90` era um numero
+        // que podia estar errado e ninguem via; este e' lido do proprio rotulo.
+        int larguraRotulos = 0;
+        foreach (var (label, control) in linhas)
         {
-            var lbl = new Label
+            if (control is CheckBox)
             {
-                Text = label,
-                AutoSize = true,
-                Location = new Point(0, _fieldY + 3)
-            };
-            _fieldHost.Controls.Add(lbl);
+                // A caixa ocupa a coluna toda e traz o proprio texto.
+                continue;
+            }
+
+            larguraRotulos = Math.Max(larguraRotulos, MedirRotulo(label));
+        }
+
+        // **Oito pixele de folga entre o rotulo e o campo**, e nao zero: um texto
+        // que chegue ao limite da medida nao deixa de encostar, porque a medicao
+        // arredonda.
+        int colunaCampos = larguraRotulos + 8;
+
+        foreach (var (label, control) in linhas)
+        {
+            // **Uma `CheckBox` nao recebe etiqueta.** Traz o proprio texto, e a
+            // etiqueta ia para `x = 0` como a caixa, uma linha abaixo: o texto
+            // aparecia duas vezes, uma por cima da outra. O `AddOption` desta
+            // mesma classe ja faz isto com `chk.Text = label`.
+            if (control is not CheckBox)
+            {
+                var lbl = new Label
+                {
+                    Text = label,
+                    AutoSize = true,
+                    Location = new Point(0, _fieldY + 3)
+                };
+                _fieldHost.Controls.Add(lbl);
+            }
 
             if (control is TextBox { Multiline: true } multi)
                 multi.Height = ReferenceEquals(multi, _txtText) ? 150 : 64;
 
             control.Location = control is CheckBox
                 ? new Point(0, _fieldY + 4)
-                : new Point(90, _fieldY);
-            control.Width = _fieldHost.ClientSize.Width - 90 - 8;
+                : new Point(colunaCampos, _fieldY);
+
+            if (control is not CheckBox)
+            {
+                control.Width = Math.Max(
+                    80, _fieldHost.ClientSize.Width - colunaCampos - 8);
+            }
             _fieldHost.Controls.Add(control);
 
             int height = control is TextBox { Multiline: true } m
@@ -374,6 +439,33 @@ public sealed class MainForm : Form
                 : 24;
             _fieldY += height + 12;
         }
+    }
+
+    /// <summary>
+    /// A largura de um rotulo, nas coordenadas de ecrã de hoje.
+    /// </summary>
+    /// <remarks>
+    /// <b>Mede-se o texto com a fonte do formulario</b>, e nao com um numero de
+    /// caracteres: "Nome do recebedor" e "Nome" tem o mesmo número de palavras e
+    /// medidas completamente diferentes. Uma aproximacao por caracteres daria a
+    /// mesma coluna para as duas e o problema continuava igual.
+    /// </remarks>
+    private int MedirRotulo(string texto)
+    {
+        // **É `TextRenderer` e não `Graphics.MeasureString`, e a diferença não é
+        // de gosto.**
+        //
+        // `MeasureString` é GDI+, e um `Label` com `AutoSize` **desenha-se com as
+        // métricas do GDI**. Os dois medem o mesmo texto e dão números diferentes.
+        // **Medir com a métrica errada é pior do que não medir** — o `90` era um
+        // número mágico, e a correção ia ser um número medido com a ferramenta
+        // que não é a do desenho. O teste apanha o excesso, os rectângulos a
+        // cruzar; não apanha uma coluna três pixele larga demais, que é apenas
+        // feia.
+        //
+        // E é `TextRenderer` porque é o que o WinForms usa para medir texto, e
+        // portanto o que o `Label` vai realmente ocupar.
+        return TextRenderer.MeasureText(texto, Font).Width;
     }
 
     private QrFields CollectFields() => new()

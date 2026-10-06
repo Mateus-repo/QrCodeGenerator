@@ -11,6 +11,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <RootNamespace>QrCodeGenerator.Tests</RootNamespace>
+
+    <!--
+      WinForms, para poder testar a interface.
+
+      **Esta linha e' a resposta a um bug que noutro sitio nao foi visto:** tres
+      campos do VCard estavam por baixo do fundo de um painel de 280 px, sem barra
+      e sem atalho, e os 188 testes so olhavam para o payload. Um teste que nao
+      desenha a janela nao vê um campo que a janela esconde.
+
+      O projecto ja era `net8.0-windows` porque o `RenderTests` desenha um PNG,
+      portanto isto nao acrescenta uma plataforma — acrescenta uma funcionalidade.
+    -->
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +36,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\core\QrCodeGenerator.Core.csproj" />
+
+    <!--
+      A app, para que o `InterfaceTestes` possa abrir o `MainForm` de verdade.
+
+      **Sem esta referencia o teste nao vê a interface**, e um teste de interface
+      que nao abre a interface nao testa a interface.
+    -->
+    <ProjectReference Include="..\desktop-winforms\QrCodeGenerator.csproj" />
   </ItemGroup>
 
 </Project>
