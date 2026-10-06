@@ -129,7 +129,7 @@ observado — e o código regenera com o valor antigo, sem dar erro.
 A forma de não cair: **o campo declara-se uma vez, num dicionário ou numa
 lista, e tudo o resto lê essa lista.**
 
-### 5. Nem nome acessível nem ordem de tabulação
+### 5. Nem nome acessivel nem ordem de tabulacao
 
 Não há um único `AccessibleName`, e o `TabIndex` nunca é atribuído — a ordem de
 tabulação é a ordem de adição ao `Controls`, que funciona por acaso e passa a

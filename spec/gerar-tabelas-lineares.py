@@ -77,6 +77,21 @@ except ImportError:
 RAIZ = Path(__file__).resolve().parent.parent
 DESTINO = RAIZ / "python" / "qrcode_core" / "simbologias" / "tabelas_lineares.py"
 
+#: O mesmo modulo para o Java, e **pelo mesmo gerador**.
+#:
+#: **Uma tabela, uma fonte.** O que a `AGENTS.md` proibe e' escrever as tabelas
+#: de memoria, e o que ela nao resolve e' transcreve-las para cada linguagem. Um
+#: `String[]` em Java copiado a mao da lista em Python e' a mesma tabela duas
+#: vezes, e diverge no mesmo silencio — so que agora sem nenhum teste de
+#: estrutura que as compare, porque cada stack so conhece a sua.
+#:
+#: Por isso que o gerador escreve os dois ficheiros a partir da mesma extracao,
+#: e a regra passa a ser "correm o gerador" em vez de "não transcrevas".
+DESTINO_JAVA = (
+    RAIZ / "java" / "core" / "src" / "main" / "java" / "com" / "qrcodegen"
+    / "core" / "simbologias" / "Tabelas.java"
+)
+
 
 def conferir(nome: str, padroes, n_elementos: int, alfabeto_valido: str) -> None:
     """
@@ -278,15 +293,195 @@ CODE128_PADROES = {padroes128!r}
 CODE128_PARAGEM = {PARAGEM_CODE128!r}
 '''
 
+    java = _java(
+        alfabeto39=alfabeto,
+        padroes39=padroes39,
+        paragem39=str(T39.EDGE),
+        padroesitf=padroesitf,
+        inicioitf=str(TITF.START),
+        paragemitf=str(TITF.STOP),
+        padroescod=padroescod,
+        inicio_paragem=inicio_paragem,
+        padroes128=padroes128,
+        paragem128=PARAGEM_CODE128,
+    )
+
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
     DESTINO.write_text(conteudo, encoding="utf-8")
+
+    DESTINO_JAVA.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO_JAVA.write_text(java, encoding="utf-8")
 
     print(f"  Code 39:  {len(padroes39)} caracteres x 9 elementos")
     print(f"  ITF:      {len(padroesitf)} digitos x 5 elementos")
     print(f"  Codabar:  {len(padroescod)} caracteres x 7 elementos")
     print(f"  Code 128: {len(padroes128)} padroes x 6 elementos + paragem")
     print(f"  -> {DESTINO.relative_to(RAIZ)}")
+    print(f"  -> {DESTINO_JAVA.relative_to(RAIZ)}")
     return 0
+
+
+def _java(
+    *, alfabeto39, padroes39, paragem39, padroesitf, inicioitf, paragemitf,
+    padroescod, inicio_paragem, padroes128, paragem128,
+) -> str:
+    """
+    O mesmo modulo em Java, a partir da **mesma** extracao.
+
+    **Uma tabela, uma fonte.** O que a `AGENTS.md` proibe e' escrever as
+    tabelas de memoria, e o que ela nao resolve e' transcreve-las para cada
+    linguagem. Um `String[]` em Java copiado a mao da lista em Python e' a
+    mesma tabela duas vezes, e diverge no mesmo silencio — so que agora sem
+    nenhum teste de estrutura que as compare, porque cada stack so conhece a
+    sua.
+
+    Por isso que o gerador escreve os dois ficheiros a partir da mesma
+    extracao, e a regra passa a ser "correm o gerador" em vez de "nao
+    transcrevas".
+
+    **O `String[]` do Java e' gerado com `", "` e nao com `","`** porque o
+    Java nao tem literais de lista. E o `char[]` do Code 39 nao existe de
+    proposito: o `String` ja' e' a sequencia, e um `char[]` seria uma copia
+    que pode divergir do `String` sem nenhum teste dar por isso.
+    """
+    def arr(valores, indent="    "):
+        corpo = ",\n".join(f'{indent}    "{v}"' for v in valores)
+        return "{\n" + corpo + f",\n{indent}}}"
+
+    def mapa(dicionario, indent="    "):
+        linhas = ",\n".join(
+            f'{indent}    "{k}", "{v}"' for k, v in sorted(dicionario.items())
+        )
+        return "{\n" + linhas + f",\n{indent}}}"
+
+    def inteiros(valores, indent="    "):
+        corpo = ",\n".join(f"{indent}    {v}" for v in valores)
+        return "{\n" + corpo + f",\n{indent}}}"
+
+    return f'''package com.qrcodegen.core.simbologias;
+
+/**
+ * As tabelas dos codigos de barras de uma linha, extraidas do
+ * `python-barcode`.
+ *
+ * <pre>
+ *     python spec/gerar-tabelas-lineares.py
+ * </pre>
+ *
+ * <strong>NAO EDITE ESTE FICHEIRO A MAO.</strong> E' gerado, e a razao esta no
+ * Python: a tabela do Code 39 foi escrita de memoria com doze elementos por
+ * caractere em vez de nove, e a do ITF com dois na moldura de paragem em vez
+ * de tres. Nenhum dos dois foi apanhado por um teste — desenhavam-se com aspecto
+ * de estar certo e o leitor nao lia.
+ *
+ * <h2>Porquê uma classe so para isto</h2>
+ *
+ * <p>Porque e' <strong>a mesma extracao que escreve o modulo Python</strong>, e
+ * nao uma transcricao. Um {{@code String[]}} copiado a mao da lista do Python e' a
+ * mesma tabela duas vezes, e diverge no mesmo silencio — e sem nenhum teste de
+ * estrutura que as compare, porque cada stack so conhece a sua.
+ *
+ * <p>E' por isso que {{@code modulosMaximos}} e as formas do FieldQR do web usam
+ * o mesmo codigo e nao duas implementacoes: a regra deste repositorio e' nao
+ * escrever as tabelas de memoria, e a segunda leitura dessa regra e' nao as
+ * escrever duas vezes.
+ *
+ * <h2>A notacao de 'N' e 'W'</h2>
+ *
+ * <p><code>N</code> barra estreita, <code>n</code> espaco estreito,
+ * <code>W</code> barra larga, <code>w</code> espaco largo.
+ *
+ * <p><strong>Maiuscula e' largo, minuscula e' estreito — e nao barra e
+ * espaco.</strong> Sao duas perguntas independentes, e mistura-las produz uma
+ * barra inicial com a largura do espaco.
+ */
+public final class Tabelas {{
+
+    private Tabelas() {{
+    }}
+
+    /** O Code 39, por ordem, com o asterisco de inicio e paragem a parte. */
+    public static final String COD39_ALFABETO = "{''.join(alfabeto39)}";
+
+    /** Cada entrada tem quinze caracteres, ja expandidos a 3:1. */
+    public static final String[] COD39_PADROES = {arr(padroes39)};
+
+    /** O asterisco de inicio e de paragem. */
+    public static final String COD39_PARAGEM = "{paragem39}";
+
+    /** O ITF: cinco elementos por digito. */
+    public static final String[] ITF_PADROES = {arr(padroesitf)};
+
+    /** A moldura de inicio do ITF, com quatro elementos estreitos. */
+    public static final String ITF_INICIO = "{inicioitf}";
+
+    /**
+     * A moldura de paragem do ITF, com <strong>tres</strong> elementos: barra
+     * larga, espaco estreito, barra estreita. Sao tres e nao dois — a segunda
+     * versao tinha dois e o codigo nao lia.
+     */
+    public static final String ITF_PARAGEM = "{paragemitf}";
+
+    /** O Codabar, por caracter de dados: sete elementos cada. */
+    private static final String[] CODABAR_CHAVES = {arr(sorted(padroescod))};
+
+    private static final String[] CODABAR_VALORES = {arr([padroescod[k] for k in sorted(padroescod)])};
+
+    /** Os quatro caracteres que so podem ser inicio ou paragem. */
+    private static final String[] CODABAR_MOLDURA_CHAVES = {arr(sorted(inicio_paragem))};
+
+    private static final String[] CODABAR_MOLDURA_VALORES = {arr([inicio_paragem[k] for k in sorted(inicio_paragem)])};
+
+    /**
+     * O Code 128: os 106 primeiros valores, por indice.
+     *
+     * <p><strong>Cada entrada tem onze caracteres, ja expandidos</strong>, e nao
+     * os seis elementos <code>NnWw</code> dos outros: a cadeia e' a soma das
+     * larguras dos seis elementos.
+     */
+    public static final String[] CODE128_PADROES = {arr(padroes128)};
+
+    /**
+     * A paragem do Code 128: treze modulos, sete elementos.
+     *
+     * <p><strong>E' a unica tabela deste ficheiro que nao vem do
+     * `python-barcode`, porque a da biblioteca esta truncada</strong> — onze
+     * modulos em vez de treze, sem a barra final. Com a cadeia da biblioteca o
+     * ZXing devolve "NAO LEU" e com esta devolve a string certa. A barra e' a
+     * ancora do leitor, porque o Code 128 nao tem barras-guarda como o EAN.
+     */
+    public static final String CODE128_PARAGEM = "{paragem128}";
+
+    /**
+     * O padrao de um caracter do Codabar, ou {{@code null}} se nao existir.
+     *
+     * <p><strong>O Codabar tem duas tabelas e uma funcao</strong>, e nao uma
+     * tabela com tudo: os quatro caracteres de moldura so podem ser inicio ou
+     * paragem, e por isso vivem separadas. Uma tabela unica dava ao encoder a
+     * possibilidade de codificar um <code>A</code> nos dados, e o leitor lia-o
+     * como uma moldura — o codigo passava a parte estrutural e partia a meio.
+     */
+    public static String codabar(String caractere) {{
+        for (int i = 0; i < CODABAR_MOLDURA_CHAVES.length; i++) {{
+            if (CODABAR_MOLDURA_CHAVES[i].equals(caractere)) {{
+                return CODABAR_MOLDURA_VALORES[i];
+            }}
+        }}
+
+        for (int i = 0; i < CODABAR_CHAVES.length; i++) {{
+            if (CODABAR_CHAVES[i].equals(caractere)) {{
+                return CODABAR_VALORES[i];
+            }}
+        }}
+
+        return null;
+    }}
+
+    /** As medidas do Codabar nas duas variantes de espacado. */
+    public static final int[] CODABAR_ESTREITO = {{2, 2}};
+    public static final int[] CODABAR_LARGO = {{2, 2}};
+}}
+'''
 
 
 if __name__ == "__main__":
