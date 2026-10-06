@@ -110,6 +110,32 @@ spec/_frameqr-*.json
 spec/_zona-frameqr.json
 spec/_centragem.json
 
+## Bibliotecas de referência, em docs/
+#
+# **São de terceiros, e é por isso que não entram versionadas.** O `qrframe` e
+# o `segno` foram copiados para servirem de referência ao FieldQR — as formas, o
+# `Logo size` como rácio e o `Radius offset` do `qrframe`, e os limites de área
+# apagada do `segno`.
+#
+# Duas razões, e a segunda é a que dói:
+#
+#  1. **Têm as licenças e os README deles.** Versionar duas bibliotecas com
+#     `LICENSE` própria dentro de `docs/` é uma promessa que este repositório
+#     não pode fazer: quem clonar não sabe o que pode fazer com elas nem onde
+#     está a licença.
+#  2. **Pesam 2 MB e não são fonte.** Um `git add -A` leva-os sem querer, e
+#     o commit fica com um directório inteiro de código alheio no meio dos
+#     commits próprios — em que ninguém lê o que mudou.
+#
+# **Ficam no disco.** A regra da `AGENTS.md` é que as tabelas dos códigos de
+# barras não se escrevem de memória e vêm do `python-barcode`; estas duas
+# foram consultadas para o desenho, não copiadas para o código. O que ficou no
+# código são as medidas e as formas, todas verificadas com o ZXing.
+docs/qrframe-main/
+docs/qrframe-main.zip
+docs/segno-master/
+docs/segno-master.zip
+
 ## Editores
 *.swp
 .vscode/
