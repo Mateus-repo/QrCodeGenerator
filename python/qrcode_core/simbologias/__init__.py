@@ -16,6 +16,7 @@ uma spec que se cumpre. Um payload que difira num cliente e' um bug, mesmo que
 o teste desse cliente passe.
 """
 
+from .code93 import SIMBOLOGIAS_CODE93, code93
 from .lineares import (
     SIMBOLOGIAS_LINEARES,
     codabar,
@@ -37,7 +38,11 @@ from .upcean import SIMBOLOGIAS, SimbologiaError, digito_de_controlo, ean8, ean1
 #: Nao ha segunda lista a acertar aqui, e' a **unica** entrada que o resto do core
 #: consulta. Um cliente novo, ou um registo que cresca, tem de acrescentar a esta
 #: e nao a uma copia sua.
-SIMBOLOGIAS_TODAS = {**SIMBOLOGIAS, **SIMBOLOGIAS_LINEARES}
+SIMBOLOGIAS_TODAS = {
+    **SIMBOLOGIAS,
+    **SIMBOLOGIAS_LINEARES,
+    **SIMBOLOGIAS_CODE93,
+}
 
 __all__ = [
     "SIMBOLOGIAS",
@@ -53,4 +58,6 @@ __all__ = [
     "itf14",
     "codabar",
     "code128",
+    "SIMBOLOGIAS_CODE93",
+    "code93",
 ]

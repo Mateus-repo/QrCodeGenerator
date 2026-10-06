@@ -38,7 +38,14 @@
  * inversao de dois caracteres, que o Code 39 nao apanha.
  */
 
-import { ALFABETO, PADROES, INDICE, ASTERISCO } from './code93-tabelas.js';
+import {
+  ALFABETO,
+  ASTERISCO,
+  CONTROLES,
+  INDICE,
+  MODULO_CHECKSUM,
+  PADROES,
+} from './code93-tabelas.js';
 
 /**
  * O Code 93.
@@ -173,88 +180,46 @@ function codificarEstendido(texto) {
   const saida = [];
 
   for (const c of texto) {
-    const codigo = c.charCodeAt(0);
-
-    // Minusculas: `d` mais a maiuscula. E' o caso de uso corrente.
-    if (codigo >= 0x61 && codigo <= 0x7a) {
-      saida.push('d', String.fromCharCode(codigo - 32));
-      continue;
+    /*
+     * **Uma busca na tabela, e nao uma escada de regras.**
+     *
+     * A tabela do Code 93 tem 48 entradas e nenhuma e' uma minuscula nem um
+     * caracter de controlo: o que ha sao quatro caracteres de escape, escritos
+     * no ZXing como `a`, `b`, `c` e `d`, e cada um marca que o par seguinte se
+     * le de outra maneira:
+     *
+     *  - `d` mais uma maiuscula da a minuscula (`dA` -> `a`);
+     *  - `a` mais uma maiuscula da SH a SB;
+     *  - `b` mais uma maiuscula dos restantes, e tem **seis** transformacoes;
+     *  - `c` mais uma maiuscula da `!` a `,`.
+     *
+     * **Os pares vem do `decodeExtended` do ZXing invertido**, pelo mesmo
+     * gerador que extrai os 48 padroes.
+     *
+     * **A primeira versao tinha uma escada escrita a mao, e estava errada em
+     * vinte e quatro dos trinta e dois caracteres de controlo** — entre eles o
+     * CR, que saia como o algarismo `0`, e o ESC, que saia como `bV`, que o
+     * ZXing le como 64. **Nenhum dos dez casos tem um caracter de controlo**, e
+     * por isso que a parte mais fragil do encoder nunca foi exercitada.
+     *
+     * E' este passo que faz o Code 93 ser ASCII completo num codigo de 48
+     * valores. Sem ele, `teste-93` falha logo no `t` com "o caractere nao tem
+     * padrao" — que e' o que a primeira versao fazia.
+     *
+     * **O `push(...escape)` e' o que torna isto correcto.** A entrada tem uma
+     * letra para os caracteres do alfabeto e duas para os que precisam de
+     * escape, e o `checksum` conta **um caracter de cada vez**: juntar a entrada
+     * como uma cadeia daria um digito diferente em qualquer texto com minusculas.
+     */
+    const escape = CONTROLES[c.codePointAt(0)];
+    if (escape === undefined) {
+      throw new Error(`Code 93: o caractere "${c}" nao tem par de escape`);
     }
 
-    if (codigo < 0x20) {
-      saida.push(...controle(codigo));
-      continue;
-    }
-
-    saida.push(c);
+    saida.push(...escape);
   }
 
   return saida;
-}
-
-/**
- * O par de escape de um caracter de controlo.
- *
- * **Escrito como uma tabela, e nao calculado.** E' a parte do Code 93 em que a
- * intuicao falha: os controles de 0 a 31 nao sao uma subtraccao a partir de uma
- * letra, porque o ZXing os distribui por tres letras de escape diferentes
- * conforme a faixa. A regra esta no `decodeExtended` do ZXing, e e' consultavel.
- * Calculada a partir de uma regra inventada daria controlos errados num codigo
- * que se desenha bem e le caracteres errados.
- */
-function controle(codigo) {
-  // 0 a 5, de SH a SP: o `a` mais uma letra, com o deslocamento de 64. E' o
-  // deslocamento que faz 'A' (65) dar 1 - e SH e' 1 no C0, nao 0.
-  if (codigo <= 0x05) return ['a', String.fromCharCode(codigo + 64)];
-
-  // 6 a 8, de ACK a BS: o `b` mais uma letra. A primeira das cinco
-  // transformacoes do `b`, que e' a que cobre os comandos de duas letras.
-  if (codigo <= 0x08) return ['b', String.fromCharCode(codigo - 3)];
-
-  // 9, o HT: o `b` mais 'W', que e' a letra que o ZXing reserva para ele.
-  if (codigo === 0x09) return ['b', 'W'];
-
-  // 10, o LF: o `a` mais 'J'.
-  if (codigo === 0x0a) return ['a', 'J'];
-
-  // 11 e 12, VT e FF, e 14 e 15, SO e SI: o `b` mais a letra seguinte, na
-  // mesma primeira transformacao.
-  if (codigo === 0x0b) return ['b', 'K'];
-  if (codigo === 0x0c) return ['b', 'L'];
-  if (codigo === 0x0e) return ['b', 'M'];
-  if (codigo === 0x0f) return ['b', 'N'];
-
-  /*
-   * 13, o CR: e' o **valor zero** da tabela, e nao um caractere de retorno.
-   *
-   * A primeira versao devolvia `'\r'`, e a tabela nao tem `\r` - tem `'0'`, que
-   * e' o valor 0. A razao e' que a tabela do Code 93 e' uma lista de **codigos**,
-   * e o CR e' o codigo 0, o mesmo codigo que o digito "0". Sao coisas
-   * diferentes no mesmo codigo, e e' por isso que a tabela precisa do comentario
-   * que tem: um `\r` literal num ficheiro de texto conta como uma entrada e
-   * estraga a contagem.
-   */
-  if (codigo === 0x0d) return ['0'];
-
-  // 16 a 19, de DLE a DC3: a segunda transformacao do `b`, com as letras A a D.
-  if (codigo <= 0x13) return ['b', String.fromCharCode(codigo - 9)];
-
-  // 20 a 22, de DC4 a SYN: a terceira transformacao, as letras E a G.
-  if (codigo <= 0x16) return ['b', String.fromCharCode(codigo - 8)];
-
-  // 23 a 26, de ETB a SUB: a quarta transformacao, as letras H a K.
-  if (codigo <= 0x1a) return ['b', String.fromCharCode(codigo - 18)];
-
-  // 27, o ESC: o `b` mais 'V', que da o proprio 27. E' o unico em que a letra
-  // nao se obtem por subtraccao do codigo.
-  if (codigo === 0x1b) return ['b', 'V'];
-
-  // 28 a 31, de FS a US: a quinta transformacao, as letras O a R.
-  if (codigo >= 0x1c) return ['b', String.fromCharCode(codigo - 1)];
-
-  // Nao devia chegar aqui, porque a validacao ja passou por isso. Lancar e'
-  // melhor do que devolver um `undefined` que ia parar ao meio do codigo.
-  throw new Error(`Code 93: o controlo 0x${codigo.toString(16)} nao tem par de escape`);
 }
 
 /**

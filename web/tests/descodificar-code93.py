@@ -65,7 +65,22 @@ def main() -> int:
             continue
 
         codigo = lidos[0]
-        texto = codigo.text
+        texto = codigo.bytes.decode("ascii")
+        # **Compara-se pelos bytes, e nao pelo `text`.**
+        #
+        # O `text` do `zxingcpp` escreve os caracteres de controlo em notacao
+        # mnemonica — o ESC vem `<ESC>`, o BEL vem `<BEL>`, e o CR vem como um
+        # retorno de carro cru que o terminal desenha como uma mudanca de linha.
+        # **Sao tres formatos para tres caracteres da mesma tabela.**
+        #
+        # O `bytes` devolve o que o codigo transporta, e e' o que se quer
+        # comparar. **A falha era deste teste e nao do encoder**: o ZXing leu
+        # correctamente os trinta e dois caracteres de controlo, com os escapes
+        # certos, e a comparacao é que falhava por estar a comparar duas
+        # representacoes humanas uma com a outra.
+        #
+        # **Quando um leitor devolve duas representacoes, a que se compara e' a
+        # crua.** A outra e' para mostrar a uma pessoa.
         formato = str(codigo.format).replace("BarcodeFormat.", "")
 
         problemas = []
@@ -91,7 +106,7 @@ def main() -> int:
 
         # 3. A legenda, que tem de ter os dois digitos de controlo. E' o que se
         #    imprime, e sem eles uma etiqueta de automovel nao tem o que a pessoa
-        #    lê em voz alta quando o carro tem a vidroca partida.
+        #    le em voz alta quando o carro tem a vidraceira partida.
         #
         #    **A legenda e' a forma estendida mais os dois digitos**, e nao o
         #    texto original: e' o que permite ao lector conferir o checksum, e e'

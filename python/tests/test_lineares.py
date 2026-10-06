@@ -33,9 +33,9 @@ trocadas passa em todos os testes deste ficheiro — e nao le. Da' o nivel dois.
 **Nao verifica a paridade.** Um encoder correcto e um errado passam os dois —
 da' o `paridade-lineares.py`.
 
-**E nao ha um teste que proves que o ZXing le um codigo de dois digitos**, porque
+**E nao ha um teste que prove que o ZXing le um codigo de dois digitos**, porque
 nao le. Esta regra esta escrita no `verificar-lineares.py` e repetida aqui para
-que ninguem-added a leia sem ver a razao.
+que ninguem a leia sem ver a razao.
 """
 
 from __future__ import annotations

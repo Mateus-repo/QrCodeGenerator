@@ -1,11 +1,11 @@
 /**
- * As tabelas do Code 93. **Gerado** por `tests/gerar-tabela-code93.py`.
+ * As tabelas do Code 93. **Gerado** por `spec/gerar-tabelas-code93.py`.
  *
  * Sao 48 inteiros de nove bits, e nao padroes em texto, que e' o que torna esta
- * tabela diferente de todas as outras do repositorio. Cada inteiro tem nove bits
- * significant, e cada par de bits diz uma coisa: o primeiro e' o bit menos
- * significativo do par, e o par e' (largo?, comprimento). Tres barras, tres
- * espacos, e cada um com uma largura de 1 a 4 modulos.
+ * tabela diferente de todas as outras do repositorio. **Os nove bits sao os
+ * nove modulos, um a um, do mais significativo para o menos** - o bit mais
+ * significativo e' a primeira barra e o menos significativo e' o ultimo
+ * modulo. Nao ha larguras a extrair.
  *
  * **Nao se escreve isto de memoria.** Uma troca em dois caracteres produz um
  * codigo que se desenha perfeito, tem o checksum certo e nao e' lido por nada -
@@ -13,12 +13,51 @@
  * nove, que ja aconteceu neste repositorio.
  *
  * A origem e' a implementacao de referencia do ZXing (`Code93Reader.java`), que
- * e' tambem o leitor que vai verificar o encoder.
+ * e' tambem o leitor que vai verificar o encoder. **E' a unica tabela do
+ * repositorio que nao vem do `python-barcode`**, porque o `python-barcode` nao
+ * tem Code 93.
  */
 
 /** Os 48 caracteres, na ordem do indice. Os ultimos quatro sao de controle. */
-export const ALFABETO =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%abcd*";
+export const ALFABETO = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%abcd*";
+
+/**
+ * Os 128 caracteres ASCII ja escritos como vao no codigo.
+ *
+ * **E uma tabela cheia de proposito.** Um `""` para os caracteres que estao no
+ * alfabeto obrigaria o encoder a perguntar "o par esta vazio?" em cada
+ * caractere, e esse ramo e' cinco linguagens a escrever cinco versoes que ninguem
+ * testa directamente. Aqui `CONTROLES[ord(c)]` da sempre o que sai, e uma
+ * busca nao diverge entre linguagens.
+ *
+ * **Vem do `decodeExtended` do ZXing, invertido**, e nao de uma escada escrita a
+ * mao — que foi o que o encoder do web tinha, com vinte e quatro dos trinta e
+ * dois caracteres de controlo errados. Um CR saia como o algarismo `0`.
+ */
+export const CONTROLES = [
+  "bU", "aA", "aB", "aC", "aD", "aE",  // 0x00 a 0x05
+  "aF", "aG", "aH", "aI", "aJ", "aK",  // 0x06 a 0x0B
+  "aL", "aM", "aN", "aO", "aP", "aQ",  // 0x0C a 0x11
+  "aR", "aS", "aT", "aU", "aV", "aW",  // 0x12 a 0x17
+  "aX", "aY", "aZ", "bA", "bB", "bC",  // 0x18 a 0x1D
+  "bD", "bE", " ", "cA", "cB", "cC",  // 0x1E a #
+  "$", "%", "cF", "cG", "cH", "cI",  // $ a )
+  "*", "+", "cL", "-", ".", "/",  // * a /
+  "0", "1", "2", "3", "4", "5",  // 0 a 5
+  "6", "7", "8", "9", "cZ", "bF",  // 6 a ;
+  "bG", "bH", "bI", "bJ", "bV", "A",  // < a A
+  "B", "C", "D", "E", "F", "G",  // B a G
+  "H", "I", "J", "K", "L", "M",  // H a M
+  "N", "O", "P", "Q", "R", "S",  // N a S
+  "T", "U", "V", "W", "X", "Y",  // T a Y
+  "Z", "bK", "bL", "bM", "bN", "bO",  // Z a _
+  "bW", "dA", "dB", "dC", "dD", "dE",  // ` a e
+  "dF", "dG", "dH", "dI", "dJ", "dK",  // f a k
+  "dL", "dM", "dN", "dO", "dP", "dQ",  // l a q
+  "dR", "dS", "dT", "dU", "dV", "dW",  // r a w
+  "dX", "dY", "dZ", "bP", "bQ", "bR",  // x a }
+  "bS", "bT",  // ~ a 0x7F
+];
 
 /** Os 48 padroes, em hexadecimal, na mesma ordem do alfabeto. */
 export const PADROES = [
@@ -39,3 +78,6 @@ export const INDICE = new Map(
 
 /** O asterisco, que marca o inicio e o fim. E' o indice 47. */
 export const ASTERISCO = 47;
+
+/** O modulo do checksum: 47, e nao 44. */
+export const MODULO_CHECKSUM = 47;

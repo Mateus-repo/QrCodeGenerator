@@ -254,6 +254,64 @@ todo de posições absolutas, com os botões em `y = 490`, e um `Fill` no painel
 tapava-os. **A skill estava certa no diagnóstico e a meio caminho na receita,**
 que é a razão de se seguir o código e não a receita.
 
+**E uma parte do encoder que os casos de leitura não tocam fica errada sem
+ninguém dar por isso — mesmo com a verificação toda feita e a verde.** O Code 93
+tinha uma escada escrita à mão para os caracteres de controlo, e **vinte e quatro
+dos trinta e dois estavam errados**: o CR saía como o algarismo `0`, e o ZXing
+devolvia um `0` onde estava um CR. O ESC saía como `bV`, que o ZXing lê como 64.
+**Todos os testes estruturais passavam**, porque o código desenha-se certo e o
+checksum bate — o checksum é sobre os índices, e `'0'` é um índice válido.
+
+**Não faltava um teste. Faltava um caso.** Os dez casos de leitura eram
+maiúsculas, minúsculas, símbolos e texto longo, e **não havia um único carácter
+de controlo** — enquanto o próprio ficheiro que os gerava dizia na primeira
+linha que os casos cobriam "caracteres de controlo". **A verificação estava
+presente, correcta, e a medir outra coisa.**
+
+Isto generaliza o que a tabela do Code 39 e a do ITF já ensinaram, e acrescenta
+o pior caso: lá faltava escrever a tabela; aqui **a tabela estava escrita, os
+testes estavam escritos, e os testes não olhavam para a parte errada.**
+
+**A regra que sai daqui: um caso de leitura por ramo da lógica, e não um caso
+por caminho feliz.** O encoder tem cinco caminhos — maiúsculas, minúsculas,
+símbolos, controlos, recusas — e os casos tinham quatro. **Um ramo sem caso é
+um ramo onde um erro custa meses.**
+
+**E a correcção não foi corrigir a escada: foi não haver escada.** Os pares de
+escape passam a vir de uma tabela gerada do `decodeExtended` do ZXing
+*invertido*, e o encoder passou a ser uma busca. **Uma tabela que se resolve por
+busca não diverge entre cinco linguagens, porque a fonte é a tabela** — que é o
+mesmo motivo pelo qual os 48 padrões já eram gerados.
+
+**E inverter uma tabela de descodificação perde a forma canónica, e a
+informação perdida estava no alfabeto.** O `switch` do ZXing diz como
+descodificar cada letra; não diz qual é a forma preferida de escrever. Os cinco
+símbolos da tabela — `%`, `+`, `-`, `.` e `/` — têm escape *e* são valores, e
+`ABC-1234` ia como `ABCcM1234` até isso se corrigir. **A forma directa é a mais
+curta e é a que torna a legenda impressa legível.**
+
+**E as quatro letras de escape nunca podem aparecer a solas nos dados**, que foi o
+erro seguinte: o `decodeExtended` começa com `if (c >= 'a' && c <= 'd')` e não olha
+para o índice, e um `c` solto faz o leitor levantar `FormatException` e **não
+devolver nada**. Os 48 caracteres não são iguais: **43 são valores, 4 são as
+letras de escape, e o último é o asterisco.** A distinção está no formato, e
+escrevê-la à mão é o erro.
+
+**E o sintoma foi "o ZXing não leu nada",** que é o pior de todos: uma tabela
+errada lê-se mal, e esta não se lê. Quando um teste de leitura falha com "não leu
+nada", **a tabela de escapes é a primeira coisa a pôr em causa** — e é melhor
+experimentar um texto com controlos a ver se muda alguma coisa do que ficar a
+olhar para a geometria.
+
+**E a comparação tem de ser pelos bytes, não pelo texto.** O `text` do `zxingcpp`
+escreve os caracteres de controlo em notação mnemónica — o ESC vem `<ESC>`, o BEL
+vem `<BEL>`, e o CR vem cru, que o terminal desenha como mudança de linha. **São
+três formatos para três caracteres da mesma tabela**, e a falha apareceu como
+"leu `<ESC>` em vez de `\x1b`", que parece um erro do encoder e é do teste. **Um
+leitor que devolve duas representações tem uma que é para comparar e outra que é
+para mostrar a uma pessoa**, e adivinhar qual é qual é a maneira de "corrigir" o
+encoder que estava certo.
+
 **E sobre o limite em píxeis do logotipo:** não é um número fixo, depende da
 escala, e a escala muda com o tamanho pedido e com a versão do QR. A mensagem
 tem de dizer a caixa nos dois termos — N×N **módulos** e N×escala **píxeis** —

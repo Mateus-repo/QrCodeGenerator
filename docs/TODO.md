@@ -7,7 +7,7 @@
 
 **Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR, e as
 4 simbologias de códigos de barras em **cinco** stacks — web, Python, Java, C# e
-o `:core` do Kotlin. **1016 testes** (292 site, 283 Python, 236 C#, 161 Java,
+o `:core` do Kotlin. **1056 testes** (292 site, 323 Python, 236 C#, 161 Java,
 44 Kotlin). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
@@ -208,14 +208,49 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       parte dos produtos.
 - [x] **Code 93** — mais compacto e mais seguro que o Code 39. Não é um
       Code 39 melhorado: tem dois dígitos de controlo e uma tabela diferente.
-      > **Feito e verificado pelo ZXing**, 10 de 10 casos lidos.
+      > **Feito e verificado pelo ZXing**, 17 de 17 casos lidos, **em duas
+      > stacks** — web e Python, com paridade de 17/17 módulo a módulo.
       >
-      > A tabela não veio do `python-barcode`, que não o tem — veio do próprio
-      > **ZXing**, o `Code93Reader.java`, e o `gerar-tabela-code93.py` gera o
-      > ficheiro a partir de lá. A razão de ser aceitável é a mesma do Code
-      > 32: não é uma tabela transcrita de uma tabela, é a que o leitor usa.
+      > As duas tabelas não vêm do `python-barcode`, que não tem Code 93 — vêm do
+      > próprio **ZXing**, o `Code93Reader.java`, e o
+      > `spec/gerar-tabelas-code93.py` gera os cinco ficheiros a partir de lá.
+      > **Uma tabela, cinco alvos:** web, Python, Java, Kotlin e C#, que é o que
+      > a `AGENTS.md` pede em vez de cinco transcrições.
       >
-      > Quatro bugs, e **nenhum era de tabela**: os 9 bits lidos de três
+      > **Duas tabelas, e a segunda estava errada.** Os 48 padrões são os nove
+      > módulos de cada carácter. Os **pares de escape** dos caracteres de
+      > controlo são outra coisa, e vêm do `decodeExtended` do mesmo ficheiro —
+      > **invertido**, porque o ZXing sabe descodificar um par e o encoder
+      > precisa do contrário.
+      >
+      > **O `controle()` que o web tinha estava errado em vinte e quatro dos
+      > trinta e dois caracteres de controlo**, e ninguém reparou porque
+      > **nenhum dos dez casos tinha um**. Entre os errados:
+      >
+      > | código | ZXing | o que o web fazia | o que isso codificava |
+      > |---|---|---|---|
+      > | 0, NUL | `bU` | `'0'` | o algarismo zero |
+      > | 6, 7, 8 | `aF`–`aH` | `bC`–`bE` | 29, 30, 31 |
+      > | 9, tab | `aI` | `bW` | 96 |
+      > | 13, CR | `aM` | `'0'` | o algarismo zero |
+      > | 27, ESC | `bA` | `bV` | 64 (`@`) |
+      >
+      > Um CR saía como um `0`, e o ZXing devolvia um `0` onde estava um CR.
+      > **Todos os testes estruturais passavam**, porque o código se desenha
+      > certo e o checksum bate — o checksum é sobre os índices, e `'0'` é um
+      > índice válido.
+      >
+      > **A correcção não foi corrigir a escada: foi não haver escada.** Os
+      > pares vêm da tabela gerada, e o encoder passou a ser uma busca. Uma
+      > tabela que se resolve por busca não diverge entre linguagens, porque a
+      > fonte é a tabela.
+      >
+      > **E os casos de leitura agora têm caracteres de controlo**, que é o que
+      > teria apanhado isto da primeira vez: CR, ESC, BEL, NUL, US, DEL e os 32
+      > em fila. O ficheiro `gerar-code93.mjs` dizia na primeira linha que os
+      > casos cobriam "caracteres de controlo", e não havia um único.
+      >
+      > Três bugs anteriores, e **nenhum era de tabela**: os 9 bits lidos de três
       > maneiras diferentes, o asterisco ausente do código, e a barra de
       > terminação ausente. Todos se desenhavam e nenhum lia.
 - [ ] **Code 11** — telecomunicações. Formato antigo, três dígitos de
