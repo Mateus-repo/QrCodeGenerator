@@ -6,7 +6,7 @@ Os testes do Code 39, do ITF e do Codabar.
 ## Os tres niveis, e porque este ficheiro so cobre um
 
 A `AGENTS.md` descreve a verificacao dos codigos de barras em tres degraus, e a
-ordem **e' a ordem da依赖于 barato para o caro**:
+ordem **e' a ordem do mais barato para o mais caro**:
 
 | | onde | o que apanha |
 |---|---|---|
@@ -895,6 +895,105 @@ def test_code128_nao_tem_guardas():
     descobre a exportar.
     """
     assert code128("ABC123")["guardas"] == []
+
+
+# --- as guardas -------------------------------------------------------------
+
+
+def test_guardas_sao_modulos_e_nao_elementos():
+    """
+    **As guardas sao os indices de modulo, e nao de elemento.**
+
+    Este teste nao existia, e o bug passou por ele durante meses: o Codabar
+    marcava `len(moldura) * medidas["largo"]`, que assume que todos os elementos
+    da moldura sao largos. Nao sao — a moldura do inicio ocupa **23 modulos** e a
+    conta dava 35, e as 12 colunas a mais eram do **primeiro caractere de
+    dados**, pintadas com a altura da moldura.
+
+    E no Codabar isso nao e' cosmete: e' da moldura que o leitor tira a razao
+    larga/estreita, e um dado com a altura da moldura embaralha essa razao.
+
+    Nenhum teste afirmava as guardas, e o `spec/paridade-lineares.py` passa
+    `guardas=None` ao desenho — a lista estava certa para o Code 39 por acaso,
+    porque ai um elemento e' um modulo, e errada no ITF e no Codabar.
+    """
+    codigo = codabar("123456")
+    modulos = codigo["modulos"]
+    guardas = codigo["guardas"]
+
+    # Duas molduras, a de inicio e a de paragem, de 23 modulos cada.
+    assert len(guardas) == 46, guardas
+    assert guardas[:23] == list(range(23)), guardas[:23]
+
+    # **A guarda nunca pode passar do fim da moldura que marca.** Se uma coluna
+    # de dados aparecer na lista, a guarda chegou a dados.
+    assert guardas[22] == 22
+    assert guardas[23] > guardas[22]
+    assert max(guardas) < len(modulos)
+
+
+def test_as_guardas_do_itf_incluem_a_ultima_barra_da_paragem():
+    """
+    **A moldura de paragem do ITF tem 3 elementos e ocupa 4 modulos.**
+
+    `WnN` e' uma barra larga, um espaco estreito e uma barra estreita: 2 + 1 + 1.
+    A conta antiga `len(ITF_PARAGEM)` marcava 3 e deixava a ultima barra da
+    paragem com a altura de uma barra de dados — e e' essa barra que distingue a
+    paragem.
+    """
+    codigo = itf("123456")
+
+    assert codigo["guardas"][:4] == [0, 1, 2, 3]
+    assert codigo["guardas"][-4:] == [46, 47, 48, 49]
+    assert max(codigo["guardas"]) == len(codigo["modulos"]) - 1
+
+
+def test_as_guardas_sao_exatamente_dois_blocos():
+    """
+    **A propriedade que vale para todos, e que nenhum caso isolado prova.**
+
+    As guardas tem de ser dois blocos continuos: um que comeca no modulo 0 e
+    outro que acaba no ultimo modulo. Um terceiro bloco, ou um bloco no meio, so
+    pode ser um caractere de dados marcado por engano — que e' exactamente o que
+    a conta antiga do Codabar fazia, marcando 12 colunas do primeiro digito.
+
+    Cada bloco e' uma moldura, e so ha molduras no inicio e no fim.
+    """
+    for nome, codigo in [
+        ("code39", code39("ABC123")),
+        ("itf", itf("123456")),
+        ("itf14", itf14("1234567890128")),
+        ("codabar", codabar("123456")),
+        ("codabar-largo", codabar("123456", largo=True)),
+    ]:
+        guardas = codigo["guardas"]
+        modulos = codigo["modulos"]
+
+        blocos = _blocos(guardas)
+
+        assert len(blocos) == 2, (
+            f"{nome}: as guardas deviam ser dois blocos, e sao {len(blocos)}: {blocos}"
+        )
+        assert blocos[0][0] == 0, f"{nome}: o primeiro bloco tem de comecar no modulo 0"
+        assert blocos[-1][-1] == len(modulos) - 1, (
+            f"{nome}: o ultimo bloco tem de acabar no ultimo modulo, e acaba em "
+            f"{blocos[-1][-1]} de um codigo com {len(modulos)}"
+        )
+
+
+def _blocos(guardas: list[int]) -> list[tuple[int, int]]:
+    """Os intervalos continuos de uma lista de indices ja ordenada."""
+    if not guardas:
+        return []
+    blocos = []
+    inicio = anterior = guardas[0]
+    for guarda in guardas[1:]:
+        if guarda != anterior + 1:
+            blocos.append((inicio, anterior))
+            inicio = guarda
+        anterior = guarda
+    blocos.append((inicio, anterior))
+    return blocos
 
 
 # --- o registo --------------------------------------------------------------
