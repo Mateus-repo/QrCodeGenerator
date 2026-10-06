@@ -1,0 +1,6 @@
+-encoding
+UTF-8
+-Xlint:all
+-d
+core/build/classes
+@core/build/sources.txt

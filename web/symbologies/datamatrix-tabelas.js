@@ -1,32 +1,34 @@
 /**
- * As tabelas do Data Matrix. **Gerado** por `tests/gerar-tabela-datamatrix.py`.
+ * As tabelas do Data Matrix. **Gerado** por `spec/gerar-tabelas-datamatrix.py`.
  *
- * Duas tabelas, e nenhuma delas é dedutível.
+ * Duas tabelas, e nenhuma delas e' dedutivel.
  *
- * A dos **símbolos** diz, para cada um dos 24 tamanhos quadrados, quantos
- * codewords de dados cabem, quantos de correcção, como a região de dados se
- * divide e onde é o corte em blocos. Uma entrada trocada dá um símbolo que não
- * lê, e o sintoma é uma mensagem que não aponta para a tabela.
+ * A dos **simbolos** diz, para cada um dos 24 tamanhos quadrados, quantos
+ * codewords de dados cabem, quantos de correccao, como a regiao de
+ * dados se divide e onde e' o corte em blocos. Uma entrada trocada da
+ * um simbolo que nao le, e o sintoma e' uma mensagem que nao aponta
+ * para a tabela.
  *
- * A dos **factores** são os 16 polinómios geradores de Reed-Solomon, de grau 5
- * a 68. Tentei derivá-los e não batem: a tabela põe o coeficiente de
- * `x^(n-1)` no primeiro lugar e o cálculo põe o termo de ordem zero. Vão
- * copiados, e a verificação é funcional — um factor errado faz a correcção de
- * erros não bater e o ZXing não devolve o texto ao ler.
+ * A dos **factors** sao os 16 polinomios geradores de Reed-Solomon, de
+ * grau 5 a 68. Nenhum e' dedutivel: o ZXing poe o coeficiente de
+ * `x^(n-1)` no primeiro lugar e o calculo poe o termo de ordem zero.
+ * A verificacao e' funcional — um factor errado faz a correccao de
+ * erros nao bater e o ZXing nao devolve o texto ao ler.
  *
- * Só entram os símbolos **quadrados**. Os rectangulares ficam de fora: a norma
- * também os define e nenhum leitor de bolso os lê.
+ * So entram os simbolos **quadrados**. Os rectangulares ficam de fora: a
+ * norma tambem os define e nenhum leitor de bolso os le.
  *
- * Vêm da implementação de referência do ZXing (Apache 2.0), que é também o
- * leitor que verifica o que este encoder produz. **Não editar à mão.**
+ * Vem da implementacao de referencia do ZXing (Apache 2.0), que e' tambem
+ * o leitor que verifica o que este encoder produz. **Nao editar a mao.**
  */
 
 /**
- * Os símbolos quadrados, por ordem de capacidade.
+ * Os simbolos quadrados, por ordem de capacidade.
  *
- * Cada linha é `[dados, correcção, larguraDaRegião, alturaDaRegião,
- * regiõesDeDados, dadosPorBloco, errosPorBloco]`. Os dois últimos valem `-1`
- * quando o bloco é o símbolo inteiro, que é o caso de quase todos.
+ * Cada linha e' `[dados, correccao, larguraDaRegiao, alturaDaRegiao,
+ * regioesDeDados, dadosPorBloco, errosPorBloco]`. Os dois ultimos valem
+ * `-1` quando o bloco e' o simbolo inteiro, que e' o caso de quase
+ * todos.
  */
 export const SIMBOLOS = [
   [3, 5, 8, 8, 1, -1, -1],
@@ -56,26 +58,20 @@ export const SIMBOLOS = [
 ];
 
 /**
- * O 144x144, que é o único com blocos de tamanho desigual.
- *
- * **Oito** blocos de 156 codewords de dados e **dois** de 155 — 8 × 156 + 2 ×
- * 155 = 1558, a capacidade que a linha de cima declara — mais 62 de correcção
- * em cada.
- *
- * Nota para quem contar, porque é um a menos e não dois: a primeira versão
- * punha 154, e a conta dava 1556 em vez de 1558. Dois codewords num código de
- * 1558, e o leitor acusa isso como corrupção e não como tabela errada.
+ *  * **O 144x144, que e' o unico com blocos de tamanho desigual.** Oito blocos de 156 codewords de dados e dois de 155 — 8 x 156 + 2 x 155 = 1558, a capacidade que a linha de cima declara — mais 62 de correccao em cada.
+ * 
+ * *Nota para quem contar, porque e' um a menos e nao dois:* a primeira versao punha 154, e a conta dava 1556 em vez de 1558. **Dois codewords num codigo de 1558, e o leitor acusa isso como corrupcao e nao como tabela errada** — que e' o pior dos sintomas, porque a mensagem aponta para o leitor.
  */
 export const ULTIMO = {
-  simbolo: 23,
-  blocos: 10,
-  cheios: 8,
-  dadosCheio: 156,
-  dadosUltimos: 155,
-  erros: 62,
+    SIMBOLO: 23,
+    BLOCOS: 10,
+    CHEIOS: 8,
+    DADOSCHEIO: 156,
+    DADOSULTIMOS: 155,
+    ERROS: 62,
 };
 
-/** Os factores de Reed-Solomon, indexados pelo número de codewords de correcção. */
+/** Os factors de Reed-Solomon, indexados pelo numero de codewords. */
 export const FATORES = {
   5: [228, 48, 15, 111, 62],
   7: [23, 68, 144, 134, 240, 92, 254],
