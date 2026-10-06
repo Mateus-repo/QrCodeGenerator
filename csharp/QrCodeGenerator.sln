@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QrCodeGenerator.Tests", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QrCodeGenerator", "desktop-winforms\QrCodeGenerator.csproj", "{18F1AFC4-204C-46A3-A9BC-B9EF859AB272}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QrCodeGenerator.Tools", "tools\QrCodeGenerator.Tools.csproj", "{FE0F5CE3-9EC9-4E75-A19A-DED4C8A5FCD8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{18F1AFC4-204C-46A3-A9BC-B9EF859AB272}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18F1AFC4-204C-46A3-A9BC-B9EF859AB272}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18F1AFC4-204C-46A3-A9BC-B9EF859AB272}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE0F5CE3-9EC9-4E75-A19A-DED4C8A5FCD8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE0F5CE3-9EC9-4E75-A19A-DED4C8A5FCD8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE0F5CE3-9EC9-4E75-A19A-DED4C8A5FCD8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE0F5CE3-9EC9-4E75-A19A-DED4C8A5FCD8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Ferramentas de verificacao. Nao sao app nem biblioteca: existem para o
+    `spec/paridade-csharp.mjs` comparar os modulos do C# com os do Python.
+
+    **Fica num projecto proprio e nao dentro do `core`**, porque o `core` nao tem
+    dependencias e nao tem de as ter: uma ferramenta de comparacao no `main`
+    seria uma dependencia a mais por causa de um ficheiro que so o `spec/`
+    consome. E nao dentro dos testes porque `dotnet run` precisa de um `Main`, e um
+    projecto de testes e' uma biblioteca.
+
+    **Sem `PackageReference` nenhum.** O `System.Text.Json` vem no .NET 8, por
+    isso que ler e escrever JSON aqui nao custa uma dependencia — que e' a mesma
+    razao pela qual o Kotlin fez a ferramenta no `test` com o Gson que ja estava la.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>QrCodeGenerator.Tools</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <!--
+      O `dotnet test` na solucao passa por aqui, e esta ferramenta nao e' um teste.
+      `IsTestProject` a falso evita que o runner a procure e nao encontre nada.
+    -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\core\QrCodeGenerator.Core.csproj" />
+  </ItemGroup>
+
+</Project>

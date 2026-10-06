@@ -114,6 +114,13 @@ DESTINO_KOTLIN = (
     / "core" / "simbologias" / "Tabelas.kt"
 )
 
+#: E o C#, **pela mesma razao e no mesmo gerador**, e nao por ser mais facil.
+#:
+#: **Quatro linguagens, uma extracao.** O .NET ja traz o `System.Text.Json`, e por
+#: isso que a ferramenta de paridade em C# nao precisa de dependencia nenhuma —
+#: o mesmo que o `core` diz de si proprio e que o Kotlin tambem cumpriu.
+DESTINO_CSHARP = RAIZ / "csharp" / "core" / "Simbologias" / "Tabelas.cs"
+
 
 def conferir(nome: str, padroes, n_elementos: int, alfabeto_valido: str) -> None:
     """
@@ -350,6 +357,22 @@ CODE128_PARAGEM = {PARAGEM_CODE128!r}
     DESTINO_KOTLIN.parent.mkdir(parents=True, exist_ok=True)
     DESTINO_KOTLIN.write_text(kotlin, encoding="utf-8")
 
+    csharp = _csharp(
+        alfabeto39=alfabeto,
+        padroes39=padroes39,
+        paragem39=str(T39.EDGE),
+        padroesitf=padroesitf,
+        inicioitf=str(TITF.START),
+        paragemitf=str(TITF.STOP),
+        padroescod=padroescod,
+        inicio_paragem=inicio_paragem,
+        padroes128=padroes128,
+        paragem128=PARAGEM_CODE128,
+    )
+
+    DESTINO_CSHARP.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO_CSHARP.write_text(csharp, encoding="utf-8")
+
     print(f"  Code 39:  {len(padroes39)} caracteres x 9 elementos")
     print(f"  ITF:      {len(padroesitf)} digitos x 5 elementos")
     print(f"  Codabar:  {len(padroescod)} caracteres x 7 elementos")
@@ -357,6 +380,7 @@ CODE128_PARAGEM = {PARAGEM_CODE128!r}
     print(f"  -> {DESTINO.relative_to(RAIZ)}")
     print(f"  -> {DESTINO_JAVA.relative_to(RAIZ)}")
     print(f"  -> {DESTINO_KOTLIN.relative_to(RAIZ)}")
+    print(f"  -> {DESTINO_CSHARP.relative_to(RAIZ)}")
     return 0
 
 
@@ -655,6 +679,164 @@ object Tabelas {{
         CODABAR_MOLDURA[caractere] ?: CODABAR_DADOS[caractere]
 }}
 '''
+
+
+def _csharp(
+    *, alfabeto39, padroes39, paragem39, padroesitf, inicioitf, paragemitf,
+    padroescod, inicio_paragem, padroes128, paragem128,
+) -> str:
+    """
+    O mesmo modulo em C#, a partir da **mesma** extracao.
+
+    **O quarto alvo, e a regra e' a mesma dos outros tres.** Um `string[]`
+    transcrito a mao da lista em Kotlin e' a mesma tabela quatro vezes.
+
+    **O mapa do Codabar sao dois arrays e uma funcao, como no Java, e nao um
+    `Dictionary`.** Nao e' preferencia: o ficheiro gerado e' so dados, e um
+    `Dictionary` inicializado no campo obriga a um construtor que recebe um
+    inicializador de coleccao — que ja nao e' so uma lista de cadeias. No
+    Kotlin, `mapOf` cabe porque o objecto pode ter um inicializador de
+    propriedade sem custo; em C# o mais simples e' o que o Java faz.
+    """
+    def arr(valores, indent="        "):
+        corpo = (",\n").join(f'{indent}    "{v}"' for v in valores)
+        return "new[]\n    {\n" + corpo + f",\n{indent}}}"
+
+    def mapa(dicionario, indent="        "):
+        linhas = (",\n").join(
+            f'{indent}    "{k}", "{v}"' for k, v in sorted(dicionario.items())
+        )
+        return "new[]\n    {\n" + linhas + f",\n{indent}}}"
+
+    return f"""namespace QrCodeGenerator.Core.Simbologias;
+
+/// <summary>
+/// As tabelas dos codigos de barras de uma linha, extraidas do
+/// <c>python-barcode</c>.
+///
+/// <code>python spec/gerar-tabelas-lineares.py</code>
+///
+/// <para><b>NAO EDITE ESTE FICHEIRO A MAO.</b> E' gerado, e a razao esta no
+/// Python: a tabela do Code 39 foi escrita de memoria com doze elementos por
+/// caractere em vez de nove, e a do ITF com dois na moldura de paragem em vez
+/// de tres. Nenhum dos dois foi apanhado por um teste — desenhavam-se com
+/// aspecto de estar certo e o leitor nao lia.</para>
+///
+/// <para><b>Porque um ficheiro so para as tabelas:</b> e' a mesma extracao que
+/// escreve o modulo Python, o Java e o Kotlin, e nao uma transcricao. A regra
+/// deste repositorio e' nao escrever as tabelas de memoria, e a segunda leitura
+/// dessa regra e' nao as escrever quatro vezes.</para>
+///
+/// <para>A notacao de 'N' e 'W': <c>N</c> barra estreita, <c>n</c> espaco
+/// estreito, <c>W</c> barra larga, <c>w</c> espaco largo. <b>Decide a letra, e
+/// nao a caixa:</b> <c>W</c> e <c>w</c> sao largos, <c>N</c> e <c>n</c> estreitos.
+/// A caixa existia so por legibilidade, e ler pela caixa dava ao ITF uma
+/// moldura de inicio com barras largas onde o formato nao tem nenhuma.</para>
+/// </summary>
+public static class Tabelas
+{{
+    /// <summary>O Code 39, por ordem, com o asterisco de inicio e paragem a parte.</summary>
+    public const string COD39_ALFABETO = "{''.join(alfabeto39)}";
+
+    /// <summary>Cada entrada tem quinze caracteres, ja expandidos a 3:1.</summary>
+    public static readonly string[] COD39_PADROES = {arr(padroes39)};
+
+    /// <summary>O asterisco de inicio e de paragem.</summary>
+    public const string COD39_PARAGEM = "{paragem39}";
+
+    /// <summary>O ITF: cinco elementos por digito.</summary>
+    public static readonly string[] ITF_PADROES = {arr(padroesitf)};
+
+    /// <summary>A moldura de inicio do ITF, com quatro elementos estreitos.</summary>
+    public const string ITF_INICIO = "{inicioitf}";
+
+    /// <summary>
+    /// A moldura de paragem do ITF, com <b>tres</b> elementos: barra larga,
+    /// espaco estreito, barra estreita. Sao tres e nao dois — a segunda versao
+    /// tinha dois e o codigo nao lia.
+    /// </summary>
+    public const string ITF_PARAGEM = "{paragemitf}";
+
+    /// <summary>As chaves de dados do Codabar, por ordem alfabetica.</summary>
+    private static readonly string[] CODABAR_CHAVES = {arr(sorted(padroescod))};
+
+    private static readonly string[] CODABAR_VALORES = {arr([padroescod[k] for k in sorted(padroescod)])};
+
+    /// <summary>
+    /// Os quatro caracteres que so podem ser inicio ou paragem.
+    ///
+    /// <para>Vem a parte porque um <c>A</c> no meio dos dados era codificado com
+    /// a tabela de dados e o leitor lia-o como moldura: o codigo passava a parte
+    /// estrutural e partia a meio.</para>
+    /// </summary>
+    private static readonly string[] CODABAR_MOLDURA_CHAVES = {arr(sorted(inicio_paragem))};
+
+    private static readonly string[] CODABAR_MOLDURA_VALORES = {arr([inicio_paragem[k] for k in sorted(inicio_paragem)])};
+
+    /// <summary>
+    /// O Code 128: os 106 primeiros valores, por indice.
+    ///
+    /// <para><b>Cada entrada tem onze caracteres, ja expandidos</b>, e nao os seis
+    /// elementos <c>NnWw</c> dos outros: a cadeia e' a soma das larguras dos seis
+    /// elementos, e as larguras vao de 1 a 4.</para>
+    /// </summary>
+    public static readonly string[] CODE128_PADROES = {arr(padroes128)};
+
+    /// <summary>
+    /// A paragem do Code 128: treze modulos, sete elementos.
+    ///
+    /// <para><b>E' a unica tabela deste ficheiro que nao vem do
+    /// <c>python-barcode</c>, porque a da biblioteca esta truncada</b> — onze
+    /// modulos em vez de treze, sem a barra final. Com a cadeia da biblioteca o
+    /// ZXing devolve "NAO LEU" e com esta devolve a string certa. A barra e' a
+    /// ancora do leitor, porque o Code 128 nao tem barras-guarda como o EAN.</para>
+    /// </summary>
+    public const string CODE128_PARAGEM = "{paragem128}";
+
+    /// <summary>
+    /// Se um caractere so pode ser inicio ou paragem do Codabar.
+    /// </summary>
+    /// <remarks>
+    /// <b>Esta pergunta e' diferente de "qual e' o padrao".</b> <c>Codabar</c>
+    /// responde ao mesmo tempo as duas, e o encoder precisa de saber se um
+    /// <c>A</c> nos dados e' legal — e nao e'. Por isso existe aqui, e nao no
+    /// encoder: <b>a tabela sabe o que e' moldura, e o encoder sabe o que e'
+    /// legal</b>, e misturar as duas coisas e' como um <c>A</c> no meio do texto
+    /// passa a parte estrutural e parte a meio na leitura.
+    /// </remarks>
+    public static bool EhMoldura(string caractere) =>
+        Array.IndexOf(CODABAR_MOLDURA_CHAVES, caractere) >= 0;
+
+    /// <summary>
+    /// O padrao de um caracter do Codabar, ou <c>null</c> se nao existir.
+    ///
+    /// <para><b>A moldura e' procurada primeiro</b>, e <c>A</c>, <c>B</c>, <c>C</c>
+    /// e <c>D</c> devolvem o padrao de moldura — que e' o que esta funcao
+    /// promete: o padrao daquele caractere. Quem recusa um <c>A</c> no meio dos
+    /// dados e' o encoder, e nao esta funcao.</para>
+    /// </summary>
+    public static string? Codabar(string caractere)
+    {{
+        for (int i = 0; i < CODABAR_MOLDURA_CHAVES.Length; i++)
+        {{
+            if (CODABAR_MOLDURA_CHAVES[i] == caractere)
+            {{
+                return CODABAR_MOLDURA_VALORES[i];
+            }}
+        }}
+
+        for (int i = 0; i < CODABAR_CHAVES.Length; i++)
+        {{
+            if (CODABAR_CHAVES[i] == caractere)
+            {{
+                return CODABAR_VALORES[i];
+            }}
+        }}
+
+        return null;
+    }}
+}}
+"""
 
 
 if __name__ == "__main__":

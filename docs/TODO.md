@@ -5,8 +5,10 @@
 >
 > Ver `IDEIA.md` para o raciocínio e `COMO-USAR.md` para usar o que já existe.
 
-**Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR + 4 simbologias
-de codigos de barras, 781 testes (202 Python, 188 C#, 120 Java, 271 site). A
+**Estado:** 4 stacks completas (web, C#, Java, Python), 11 tipos de QR, e as
+4 simbologias de códigos de barras em **cinco** stacks — web, Python, Java, C# e
+o `:core` do Kotlin. **1013 testes** (292 site, 283 Python, 233 C#, 161 Java,
+44 Kotlin). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
@@ -622,7 +624,7 @@ o ZXing a ler o resultado.
 ```
 1. java/       → ✅ tabelas geradas, Code 39 / ITF-14 / Codabar / Code 128
 2. kotlin/     → core JVM com as 4 simbologias, depois a app Android
-3. csharp/     → core, e depois a app WinForms
+3. csharp/     → core com as 4 simbologias, e depois a app WinForms
 4. python/     → ✅ é a implementação de referência; falta a CLI
 5. go/         ⬜ pasta e README prontos; código por fazer, e por último
 ```
@@ -639,7 +641,7 @@ o ZXing a ler o resultado.
 ```
 1. python/qrcode_core   → ✅ 11 tipos prontos, e a spec que eles geram
 2. web/                 → ✅ PWA + encoder próprio + ficheiro único
-3. csharp/              → ✅ core extraído, 7 bugs corrigidos, PIX
+3. csharp/              → ✅ core + 4 simbologias de barras, 7 bugs corrigidos, PIX
 4. java/                → ✅ core + app + CLI + jpackage, 120 testes
 5. kotlin/android       → Compose + scan de câmara
 6. extras               → ✅ 7 simbologias 1D (ver BLOQUEIO 6) · falta 2D e PDF
