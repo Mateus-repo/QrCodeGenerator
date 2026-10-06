@@ -43,7 +43,7 @@ import java.util.Map;
  *
  * <h2>A notacao de N e W</h2>
  *
- * <p><strong>Maiuscula e' largo, minuscula e' estreito â€” e nao barra e
+ * <p><strong>Maiuscula e' largo, minuscula e' estreito â— e nao barra e
  * espaco.</strong> Sao duas perguntas independentes. E' aqui que a confusao
  * entre as duas coisas custa caro: ler a largura pela caixa da letra da ao
  * {@code w} a largura de um {@code n}, e o codigo sai sem um unico espaco largo.
@@ -59,8 +59,8 @@ public final class Lineares {
      * Acrescenta o espaco que separa este elemento do proximo.
      *
      * <p><strong>E' a funcao mais importante deste ficheiro.</strong> Sem ela,
-     * o caracter de inicio â€” que acaba em barra â€” encosta ao primeiro caracter de
-     * dados â€” que comeca em barra â€” e as duas fundem-se numa barra larga a mais.
+     * o caracter de inicio â— que acaba em barra â— encosta ao primeiro caracter de
+     * dados â— que comeca em barra â— e as duas fundem-se numa barra larga a mais.
      */
     private static void fechar(List<Boolean> modulos, int n) {
         for (int i = 0; i < n; i++) {
@@ -116,7 +116,7 @@ public final class Lineares {
      *
      * <p><strong>Existe porque {@code List.addAll(int[])} nao compila em Java.</strong>
      * Um {@code int[]} nao e' um {@code Collection}, e o compilador da erro em
-     * vez de fazer a caixa sozinho â€” o que e' o comportamento certo, porque
+     * vez de fazer a caixa sozinho â— o que e' o comportamento certo, porque
      * converter um array de {@code int} num {@code Collection} faz
      * {@code Integer} em cada elemento, e o custo aparece no que ninguem mede.
      */
@@ -176,7 +176,7 @@ public final class Lineares {
      * O digito de controlo que torna a soma multipla de 43 e' a regra completa do
      * formato, e a implementacao de referencia nao a cumpre: poe a letra do resto
      * da divisao. Os dois coexistiram durante anos em leitores reais e o ZXing
-     * aceita os dois â€” e um teste que afirmasse a propriedade do multiplo de 43
+     * aceita os dois â— e um teste que afirmasse a propriedade do multiplo de 43
      * estaria a testar a norma, nao o codigo.
      *
      * <p><strong>O texto sobe a maiusculas, e nao e' opcional.</strong> O Code 39
@@ -276,7 +276,7 @@ public final class Lineares {
 
     // --- ITF ----------------------------------------------------------------
 
-    /** Estreito 1, largo 2 â€” e nao 3, como o Code 39. */
+    /** Estreito 1, largo 2 â— e nao 3, como o Code 39. */
     private static final int[] ITF_MEDIDAS = {1, 2};
 
     /**
@@ -309,8 +309,8 @@ public final class Lineares {
      *
      * <p><strong>A direccao dos pesos nao se nota aqui, e vale a pena dizer
      * porquÃª.</strong> A GS1 pesa o GTIN-14 com 3, 1, 3, 1 a partir da
-     * esquerda, e o EAN pesa a partir da direita. Com treze digitos â€” e o
-     * ITF-14 tem sempre treze â€” as duas direccoes dao a mesma soma, porque com
+     * esquerda, e o EAN pesa a partir da direita. Com treze digitos â— e o
+     * ITF-14 tem sempre treze â— as duas direccoes dao a mesma soma, porque com
      * um numero impar as duas comecam com o peso 3.
      *
      * <p><strong>A primeira versao deste comentario afirmava que a diferenca
@@ -390,7 +390,7 @@ public final class Lineares {
             }
         }
 
-        // A moldura de paragem, com os seus **tres** elementos â€” e tambem guarda.
+        // A moldura de paragem, com os seus **tres** elementos â— e tambem guarda.
         inicio = modulos.size();
         modulos.addAll(modulosDe(Tabelas.ITF_PARAGEM, ITF_MEDIDAS));
         acrescentarFaixa(guardas, inicio, modulos.size());
@@ -412,7 +412,7 @@ public final class Lineares {
     // --- Codabar ------------------------------------------------------------
 
     /**
-     * O Codabar. <strong>Estreito 2, largo 5</strong> â€” e nao 3:1, que tem o
+     * O Codabar. <strong>Estreito 2, largo 5</strong> â— e nao 3:1, que tem o
      * aspecto certo e nao le.
      */
     private static final int[] CODABAR_NORMAL = {2, 5};
@@ -430,7 +430,7 @@ public final class Lineares {
      * e' o texto.
      *
      * <p>A primeira versao desta funcao pegava na cadeia toda e tirava as
-     * pontas â€” {@code codabar("A123456A")} â€” que e' a leitura mais natural e
+     * pontas â— {@code codabar("A123456A")} â— que e' a leitura mais natural e
      * <strong>esta errada</strong>. A razao e' a {@code AGENTS.md}: duas
      * implementacoes do mesmo campo com semanticas diferentes sao um bug de
      * paridade, <strong>mesmo que o teste de cada uma passe</strong>, porque cada
@@ -439,7 +439,7 @@ public final class Lineares {
      * <p><strong>Os caracteres de moldura nao podem estar nos dados.</strong> E' a
      * mesma razao pela qual eles sao opcoes: {@code A}, {@code B}, {@code C} e
      * {@code D} so existem nas pontas, e um {@code A} no meio do texto era
-     * codificado com a tabela de dados e o leitor lia-o como moldura â€” o codigo
+     * codificado com a tabela de dados e o leitor lia-o como moldura â— o codigo
      * passava a parte estrutural e partia a meio.
      */
     public static CodigoDeBarras codabar(String valor) {
@@ -491,7 +491,7 @@ public final class Lineares {
         acrescentarFaixa(guardas, from, modulos.size());
         fechar(modulos, espaco);
 
-        // Os dados, cada um seguido do seu intervalo â€” inclusive o ultimo, que
+        // Os dados, cada um seguido do seu intervalo â— inclusive o ultimo, que
         // e' o que o separa da moldura de paragem.
         for (int i = 0; i < dados.length(); i++) {
             modulos.addAll(modulosDe(Tabelas.codabar(String.valueOf(dados.charAt(i))), medidas));
