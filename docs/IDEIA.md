@@ -340,12 +340,26 @@ Estado atual:
 | Java | ✅ 119 testes | ⚠️ ZXing gera e lê (mesma biblioteca) | `java/build.sh test` |
 | Web | ✅ 54 testes | ✅ 29 matrizes, zxing-cpp | `node --test` + `descodificar.py` |
 | Kotlin | ⬜ | ⬜ | — |
+| Go | ⬜ | ⬜ | — |
 
 A ressalva em Java: o `RenderTests` gera e lê com o mesmo ZXing, o que é mais
 fraco — um erro comum aos dois passava despercebido. Para compensar, o PNG
 gerado pela CLI do Java foi verificado à mão com o `zxing-cpp` do Python, e
 confirma que devolve o payload. Quando houver CI, o mesmo ficheiro de spec pode
 servir de teste de integração.
+
+**O Go entra por último, e é a única em que a escolha da linguagem é um
+trade-off e não um dado.** Numa app que se instala, a linguagem é uma decisão
+de plataforma — o que o utilizador já tem. Num programa que se distribui, é uma
+decisão de distribuição: um binário só sem runtime chega-se mais longe do que
+um ficheiro que precisa do runtime instalado. **O Go compensa aqui pela
+distribuição e não pela ergonomia**, e é por isso que é a sexta: só depois de a
+spec estar madura é que a sexta implementação pode limitar-se a cumpri-la.
+
+O que fica menos óbvio: o Go **não tem** `char`, e `len(s)` conta bytes. Todo o
+código que toca em texto ASCII — que é o código de barras, quase todo — tem de
+converter ou de iterar bytes. Num repositório cuja regra é *nada escrito de
+memória*, isso é mais um sítio onde um erro não dá erro nenhum.
 
 Falta um `spec/verificar-paridade.sh` que corra as stacks e imprima uma tabela
 ✅/❌ por vetor. Por agora corre-se cada uma à parte.

@@ -39,8 +39,17 @@ csharp/      .NET 8, sem dependências
 java/        JDK 21 + JavaFX, sem Maven nem Gradle
 python/      a implementação de referência
 web/         HTML/CSS/JS sem framework, sem build, sem dependências
-kotlin/      ainda por fazer
+kotlin/      core JVM + app Android, com o Gradle wrapper versionado
+go/          a fazer, e por último
 ```
+
+**A app em Go é a última, e é uma decisão de ordem e não de dificuldade.**
+O Go não é uma das linguagens mais adequadas a isto — não tem `char` nem
+aritmética de `String`, e cada cadeia é uma questão de UTF-8 — mas compila
+para um binário só, sem runtime, que é o que se quer de um programa para
+distribuir. A ordem é: **Java → mobile → C# → Python → e Go no fim**, porque
+cada uma aprovecha o que a anterior deixou feito, e porque o `go/` só compensa
+depois de haver uma spec madura que não dê para improvisar.
 
 ## Regras do repositório
 
