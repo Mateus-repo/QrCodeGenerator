@@ -233,17 +233,28 @@ completa. **Ao acrescentar um módulo, acrescentá-lo à lista**, ou o site não
 funciona offline.
 
 **E um filtro de nome de classe em inglês salta os testes em português, sem
-aviso nenhum.** O JUnit descobre `.*Tests?$` por omissão — `Test` ou `Tests` — e
-uma classe chamada `SimbologiasTestes` **não bate**: não é descoberta, não corre,
-e o build passa. Não há aviso, não há falha, o número de testes é que é menor e
-ninguém compara. O `SimbologiasTestes.java` esteve compilado no directório de
+aviso nenhum.** O `SimbologiasTestes.java` esteve compilado no directório de
 classes durante uma sessão inteira sem correr uma vez, e foi por isso que os
 três bugs que ele apanha lá estavam: a largura do ITF decidida pela caixa da
 letra, o Code 128 a contar a corrida pelo índice errado, e as guardas a marcar
-colunas de dados. A `AGENTS.md` manda que os testes se chamem em português e o
-JUnit só conhece o inglês, por isso o `build.sh` diz as duas:
+colunas de dados.
+
+**Onde isso acontece é no `java/build.sh`, e só lá.** O console launcher do JUnit,
+com `--select-package`, filtra os nomes por `.*Tests?$` — `Test` ou `Tests` — e
+uma classe chamada `SimbologiasTestes` **não bate**: não é descoberta, não corre,
+e o build passa. Não há aviso, não há falha, o número de testes é que é menor e
+ninguém compara.
+
+**O `gradlew :core:test` não sofre disto**, porque o Gradle procura por métodos de
+teste e não pelo nome da classe — medido, os 37 testes do `SimbologiasTestes`
+correm em Kotlin sem nenhum filtro. **É por isso que o filtro se põe no
+`build.sh` e não em lado nenhum:** a regra é do launcher, e uma regra escrita
+onde o problema não está manda o próximo procurar no sítio errado.
+
+A `AGENTS.md` manda que os testes se chamem em português, por isso o `build.sh`
+passa a dizer as duas formas:
 `--include-classname='.*(Test|Tests|Teste|Testes)$'`. **Ao acrescentar um ficheiro
-de testes, confirmar que o número de testes subiu.**
+de testes em Java, confirmar que o número de testes subiu.**
 
 **E um comentário que descreve a regra ao contrário é pior do que nenhum
 comentário.** O dígito de controlo do Code 39 chegou a parecer um bug em três

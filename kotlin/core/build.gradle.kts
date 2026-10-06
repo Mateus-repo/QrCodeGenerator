@@ -86,3 +86,36 @@ tasks.test {
         showStandardStreams = true
     }
 }
+
+
+/**
+ * A ponta de Kotlin da comparacao de modulos.
+ *
+ *     gradlew :core:runLinear < casos.json
+ *
+ * Le os casos em JSON de stdin e devolve os modulos em JSON, para o
+ * `spec/paridade-kotlin.mjs` comparar com o Python sem interpretar nada pelo
+ * caminho. E' o mesmo contrato que o `java/build.sh run-linear`.
+ *
+ * **Vive no classpath dos testes, e nao do `main`.** A ferramenta e' um
+ * verificador: nao ha razao para o `core` saber o que e' JSON, e o Gson ja era
+ * dependencia de teste para a spec. Um `main` de producao para um script de
+ * comparacao seria uma dependencia a mais no `main` por causa de um ficheiro
+ * que so o `spec/` consome.
+ *
+ * **O `standardInput` e' explicito** porque o `JavaExec` nao o herda por omissao
+ * — e sem esta linha o Gradle le do seu proprio stdin, a toolchain diz que o
+ * daemon nao tem terminal, e acomparacao fica sem casos com um erro que fala de
+ * rede. E' o mesmo disfarce do toolchain do daemon: a falha aponta para o
+ * sitio errado.
+ */
+tasks.register<JavaExec>("runLinear") {
+    group = "verification"
+    description = "Casos de códigos de barras em JSON (stdin) -> módulos em JSON (stdout)"
+
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.qrcodegen.tools.ParidadeLinearesKt")
+
+    standardInput = System.`in`
+}

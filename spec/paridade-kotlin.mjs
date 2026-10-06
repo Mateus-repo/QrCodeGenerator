@@ -1,39 +1,27 @@
-// Compara os modulos do Java com os do Python, para cada codigo de barras.
+// Compara os modulos do Kotlin com os do Python, para cada codigo de barras.
 //
-//     node spec/paridade-java.mjs
+//     node spec/paridade-kotlin.mjs
 //
 // **Esta e' a comparacao que decide, e nao uma conta de modulos.** Duas
 // implementacoes podem ter o comprimento certo e a silhueta errada, e so a
-// comparacao dos modulos as distingue — que e' o que a AGENTS.md diz quando
-// fala do logotipo do FieldQR: "o QR continuava a ler e nenhum teste falhou,
-// porque o codigo estava certo".
+// comparacao dos modulos as distingue.
 //
 // **E nao ha um "quase".** Ou os modulos sao iguais, ou um dos dois esta errado
 // e nao se sabe qual — e e' por isso que a lista de casos vem de uma fonte so:
 // o `spec/verificar-lineares.py`, que ja tem os casos do ZXing.
 //
-// **O que este script nao faz:** mandar o ZXing ler o resultado do Java. O ZXing
-// le a matriz, e a matriz e' o que se compara aqui; acrescentar a leitura seria
-// verificar duas vezes a mesma coisa e dar a ilusao de mais cobertura.
+// **Os casos sao os mesmos que o `spec/paridade-java.mjs` usa, e nao uma copia
+// escrita a mao.** Duas listas de casos divergem em silencio, e cada uma fica
+// com os casos que a sua stack passou — que e' o mecanismo exacto que deixou o
+// Code 128 do Java sem os casos de troca de conjunto. Por isso que vem de um
+// modulo com a lista, e nao de um array repetido.
+//
+// **O que este script nao faz:** mandar o ZXing ler o resultado do Kotlin. O
+// ZXing le a matriz, e a matriz e' o que se compara aqui; a leitura esta nos
+// testes do Kotlin, onde e' o encoder que desenha.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { CASOS_BARRAS } from './casos-barras.mjs';
-
-// --- os casos, que vem de uma fonte so ---------------------------------------
-
-/**
- * A lista esta em `casos-barras.mjs`, e e' a mesma que o
- * `paridade-kotlin.mjs` usa.
- *
- * **Nao ha uma lista por script.** Duas listas divergem em silencio, e cada uma
- * fica com os casos que a sua stack passou — que e' como o Code 128 do Java
- * ficou sem os casos de troca de conjunto: estavam escritos a mao aqui e nao
- * estavam na lista do outro. Com uma so, acrescentar um caso e' um caso para
- * todas as stacks.
- *
- * Os casos vem do `spec/verificar-lineares.py`, que ja tem os que o ZXing le.
- */
 
 // --- as pontas --------------------------------------------------------------
 
@@ -70,25 +58,33 @@ print(json.dumps(saida))
 `;
 
 /**
- * Corre o Java e le os modulos em JSON.
+ * Corre o Kotlin e le os modulos em JSON.
  *
  * **Os casos vao por stdin, nunca por argumento.** Passar JSON num `argv` e'
  * fragil e ja falhou: o Git Bash faz expansao de chaves em `{"inicio":"B"}` e
  * parte o array ao meio, porque a virgula dentro das chaves parece uma lista.
- * Por stdin nao ha shell a mexer no meio. O `build.sh run-linear` compila o
- * core e as ferramentas e passa o stdin tal e qual ao `java`.
+ *
+ * **E o `--quiet` nao e' cosmetica.** Sem ele o Gradle escreve o
+ * `BUILD SUCCESSFUL` no mesmo stdout onde a ferramenta escreve o JSON, e o
+ * `JSON.parse` falha numa linha que comeca por `B`. A falha aparece em Node e
+ * a causa e' um `echo` do Gradle — o mesmo desvio que na stack Java, onde o
+ * `==>` do core entrava na resposta.
  */
-function modulosDoJava(casos) {
-  // O Git Bash e' o caminho no Windows; nos outros Sistemas o `bash` esta no
-  // PATH. Tentar os dois evita a mensagem "o Java nao correu" num sitio em que
-  // o Java esta bem instalado.
-  const bash = process.platform === 'win32' &&
-    existsSync('C:\\Program Files\\Git\\bin\\bash.exe')
-    ? 'C:\\Program Files\\Git\\bin\\bash.exe'
-    : 'bash';
+function modulosDoKotlin(casos) {
+  const ehWindows = process.platform === 'win32';
 
-  const resultado = spawnSync(bash, ['build.sh', 'run-linear'], {
-    cwd: 'java',
+  // **O `gradlew.bat` passa por `cmd.exe` em vez de `shell: true`.** Com
+  // `shell: true` o Node concatena os argumentos sem os escapar e avisa com
+  // `DEP0190` — e o aviso esta certo em principio, ainda que aqui os argumentos
+  // sejam constantes. Passar pelo `cmd.exe` explicitamente faz o mesmo sem o
+  // aviso e sem a concatenacao.
+  const [comando, argumentos] = ehWindows
+    ? [process.env.ComSpec || 'cmd.exe',
+       ['/c', 'gradlew.bat', ':core:runLinear', '--console=plain', '--quiet']]
+    : ['./gradlew', [':core:runLinear', '--console=plain', '--quiet']];
+
+  const resultado = spawnSync(comando, argumentos, {
+    cwd: 'kotlin',
     input: JSON.stringify(casos),
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
@@ -96,10 +92,24 @@ function modulosDoJava(casos) {
 
   if (resultado.status !== 0) {
     console.error(resultado.stderr || resultado.stdout);
-    throw new Error('o Java nao correu');
+    throw new Error('o Kotlin nao correu');
   }
 
-  return JSON.parse(resultado.stdout);
+  // O `--quiet` reduz a saida a uma linha, mas o Gradle pode acrescentar um
+  // aviso em qualquer versao futura. Em vez de asumir, procura a ultima linha
+  // que parece JSON — e se nao houver nenhuma, o erro diz o que veio.
+  const linha = resultado.stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('['))
+    .pop();
+
+  if (!linha) {
+    console.error(resultado.stdout);
+    throw new Error('o Kotlin nao devolveu JSON nenhum');
+  }
+
+  return JSON.parse(linha);
 }
 
 function modulosDoPython(casos) {
@@ -122,11 +132,11 @@ function modulosDoPython(casos) {
 /**
  * Diz onde dois casos divergem, e porque.
  *
- * **A comprimento vem primeiro, e o motivo nao e' o mesmo que o motivo do
+ * **O comprimento vem primeiro, e o motivo nao e' o mesmo que o motivo do
  * modulo.** Um comprimento diferente e' uma tabela ou uma moldura diferente — um
- * erro de estrutura. Um modulo diferente e' a mesma estrutura com outro conteudo
- * — um erro de dado. Confundir os dois faz com que um erro de dado se leia
- * como um erro de estrutura, e a busca pelo culpado vai ao sitio errado.
+ * erro de estrutura. Um modulo diferente e' a mesma estrutura com outro
+ * conteudo — um erro de dado. Confundir os dois faz com que um erro de dado se
+ * leia como um erro de estrutura.
  */
 function divergencia(a, b) {
   if (a.modulos.length !== b.modulos.length) {
@@ -135,33 +145,33 @@ function divergencia(a, b) {
 
   for (let i = 0; i < a.modulos.length; i++) {
     if (a.modulos[i] !== b.modulos[i]) {
-      return `DIVERGE (modulo ${i}: python ${a.modulos[i]}, java ${b.modulos[i]})`;
+      return `DIVERGE (modulo ${i}: python ${a.modulos[i]}, kotlin ${b.modulos[i]})`;
     }
   }
 
   if (a.legenda !== b.legenda) {
-    return `DIVERGE (legenda: python "${a.legenda}", java "${b.legenda}")`;
+    return `DIVERGE (legenda: python "${a.legenda}", kotlin "${b.legenda}")`;
   }
 
   if (JSON.stringify(a.guardas) !== JSON.stringify(b.guardas)) {
     return `DIVERGE (guardas: python ${JSON.stringify(a.guardas)}, `
-      + `java ${JSON.stringify(b.guardas)})`;
+      + `kotlin ${JSON.stringify(b.guardas)})`;
   }
 
   return null;
 }
 
-const casos = CASOS_BARRAS;
+const casos = CASOS_BARRAS.map(([tipo, texto, opcoes]) => [tipo, texto, opcoes]);
 
 console.log(`${'caso'.padEnd(36)}${'modulos'.padStart(9)}  estado`);
 console.log('-'.repeat(72));
 
 const doPython = modulosDoPython(casos);
-const doJava = modulosDoJava(casos);
+const doKotlin = modulosDoKotlin(casos);
 
-if (doPython.length !== doJava.length || doPython.length !== casos.length) {
+if (doPython.length !== doKotlin.length || doPython.length !== casos.length) {
   console.error(`numero de resultados diferente: `
-    + `${casos.length} casos, ${doPython.length} do Python, ${doJava.length} do Java`);
+    + `${casos.length} casos, ${doPython.length} do Python, ${doKotlin.length} do Kotlin`);
   process.exit(1);
 }
 
@@ -171,7 +181,7 @@ for (let i = 0; i < casos.length; i++) {
   const [tipo, texto] = casos[i];
   const rotulo = `${tipo} ${texto}`.slice(0, 35);
 
-  const problema = divergencia(doPython[i], doJava[i]);
+  const problema = divergencia(doPython[i], doKotlin[i]);
   const modulos = String(doPython[i].modulos.length).padStart(9);
 
   if (problema) {
@@ -197,4 +207,4 @@ if (problemas) {
   process.exit(1);
 }
 
-console.log('Java e Python dao os mesmos modulos.');
+console.log('Kotlin e Python dao os mesmos modulos.');

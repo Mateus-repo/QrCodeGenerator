@@ -10,12 +10,12 @@ de codigos de barras, 781 testes (202 Python, 188 C#, 120 Java, 271 site). A
 spec do PIX está validada contra o exemplo oficial do Banco Central e os 7
 bugs do `QrService.cs` original estão corrigidos com teste de regressão.
 
-O que bloqueia: **o Kotlin e o Go ainda não têm as simbologias de barras**, e o
-Go está em branco — tem a pasta e o README, mas zero linhas de Go. É o
-último da fila, por decisão e não por dificuldade. A ordem de propagação é
-**Java → mobile (Kotlin) → C# → Python → e Go no fim**, porque cada uma
-aproveita o que a anterior deixou feito. Ver «Simbologias nas outras stacks»
-abaixo.
+O que bloqueia: **o Go ainda não tem as simbologias de barras**, e o Go está
+em branco — tem a pasta e o README, mas zero linhas de Go. É o último da
+fila, por decisão e não por dificuldade. A ordem de propagação foi **Java →
+mobile (Kotlin) → C# → Python → e Go no fim**, e **o Kotlin já está feito**:
+as quatro simbologias com tabelas do mesmo gerador, e 37 casos lidos pelo
+ZXing. Ver «Simbologias nas outras stacks» abaixo.
 
 ---
 
@@ -621,7 +621,7 @@ o ZXing a ler o resultado.
 
 ```
 1. java/       → ✅ tabelas geradas, Code 39 / ITF-14 / Codabar / Code 128
-2. kotlin/     → core JVM, e depois a app Android
+2. kotlin/     → core JVM com as 4 simbologias, depois a app Android
 3. csharp/     → core, e depois a app WinForms
 4. python/     → ✅ é a implementação de referência; falta a CLI
 5. go/         ⬜ pasta e README prontos; código por fazer, e por último
@@ -705,10 +705,22 @@ Coisas que ficaram por fazer e que se notam:
       > um `o` com um acento por cima, pelo que o NFD não o decompõe. As duas
       > cópias davam o mesmo resultado errado — **e é por isso que um teste de
       > paridade não o apanha**.
-- [ ] **Kotlin/Android: o core existe, a app não.** É a última stack, e
-      o que está feito é o `:core` — Kotlin/JVM puro, os onze tipos de
-      payload e o PIX, a passar os 34 vectores de `spec/vectors.json` byte a
-      byte com `gradlew :core:test`.
+- [ ] **Kotlin/Android: o core existe e tem as simbologias, a app não.**
+      É a última stack, e o que está feito é o `:core` — Kotlin/JVM puro,
+      os onze tipos de payload, o PIX e **as quatro simbologias de barras**, a
+      passar os vectores de `spec/vectors.json` byte a byte com
+      `gradlew :core:test`.
+      > **As simbologias do Kotlin foram o terceiro alvo do mesmo gerador.**
+      > `spec/gerar-tabelas-lineares.py` escreve o Python, o Java e o Kotlin a
+      > partir da **mesma extracção**, e não há uma terceira transcrição das
+      > tabelas. O que muda entre os alvos é a sintaxe do ficheiro gerado: o
+      > `mapOf` do Codabar em vez dos dois arrays paralelos que o Java precisa.
+      >
+      > **Os 17 casos do `spec/paridade-kotlin.mjs` batem com o Python**, e a
+      > lista vive em `spec/casos-barras.mjs`, partilhada com o
+      > `paridade-java.mjs`. **Duas listas de casos divergem em silêncio**, e cada
+      > uma fica com os casos que a sua stack passou — foi assim que o Code 128
+      > do Java ficou sem os casos de troca de conjunto.
       > **O core é um módulo à parte, e não `Payloads.kt` dentro de
       > `app/`.** Era o caminho curto para um ficheiro e o caminho longo para
       > não ter testes: dentro do módulo Android, um teste de payload só corre

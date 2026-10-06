@@ -92,6 +92,28 @@ DESTINO_JAVA = (
     / "core" / "simbologias" / "Tabelas.java"
 )
 
+#: E o mesmo para o Kotlin, **pela mesma razao e no mesmo gerador**.
+#:
+#: **Tres linguagens, uma extracao.** A cada stack que entra acrescenta-se um
+#: alvo ao gerador, e nunca uma transcricao. O Kotlin foi o terceiro porque a
+#: ordem de propagacao e' Java, depois a mobile, depois o C# — e nao porque
+#: fosse o mais facil: o que muda de um alvo para o outro e' a sintaxe do
+#: ficheiro gerado, e nada mais.
+#:
+#: O que muda entre os tres alvos, e so isto:
+#:
+#:   - a forma de escrever uma lista: `arrayOf("a", "b")`
+#:   - a forma de escrever um mapa: `mapOf("A" to "NwW")`
+#:   - o `package` e o nome do objecto
+#:
+#: **O que nao muda entre os tres, e e' o que interessa:** a extracao, os
+#: valores, e a unica excepcao — a paragem do Code 128, que vem escrita neste
+#: script e nao da biblioteca.
+DESTINO_KOTLIN = (
+    RAIZ / "kotlin" / "core" / "src" / "main" / "kotlin" / "com" / "qrcodegen"
+    / "core" / "simbologias" / "Tabelas.kt"
+)
+
 
 def conferir(nome: str, padroes, n_elementos: int, alfabeto_valido: str) -> None:
     """
@@ -309,8 +331,24 @@ CODE128_PARAGEM = {PARAGEM_CODE128!r}
     DESTINO.parent.mkdir(parents=True, exist_ok=True)
     DESTINO.write_text(conteudo, encoding="utf-8")
 
+    kotlin = _kotlin(
+        alfabeto39=alfabeto,
+        padroes39=padroes39,
+        paragem39=str(T39.EDGE),
+        padroesitf=padroesitf,
+        inicioitf=str(TITF.START),
+        paragemitf=str(TITF.STOP),
+        padroescod=padroescod,
+        inicio_paragem=inicio_paragem,
+        padroes128=padroes128,
+        paragem128=PARAGEM_CODE128,
+    )
+
     DESTINO_JAVA.parent.mkdir(parents=True, exist_ok=True)
     DESTINO_JAVA.write_text(java, encoding="utf-8")
+
+    DESTINO_KOTLIN.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO_KOTLIN.write_text(kotlin, encoding="utf-8")
 
     print(f"  Code 39:  {len(padroes39)} caracteres x 9 elementos")
     print(f"  ITF:      {len(padroesitf)} digitos x 5 elementos")
@@ -318,6 +356,7 @@ CODE128_PARAGEM = {PARAGEM_CODE128!r}
     print(f"  Code 128: {len(padroes128)} padroes x 6 elementos + paragem")
     print(f"  -> {DESTINO.relative_to(RAIZ)}")
     print(f"  -> {DESTINO_JAVA.relative_to(RAIZ)}")
+    print(f"  -> {DESTINO_KOTLIN.relative_to(RAIZ)}")
     return 0
 
 
@@ -480,6 +519,140 @@ public final class Tabelas {{
     /** As medidas do Codabar nas duas variantes de espacado. */
     public static final int[] CODABAR_ESTREITO = {{2, 2}};
     public static final int[] CODABAR_LARGO = {{2, 2}};
+}}
+'''
+
+
+def _kotlin(
+    *, alfabeto39, padroes39, paragem39, padroesitf, inicioitf, paragemitf,
+    padroescod, inicio_paragem, padroes128, paragem128,
+) -> str:
+    """
+    O mesmo modulo em Kotlin, a partir da **mesma** extracao.
+
+    **O terceiro alvo, e a regra e' a mesma dos outros dois:** acrescenta-se um
+    gerador, nunca uma transcricao. Um `arrayOf` copiado a mao da lista em Java e'
+    a mesma tabela tres vezes, e diverge no mesmo silencio — e agora sem nenhum
+    teste que compare, porque cada stack so conhece a sua.
+
+    **O que e' idiomatico no Kotlin e o que fica igual.** O mapa do Codabar e'
+    um `mapOf` com `to`, que e' o que a linguagem tem, em vez dos dois arrays
+    paralelos e a funcao que os percorre que o Java precisa. **A tabela e' a
+    mesma; a forma de a escrever e' a da linguagem.** Sao coisas differentes, e
+    e' por isso que o Kotlin e' um alvo do gerador e nao uma traducao do Java.
+    """
+    def lista(valores, indent="        "):
+        corpo = (",\n").join(f'{indent}"{v}"' for v in valores)
+        return "arrayOf(\n" + corpo + f",\n{indent[:-4]})"
+
+    def mapa(dicionario, indent="        "):
+        linhas = (",\n").join(
+            f'{indent}"{k}" to "{v}"' for k, v in sorted(dicionario.items())
+        )
+        return "mapOf(\n" + linhas + f",\n{indent[:-4]})"
+
+    return f'''package com.qrcodegen.core.simbologias
+
+/**
+ * As tabelas dos codigos de barras de uma linha, extraidas do
+ * `python-barcode`.
+ *
+ *     python spec/gerar-tabelas-lineares.py
+ *
+ * **NAO EDITE ESTE FICHEIRO A MAO.** E' gerado, e a razao esta no Python: a
+ * tabela do Code 39 foi escrita de memoria com doze elementos por caractere em
+ * vez de nove, e a do ITF com dois na moldura de paragem em vez de tres. Nenhum
+ * dos dois foi apanhado por um teste — desenhavam-se com aspecto de estar certo
+ * e o leitor nao lia.
+ *
+ * ## Porque um objecto so para as tabelas
+ *
+ * Porque e' **a mesma extracao que escreve o modulo Python e o Java**, e nao uma
+ * transcricao. A regra deste repositorio e' nao escrever as tabelas de memoria,
+ * e a segunda leitura dessa regra e' nao as escrever duas vezes — que e' o que
+ * acontece quando cada stack transcreve a sua.
+ *
+ * ## A notacao de 'N' e 'W'
+ *
+ *     `N` barra estreita    `n` espaco estreito
+ *     `W` barra larga       `w` espaco largo
+ *
+ * **Decide a letra, e nao a caixa.** `W` e `w` sao largos, `N` e `n` sao
+ * estreitos, e a caixa existia so por legibilidade. Ler pela caixa dava ao ITF
+ * uma moldura de inicio com barras largas onde o formato nao tem nenhuma, e o
+ * codigo saia com 45 modulos a mais.
+ */
+object Tabelas {{
+
+    /** O Code 39, por ordem, com o asterisco de inicio e paragem a parte. */
+    const val COD39_ALFABETO = "{''.join(alfabeto39)}"
+
+    /** Cada entrada tem quinze caracteres, ja expandidos a 3:1. */
+    val COD39_PADROES: Array<String> = {lista(padroes39)}
+
+    /** O asterisco de inicio e de paragem. */
+    const val COD39_PARAGEM = "{paragem39}"
+
+    /** O ITF: cinco elementos por digito. */
+    val ITF_PADROES: Array<String> = {lista(padroesitf)}
+
+    /** A moldura de inicio do ITF, com quatro elementos estreitos. */
+    const val ITF_INICIO = "{inicioitf}"
+
+    /**
+     * A moldura de paragem do ITF, com **tres** elementos: barra larga, espaco
+     * estreito, barra estreita. Sao tres e nao dois — a segunda versao tinha
+     * dois e o codigo nao lia.
+     */
+    const val ITF_PARAGEM = "{paragemitf}"
+
+    /**
+     * Os caracteres de dados do Codabar, por letra.
+     *
+     * **Os quatro de moldura nao estao aqui**, e sao de propósito: `A`, `B`, `C`
+     * e `D` so existem nas pontas, e um `A` no meio do texto era codificado com
+     * a tabela de dados e o leitor lia-o como moldura — o codigo passava a parte
+     * estrutural e partia a meio.
+     */
+    val CODABAR_DADOS: Map<String, String> = {mapa(padroescod)}
+
+    /** Os quatro caracteres que so podem ser inicio ou paragem. */
+    val CODABAR_MOLDURA: Map<String, String> = {mapa(inicio_paragem)}
+
+    /**
+     * O Code 128: os 106 primeiros valores, por indice.
+     *
+     * **Cada entrada tem onze caracteres, ja expandidos**, e nao os seis
+     * elementos `NnWw` dos outros: a cadeia e' a soma das larguras dos seis
+     * elementos, e as larguras vao de 1 a 4.
+     */
+    val CODE128_PADROES: Array<String> = {lista(padroes128)}
+
+    /**
+     * A paragem do Code 128: treze modulos, sete elementos.
+     *
+     * **E' a unica tabela que nao vem do `python-barcode`, porque a da
+     * biblioteca esta truncada** — onze modulos em vez de treze, sem a barra
+     * final. Com a cadeia da biblioteca o ZXing devolve "NAO LEU" e com esta
+     * devolve a string certa. A barra e' a ancora do leitor, porque o Code 128
+     * nao tem barras-guarda como o EAN.
+     */
+    const val CODE128_PARAGEM = "{paragem128}"
+
+    /**
+     * O padrao de um caracter do Codabar, ou `null` se nao existir.
+     *
+     * **A moldura e' procurada primeiro, e `A`, `B`, `C` e `D` devolvem o padrao
+     * de moldura** — que e' o que esta funcao promete: o padrao daquele
+     * caractere. Quem recusa um `A` no meio dos dados e' o encoder, e nao esta
+     * funcao; aqui so se resolve o nome.
+     *
+     * **Um `A` nos dados e' um bug de leitura, nao de codificacao.** O encoder
+     * desenhava o mesmo, e o leitor lia-o como moldura: o codigo passava a parte
+     * estrutural e partia a meio, sem erro nenhum pelo caminho.
+     */
+    fun codabar(caractere: String): String? =
+        CODABAR_MOLDURA[caractere] ?: CODABAR_DADOS[caractere]
 }}
 '''
 
