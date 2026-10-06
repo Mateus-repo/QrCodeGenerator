@@ -182,23 +182,40 @@
           <div class="campo" id="campo-frame">
             <label for="frame">
               <input id="frame" type="checkbox" />
-              Reservar um quadrado no centro (FrameQR)
+              Reservar uma área no centro (FrameQR)
             </label>
             <p class="ajuda">
               Apaga os módulos do meio para lá pôr um logótipo. O conteúdo
               continua a ler-se: é a correcção de erros que reconstrói o que
               foi apagado.
             </p>
+
+            <label for="frame-forma" class="sub-etiqueta">Forma da área</label>
+            <select id="frame-forma"></select>
+            <p class="ajuda">
+              A forma decide quantos módulos se apagam, e isso decide se o código
+              se lê. O quadrado é o que apaga mais; o círculo e a estrela apagam
+              menos com o mesmo logótipo, e por isso o limite é maior neles.
+            </p>
+
             <label for="frame-tamanho" class="sub-etiqueta">Lado do logótipo (módulos)</label>
             <input id="frame-tamanho" type="range" min="0" max="20" step="1" value="0" />
             <p class="ajuda" id="ajuda-frame"></p>
 
+            <label for="frame-angulo" class="sub-etiqueta">Ângulo (graus)</label>
+            <input id="frame-angulo" type="range" min="0" max="90" step="5" value="0" />
+            <p class="ajuda" id="ajuda-frame-angulo"></p>
+
+            <label for="frame-posicao" class="sub-etiqueta">Posição (módulos)</label>
+            <input id="frame-posicao" type="range" min="-8" max="8" step="1" value="0" />
+            <p class="ajuda" id="ajuda-frame-posicao"></p>
+
             <label for="frame-ficheiro" class="sub-etiqueta">Imagem do logótipo</label>
             <input id="frame-ficheiro" type="file" accept="image/*" />
             <p class="ajuda" id="ajuda-frame-imagem">
-              Sem ficheiro, fica só o quadrado apagado — que é o que o
-              FieldQR está feito para: os dados dentro dele são reconstruídos
-              pela correcção de erros.
+              Sem ficheiro, fica só a área apagada — que é o que o FieldQR está
+              feito para: os dados dentro dela são reconstruídos pela correcção
+              de erros.
             </p>
           </div>
 

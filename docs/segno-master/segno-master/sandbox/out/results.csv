@@ -1,0 +1,14 @@
+qrcodegen create 1-M,2.85
+qrcode create 1-M,1.50
+Segno create 1-M,1.23
+qrcodegen create 7-Q,12.82
+qrcode create 7-Q,7.17
+Segno create 7-Q,5.80
+qrcodegen create 30-H,120.04
+qrcode create 30-H,71.66
+Segno create 30-H,56.37
+qrcode SVG path,2.47
+qrcode SVG rects,4.13
+Segno SVG,1.48
+qrcode PNG 1-M,2.10
+Segno PNG 1-M,2.03

@@ -1,26 +1,26 @@
-/**
+﻿/**
  * Interface do gerador.
  *
- * Decisões de portabilidade, porque o mesmo código tem de correr em Windows,
- * macOS, Linux e telemóvel:
+ * DecisÃµes de portabilidade, porque o mesmo cÃ³digo tem de correr em Windows,
+ * macOS, Linux e telemÃ³vel:
  *
- *  - Nada de módulos de UI, nada de framework, nada de CDN. Sem `node_modules`
- *    e sem `npm install` — é por isso que abre a partir de um servidor
- *    estático em qualquer lado.
- *  - A Clipboard API só existe em contexto seguro (https/localhost). Como o
- *    site também pode ser aberto de `file://`, há uma via alternativa com um
- *    `<textarea>` temporário.
- *  - `navigator.share` só existe em alguns browsers e sobretudo em telemóvel.
- *    Quando não existe, o botão Guardar faz o mesmo.
- *  - O service worker só se regista em http/https; em `file://` é ignorado em
- *    silêncio, sem erro na consola.
- *  - Descarregar ficheiros usa `<a download>` e um Blob, que é a via que
- *    funciona em todos os browsers modernos, em vez de APIs só do Chromium.
+ *  - Nada de mÃ³dulos de UI, nada de framework, nada de CDN. Sem `node_modules`
+ *    e sem `npm install` â€” Ã© por isso que abre a partir de um servidor
+ *    estÃ¡tico em qualquer lado.
+ *  - A Clipboard API sÃ³ existe em contexto seguro (https/localhost). Como o
+ *    site tambÃ©m pode ser aberto de `file://`, hÃ¡ uma via alternativa com um
+ *    `<textarea>` temporÃ¡rio.
+ *  - `navigator.share` sÃ³ existe em alguns browsers e sobretudo em telemÃ³vel.
+ *    Quando nÃ£o existe, o botÃ£o Guardar faz o mesmo.
+ *  - O service worker sÃ³ se regista em http/https; em `file://` Ã© ignorado em
+ *    silÃªncio, sem erro na consola.
+ *  - Descarregar ficheiros usa `<a download>` e um Blob, que Ã© a via que
+ *    funciona em todos os browsers modernos, em vez de APIs sÃ³ do Chromium.
  */
 
 import { CATEGORIES, ECC_LEVELS, build, emptyFields, validate } from './payloads/types.js';
 import { draw, encode, toSvg, MAX_BYTES } from './qrcode.js';
-import { aplicarFrame, modulosMaximos, desenharLogotipo, dimensaoDoLogotipo } from './frameqr.js';
+import { aplicarFrame, modulosMaximos, desenharLogotipo, dimensaoDoLogotipo, FORMAS } from './frameqr.js';
 import { pdf417 } from './symbologies/pdf417.js';
 import { dataMatrix as codificarDataMatrix } from './symbologies/datamatrix.js';
 import { gs1DataMatrix } from './symbologies/gs1-datamatrix.js';
@@ -52,16 +52,21 @@ const dom = {
   ajudaMargem: el('ajuda-margem'),
   campoFrame: el('campo-frame'),
   frame: el('frame'),
+  frameForma: el('frame-forma'),
   frameTamanho: el('frame-tamanho'),
   ajudaFrame: el('ajuda-frame'),
+  frameAngulo: el('frame-angulo'),
+  ajudaFrameAngulo: el('ajuda-frame-angulo'),
+  framePosicao: el('frame-posicao'),
+  ajudaFramePosicao: el('ajuda-frame-posicao'),
   frameFicheiro: el('frame-ficheiro'),
   ajudaFrameImagem: el('ajuda-frame-imagem'),
 
   /*
-   * O painel do SQRC. São três campos e um botão, e o botão é o único que
-   * escreve no campo da chave — o resto do formulário escreve em campos de
-   * conteúdo e isso é previsível; escrever na chave de quem vai ser o único
-   * ponto onde o comportamento é menos óbvio.
+   * O painel do SQRC. SÃ£o trÃªs campos e um botÃ£o, e o botÃ£o Ã© o Ãºnico que
+   * escreve no campo da chave â€” o resto do formulÃ¡rio escreve em campos de
+   * conteÃºdo e isso Ã© previsÃ­vel; escrever na chave de quem vai ser o Ãºnico
+   * ponto onde o comportamento Ã© menos Ã³bvio.
    */
   campoSqrc: el('campo-sqrc'),
   sqrcChave: el('sqrc-chave'),
@@ -85,15 +90,15 @@ const state = {
    * A matriz do Data Matrix (e do GS1 DataMatrix) tal como foi desenhada.
    *
    * Vive aqui pelo mesmo motivo que a do QR: o SVG tem de sair **igual** ao PNG,
-   * e para isso precisa da mesma matriz e não do payload outra vez. Sem isto, os
-   * dois ficheiros saíam de codificações diferentes e ninguém dizia nada.
+   * e para isso precisa da mesma matriz e nÃ£o do payload outra vez. Sem isto, os
+   * dois ficheiros saÃ­am de codificaÃ§Ãµes diferentes e ninguÃ©m dizia nada.
    */
   dataMatrix: null,
   /**
    * A matriz do QR como foi desenhada, com a zona do logotipo ja apagada.
    *
    * Vive aqui para o SVG sair igual ao PNG. Se cada um voltasse a codificar o
-   * payload, o PNG tinha o logotipo e o SVG nao — dois ficheiros com o mesmo
+   * payload, o PNG tinha o logotipo e o SVG nao â€” dois ficheiros com o mesmo
    * nome e conteudos diferentes, sem nenhum aviso.
    */
   qr: null,
@@ -106,12 +111,12 @@ const state = {
    * certeza e ler da propria imagem.
    */
   /**
-   * A escala e a zona do FrameQR, para o logotipo sair no sítio certo.
+   * A escala e a zona do FrameQR, para o logotipo sair no sÃ­tio certo.
    *
-   * O SVG vive em coordenadas de **módulo**, e o canvas em píxeis. Passar de
-   * uns para os outros é dividir pela escala, e essa divisão tem de ser feita
-   * uma vez e aqui — e não nos dois sítios, onde uma diferença de um arredondamento
-   * põe o logotipo um módulo ao lado do sítio e o código deixa de ler.
+   * O SVG vive em coordenadas de **mÃ³dulo**, e o canvas em pÃ­xeis. Passar de
+   * uns para os outros Ã© dividir pela escala, e essa divisÃ£o tem de ser feita
+   * uma vez e aqui â€” e nÃ£o nos dois sÃ­tios, onde uma diferenÃ§a de um arredondamento
+   * pÃµe o logotipo um mÃ³dulo ao lado do sÃ­tio e o cÃ³digo deixa de ler.
    */
   escalaFrame: 1,
   zonaFrame: null,
@@ -123,7 +128,7 @@ const state = {
    * Vive ao lado do `payload` em vez de o substituir porque sao coisas
    * diferentes: o payload e o texto que o QR leva dentro, e o codigo de barras
    * e a sequencia de barras ja desenhada. O que se copia e o valor que o
-   * utilizador escreveu, e o que se exporta e a imagem — que e o unico sitio
+   * utilizador escreveu, e o que se exporta e a imagem â€” que e o unico sitio
    * onde os dois se cruzam.
    */
   codigo: null,
@@ -132,28 +137,28 @@ const state = {
 /**
  * O formato escolhido.
  *
- * São três caminhos e não dois, porque o PDF417 é uma grelha de duas dimensões
- * como o QR mas não é um QR: tem payload próprio (o texto cru, não o resultado
- * de um gerador de tipo), não tem versão nem máscara nem margem de 4, e a sua
- * zona muda é de 2 módulos. Fingir que é um QR dá erros nos dois sentidos.
+ * SÃ£o trÃªs caminhos e nÃ£o dois, porque o PDF417 Ã© uma grelha de duas dimensÃµes
+ * como o QR mas nÃ£o Ã© um QR: tem payload prÃ³prio (o texto cru, nÃ£o o resultado
+ * de um gerador de tipo), nÃ£o tem versÃ£o nem mÃ¡scara nem margem de 4, e a sua
+ * zona muda Ã© de 2 mÃ³dulos. Fingir que Ã© um QR dÃ¡ erros nos dois sentidos.
  */
 const ehQr = () => dom.formato.value === 'qr';
 const ehPdf417 = () => dom.formato.value === 'pdf417';
-/** O Data Matrix, e o GS1 DataMatrix: grelha 2D, mas não o QR. */
+/** O Data Matrix, e o GS1 DataMatrix: grelha 2D, mas nÃ£o o QR. */
 const ehDataMatrix = () =>
   dom.formato.value === 'datamatrix' || dom.formato.value === 'gs1-datamatrix';
-/** O GS1 DataMatrix tem os AI entre parênteses; o Data Matrix normal, texto solto. */
+/** O GS1 DataMatrix tem os AI entre parÃªnteses; o Data Matrix normal, texto solto. */
 const ehGs1DataMatrix = () => dom.formato.value === 'gs1-datamatrix';
 /**
- * O SQRC: um QR cujo conteúdo vai cifrado.
+ * O SQRC: um QR cujo conteÃºdo vai cifrado.
  *
- * **É um QR para o desenho, e não para o conteúdo.** A grelha, a versão e a
- * correção de erros são as do QR — o que muda é o que entra no contentor, e
- * por isso o caminho de desenho é o do QR e não um quarto caminho.
+ * **Ã‰ um QR para o desenho, e nÃ£o para o conteÃºdo.** A grelha, a versÃ£o e a
+ * correÃ§Ã£o de erros sÃ£o as do QR â€” o que muda Ã© o que entra no contentor, e
+ * por isso o caminho de desenho Ã© o do QR e nÃ£o um quarto caminho.
  *
- * O que o distingue de todos os outros é que **precisa de dois campos** — o
- * conteúdo e a chave — e de uma operação assíncrona antes de haver payload. É
- * a única razão de o `atualizar()` ser uma função que devolve uma promessa.
+ * O que o distingue de todos os outros Ã© que **precisa de dois campos** â€” o
+ * conteÃºdo e a chave â€” e de uma operaÃ§Ã£o assÃ­ncrona antes de haver payload. Ã‰
+ * a Ãºnica razÃ£o de o `atualizar()` ser uma funÃ§Ã£o que devolve uma promessa.
  */
 const ehSqrc = () => dom.formato.value === 'sqrc';
 
@@ -161,7 +166,7 @@ const ehSqrc = () => dom.formato.value === 'sqrc';
 const simbologiaActual = () =>
   ehQr() || ehPdf417() || ehDataMatrix() || ehSqrc() ? null : simbologiaPorId(dom.formato.value);
 
-// --- Formulário ------------------------------------------------------------
+// --- FormulÃ¡rio ------------------------------------------------------------
 
 function popularCategorias() {
   for (const category of CATEGORIES) {
@@ -210,16 +215,16 @@ function desenharCampos() {
 }
 
 /**
- * O formulário do PDF417: um campo de texto, e só.
+ * O formulÃ¡rio do PDF417: um campo de texto, e sÃ³.
  *
- * O QR tem categorias porque cada uma monta um payload diferente. O PDF417 não
- * tem categorias: é um transportador de texto, e o que escreve vai dentro tal
- * e qual. Um utilizador que venha de um código de barras espera um campo e não
- * uma lista — e o que ele está a fazer, colar o conteúdo e imprimir, dá igualmente bem num e noutro.
+ * O QR tem categorias porque cada uma monta um payload diferente. O PDF417 nÃ£o
+ * tem categorias: Ã© um transportador de texto, e o que escreve vai dentro tal
+ * e qual. Um utilizador que venha de um cÃ³digo de barras espera um campo e nÃ£o
+ * uma lista â€” e o que ele estÃ¡ a fazer, colar o conteÃºdo e imprimir, dÃ¡ igualmente bem num e noutro.
  *
- * O `inputMode` fica no teclado normal, e não no numérico: o PDF417 é o único
- * formato deste ecrã que leva texto corrente, e pôr o teclado numérico seria
- * dizer que não leva.
+ * O `inputMode` fica no teclado normal, e nÃ£o no numÃ©rico: o PDF417 Ã© o Ãºnico
+ * formato deste ecrÃ£ que leva texto corrente, e pÃ´r o teclado numÃ©rico seria
+ * dizer que nÃ£o leva.
  */
 function desenharCamposPdf417() {
   const div = document.createElement('div');
@@ -227,19 +232,19 @@ function desenharCamposPdf417() {
 
   const input = document.createElement('input');
   input.id = 'campo-valor';
-  input.placeholder = 'Conteúdo a codificar';
+  input.placeholder = 'ConteÃºdo a codificar';
   input.value = state.payload;
   input.addEventListener('input', atualizar);
 
   const label = document.createElement('label');
   label.htmlFor = input.id;
-  label.textContent = 'Conteúdo';
+  label.textContent = 'ConteÃºdo';
 
   const ajuda = document.createElement('p');
   ajuda.className = 'ajuda';
   ajuda.textContent =
-    'Texto ou números, até 2710 caracteres. O PDF417 comprime os números ' +
-    'muito mais do que as letras: um número de série longo sai em metade do ' +
+    'Texto ou nÃºmeros, atÃ© 2710 caracteres. O PDF417 comprime os nÃºmeros ' +
+    'muito mais do que as letras: um nÃºmero de sÃ©rie longo sai em metade do ' +
     'tamanho do mesmo texto com letras.';
 
   div.append(label, input, ajuda);
@@ -247,10 +252,10 @@ function desenharCamposPdf417() {
 }
 
 /**
- * O formulário de um código de barras: um campo só.
+ * O formulÃ¡rio de um cÃ³digo de barras: um campo sÃ³.
  *
  * O campo vem do registo de simbologias, com a sua etiqueta, o seu exemplo e a
- * sua dica. Nao e preciso escrever duas vezes a mesma coisa — a lista em
+ * sua dica. Nao e preciso escrever duas vezes a mesma coisa â€” a lista em
  * `symbologies/index.js` e a fonte unica do que cada simbologia aceita.
  */
 function desenharCamposLineares() {
@@ -263,9 +268,9 @@ function desenharCamposLineares() {
   const input = document.createElement('input');
   input.id = `campo-${simbologia.campo.key}`;
   if (simbologia.campo.placeholder) input.placeholder = simbologia.campo.placeholder;
-  // Teclado numérico no telemóvel: quem está a transcrever um código de uma
-  // embalagem está a usar o dedo, e o teclado completo é lento e propenso a
-  // erros. O Code 128 é a excepção, porque leva letras e símbolos.
+  // Teclado numÃ©rico no telemÃ³vel: quem estÃ¡ a transcrever um cÃ³digo de uma
+  // embalagem estÃ¡ a usar o dedo, e o teclado completo Ã© lento e propenso a
+  // erros. O Code 128 Ã© a excepÃ§Ã£o, porque leva letras e sÃ­mbolos.
   if (simbologia.id !== 'code128') input.inputMode = 'numeric';
   input.addEventListener('input', atualizar);
 
@@ -288,7 +293,7 @@ function desenharCamposLineares() {
   dom.campos.append(descricao, div);
 }
 
-/** Um campo do formulário, com o valor por omissão. */
+/** Um campo do formulÃ¡rio, com o valor por omissÃ£o. */
 function campoDe(field, valor) {
   const div = document.createElement('div');
   div.className = 'campo';
@@ -317,7 +322,7 @@ function campoDe(field, valor) {
    *
    * **Um `select` nao leva `placeholder`, e por isso e' um ramo a parte.** Se
    * caisse no `input` de baixo com `type: 'select'`, o browser desenhava um
-   * campo de texto com a palavra "select" no sitio e **nada mais** — e o campo
+   * campo de texto com a palavra "select" no sitio e **nada mais** â€” e o campo
    * da seguranca do WiFi e' o que decide se o QR liga a rede ou nao, o que
    * e' a pior coisa para dar mal.
    */
@@ -352,7 +357,7 @@ function campoDe(field, valor) {
    * Um `datetime-local` **nao mostra o `placeholder` em lado nenhum**: o browser
    * desenha um selector com o calendario, e o texto do `placeholder` nunca
    * aparece. Escrever o exemplo num `placeholder` e' escrever num sitio onde
-   * ninguem o ve — o campo fica vazio e nao ha forma de saber se e' bug.
+   * ninguem o ve â€” o campo fica vazio e nao ha forma de saber se e' bug.
    *
    * Por isso os campos de data trazem `defaultValue`, e aqui vai para o
    * `value`. A diferenca entre os dois e' que o `value` e' o que a pessoa ve
@@ -378,32 +383,32 @@ function campoDe(field, valor) {
 }
 
 /**
- * Os níveis de correção de erros, por formato.
+ * Os nÃ­veis de correÃ§Ã£o de erros, por formato.
  *
- * São listas diferentes e não a mesma com outros nomes. No QR são quatro e
- * chamam-se L, M, Q, H. No PDF417 são **nove**, chamam-se 0 a 8, e cada um é
- * `2^(nível+1)` codewords de correcção — o nível 8 são 512, e é mais do que o
- * QR máximo. Pôr os quatro do QR no PDF417 e dizer "H — máximo" seria uma
- * mentira pequena e de consequência: quem quisesse o máximo ficaria com um quarto
- * do que dá.
+ * SÃ£o listas diferentes e nÃ£o a mesma com outros nomes. No QR sÃ£o quatro e
+ * chamam-se L, M, Q, H. No PDF417 sÃ£o **nove**, chamam-se 0 a 8, e cada um Ã©
+ * `2^(nÃ­vel+1)` codewords de correcÃ§Ã£o â€” o nÃ­vel 8 sÃ£o 512, e Ã© mais do que o
+ * QR mÃ¡ximo. PÃ´r os quatro do QR no PDF417 e dizer "H â€” mÃ¡ximo" seria uma
+ * mentira pequena e de consequÃªncia: quem quisesse o mÃ¡ximo ficaria com um quarto
+ * do que dÃ¡.
  */
 const eccQr = [
-  ['L', 'L — mais conteúdo, menos robustez'],
-  ['M', 'M — equilibrado (recomendado)'],
-  ['Q', 'Q — mais robustez'],
-  ['H', 'H — máximo, para imprimir'],
+  ['L', 'L â€” mais conteÃºdo, menos robustez'],
+  ['M', 'M â€” equilibrado (recomendado)'],
+  ['Q', 'Q â€” mais robustez'],
+  ['H', 'H â€” mÃ¡ximo, para imprimir'],
 ];
 
 const eccPdf417 = [
-  ['0', '0 — 2 codewords. Só para texto que nunca se danifica'],
-  ['1', '1 — 4 codewords'],
-  ['2', '2 — 8 codewords (recomendado)'],
-  ['3', '3 — 16 codewords'],
-  ['4', '4 — 32 codewords, para imprimir'],
-  ['5', '5 — 64 codewords'],
-  ['6', '6 — 128 codewords'],
-  ['7', '7 — 256 codewords'],
-  ['8', '8 — 512 codewords. Enche o código de barras inútil'],
+  ['0', '0 â€” 2 codewords. SÃ³ para texto que nunca se danifica'],
+  ['1', '1 â€” 4 codewords'],
+  ['2', '2 â€” 8 codewords (recomendado)'],
+  ['3', '3 â€” 16 codewords'],
+  ['4', '4 â€” 32 codewords, para imprimir'],
+  ['5', '5 â€” 64 codewords'],
+  ['6', '6 â€” 128 codewords'],
+  ['7', '7 â€” 256 codewords'],
+  ['8', '8 â€” 512 codewords. Enche o cÃ³digo de barras inÃºtil'],
 ];
 
 function preencherEcc(opcoes) {
@@ -417,105 +422,131 @@ function preencherEcc(opcoes) {
     dom.ecc.append(option);
   }
 
-  // Tenta manter o que lá estava, para não trocar de formato e perder a escolha.
+  // Tenta manter o que lÃ¡ estava, para nÃ£o trocar de formato e perder a escolha.
   if (opcoes.some(([valor]) => valor === anterior)) dom.ecc.value = anterior;
 }
 
 /**
- * O que dizer ao utilizador sobre a imagem do logótipo.
+ * O que dizer ao utilizador sobre a imagem do logÃ³tipo.
  *
- * **O número muda com a escala, e é por isso que isto é uma função.** A escala
- * depende do tamanho pedido e da versão do QR, e ambas mudam enquanto o
- * utilizador escreve: o mesmo logótipo de 5 módulos dá uma caixa de 60×60 px a
- * 512 e de 250×250 a 2048. Uma mensagem escrita uma vez seria uma mentira em
- * metade dos casos, e a pessoa só descobria a meio de imprimir.
+ * **O nÃºmero muda com a escala, e Ã© por isso que isto Ã© uma funÃ§Ã£o.** A escala
+ * depende do tamanho pedido e da versÃ£o do QR, e ambas mudam enquanto o
+ * utilizador escreve: o mesmo logÃ³tipo de 5 mÃ³dulos dÃ¡ uma caixa de 60Ã—60 px a
+ * 512 e de 250Ã—250 a 2048. Uma mensagem escrita uma vez seria uma mentira em
+ * metade dos casos, e a pessoa sÃ³ descobria a meio de imprimir.
  *
- * O que se diz tem os dois lados, porque as correções são diferentes: uma
- * imagem pequena fica a serrilhada e o remédio é fechá-la ou pôr o logótipo
- * mais pequeno; uma grande não é problema nenhum, porque o browser reduz bem e
- * o ideal é mesmo N×N **módulos**, onde já não há resolução a ganhar.
+ * O que se diz tem os dois lados, porque as correÃ§Ãµes sÃ£o diferentes: uma
+ * imagem pequena fica a serrilhada e o remÃ©dio Ã© fechÃ¡-la ou pÃ´r o logÃ³tipo
+ * mais pequeno; uma grande nÃ£o Ã© problema nenhum, porque o browser reduz bem e
+ * o ideal Ã© mesmo NÃ—N **mÃ³dulos**, onde jÃ¡ nÃ£o hÃ¡ resoluÃ§Ã£o a ganhar.
+ */
+/**
+ * O nome de uma forma, para as mensagens.
+ *
+ * **Vem de `FORMAS`, que Ã© a lista do mÃ³dulo.** Escrever os nomes outra vez aqui
+ * dava dois conjuntos que divergem em silÃªncio â€” e a `AGENTS.md` chama a isso
+ * exatamente o que Ã©, com o exemplo do GS1-128: entrou no registo e nÃ£o
+ * aparecia no selector.
+ *
+ * Uma forma desconhecida **nÃ£o dÃ¡ erro**: devolve o identificador, que Ã©
+ * literal e ainda Ãºtil numa mensagem de erro. Dar `undefined` punha "undefined"
+ * na tela, e a pessoa culparia a aplicaÃ§Ã£o por uma coisa que ela nÃ£o escolheu.
+ */
+function nomeDaForma(forma) {
+  return (FORMAS.find(([id]) => id === forma) ?? [null, forma])[1];
+}
+
+/**
+ * O que dizer ao utilizador sobre a imagem do logÃ³tipo.
+ *
+ * **O nÃºmero muda com a escala, e Ã© por isso que isto Ã© uma funÃ§Ã£o.** A escala
+ * depende do tamanho pedido e da versÃ£o do QR, e ambas mudam enquanto o
+ * utilizador escreve: o mesmo logÃ³tipo de 5 mÃ³dulos dÃ¡ uma caixa de 60Ã—60 px a
+ * 512 e de 250Ã—250 a 2048. Uma mensagem escrita uma vez seria uma mentira em
+ * metade dos casos, e a pessoa sÃ³ descobria a meio de imprimir.
  */
 function dizerDoLogotipo(info, codigo, escala, modulos) {
   if (!dom.frame.checked || modulos === 0) {
     dom.ajudaFrameImagem.textContent =
-      'Sem ficheiro, fica só o quadrado apagado — que é o que o FieldQR está feito para: os dados dentro dele são reconstruídos pela correção de erros.';
+      'Sem ficheiro, fica sÃ³ a Ã¡rea apagada â€” que Ã© o que o FieldQR estÃ¡ feito ' +
+      'para: os dados dentro dela sÃ£o reconstruÃ­dos pela correÃ§Ã£o de erros.';
     return;
   }
 
   const { pix } = dimensaoDoLogotipo(modulos, escala);
-  const ideal = `${pix}×${pix} px (${modulos}×${modulos} módulos a ${escala} px por módulo)`;
+  const ideal = `${pix}Ã—${pix} px (${modulos}Ã—${modulos} mÃ³dulos a ${escala} px por mÃ³dulo)`;
   const imagem = state.logotipo;
 
   if (!imagem) {
-    dom.ajudaFrameImagem.textContent = `Escolhe uma imagem para pôr no quadrado. A caixa é ${ideal}.`;
+    dom.ajudaFrameImagem.textContent = `Escolhe uma imagem para pÃ´r no quadrado. A caixa Ã© ${ideal}.`;
     return;
   }
 
   const largura = imagem.naturalWidth;
   const altura = imagem.naturalHeight;
   const nome = state.nomeLogotipo;
-  const medida = `${largura}×${altura} px`;
+  const medida = `${largura}Ã—${altura} px`;
 
   /*
-   * A partir de `modulos` píxeis por lado já não há nada a ganhar: um módulo é
-   * o menor elemento do código, e ampliar mais só repete pixels. O browser
-   * reduz bem, por isso acima disso **não há problema nenhum** — e dizer que há
-   * um máximo seria inventar uma restrição que não existe. O aviso é só para
-   * baixo, que é onde a imagem é esticada e o logotipo fica a serrilhado.
+   * A partir de `modulos` pÃ­xeis por lado jÃ¡ nÃ£o hÃ¡ nada a ganhar: um mÃ³dulo Ã©
+   * o menor elemento do cÃ³digo, e ampliar mais sÃ³ repete pixels. O browser
+   * reduz bem, por isso acima disso **nÃ£o hÃ¡ problema nenhum** â€” e dizer que hÃ¡
+   * um mÃ¡ximo seria inventar uma restriÃ§Ã£o que nÃ£o existe. O aviso Ã© sÃ³ para
+   * baixo, que Ã© onde a imagem Ã© esticada e o logotipo fica a serrilhado.
    *
-   * A primeira versão dizia "está no tamanho certo — é grande, e o browser
-   * reduz", que é uma frase que se contradiz a meio. O que interessa dizer é
-   * uma coisa só, e o resto é silêncio.
+   * A primeira versÃ£o dizia "estÃ¡ no tamanho certo â€” Ã© grande, e o browser
+   * reduz", que Ã© uma frase que se contradiz a meio. O que interessa dizer Ã©
+   * uma coisa sÃ³, e o resto Ã© silÃªncio.
    */
   if (largura < modulos || altura < modulos) {
-    // **O número que falta e' o da propria imagem.** A mensagem dizia "fecha-a
+    // **O nÃºmero que falta e' o da propria imagem.** A mensagem dizia "fecha-a
     // para 70x70 px", mas nao dizia *de* quantos pixeis, e quem tem de a
     // redimensionar e' quem vai ler a frase. `modulos` e' a medida em modulos e
     // `pix` em pixeis, e sao numeros diferentes: e' a confusao entre as duas
     // unidades que a `AGENTS.md` manda escrever nos dois termos.
     dom.ajudaFrameImagem.textContent =
-      `${nome} tem ${medida}, e a caixa é ${ideal} — ou seja ${pix}×${pix} ` +
-      `píxeis na imagem exportada. O logótipo é menor do que a caixa, por isso ` +
-      `vai ser esticado e fica a serrilhado — numa etiqueta pequena vê-se a um ` +
-      `metro. Fecha a imagem para pelo menos ${pix}×${pix} px, ou põe um ` +
-      `logótipo mais pequeno.`;
+      `${nome} tem ${medida}, e a caixa Ã© ${ideal} â€” ou seja ${pix}Ã—${pix} ` +
+      `pÃ­xeis na imagem exportada. O logÃ³tipo Ã© menor do que a caixa, por isso ` +
+      `vai ser esticado e fica a serrilhado â€” numa etiqueta pequena vÃª-se a um ` +
+      `metro. Fecha a imagem para pelo menos ${pix}Ã—${pix} px, ou pÃµe um ` +
+      `logÃ³tipo mais pequeno.`;
     return;
   }
 
   /*
    * Acima da medida ideal: **nao ha problema, e a razao importa.**
    *
-   * A primeira versao dizia "está no tamanho certo — é grande, e o browser
+   * A primeira versao dizia "estÃ¡ no tamanho certo â€” Ã© grande, e o browser
    * reduz", que e' uma frase que se contradiz a meio. A segunda so media a
    * folga e nao dizia nada sobre a resolucao. **As duas sao incompletas**: o
-   * que a pessoa quer saber e' se o logótipo sai nitido na imagem exportada, e
-   * isso responde-se com `escala` — quantos pixeis do logótipo caem num modulo.
+   * que a pessoa quer saber e' se o logÃ³tipo sai nitido na imagem exportada, e
+   * isso responde-se com `escala` â€” quantos pixeis do logÃ³tipo caem num modulo.
    *
-   * Um logótipo com 8 pixeis por modulo ja e' nitido a olho nu; com 4, cada
+   * Um logÃ³tipo com 8 pixeis por modulo ja e' nitido a olho nu; com 4, cada
    * modulo e' um bloco de 4 pixeis da imagem original e o contorno treme.
    */
   const pxPorModulo = Math.min(largura, altura) / modulos;
   const nitido = pxPorModulo >= 8;
-  const medidaPorModulo = `${pxPorModulo.toFixed(1)} px por módulo`;
+  const medidaPorModulo = `${pxPorModulo.toFixed(1)} px por mÃ³dulo`;
 
   dom.ajudaFrameImagem.textContent = nitido
-    ? `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem dá ` +
-      `${medidaPorModulo}, o que é nitido — e acima do necessário o browser ` +
+    ? `${nome} tem ${medida}, e a caixa Ã© ${ideal}. A imagem dÃ¡ ` +
+      `${medidaPorModulo}, o que Ã© nitido â€” e acima do necessÃ¡rio o browser ` +
       `reduz sem se ver, por isso pode ser mais grande sem problema.`
-    : `${nome} tem ${medida}, e a caixa é ${ideal}. A imagem dá só ` +
-      `${medidaPorModulo}, e o contorno do logótipo pode tremer na imagem ` +
-      `exportada. Acima de 8 px por módulo já é nitido; fecha a imagem para ` +
-      `uns ${Math.ceil(modulos * 8)}×${Math.ceil(modulos * 8)} px se quiser ` +
+    : `${nome} tem ${medida}, e a caixa Ã© ${ideal}. A imagem dÃ¡ sÃ³ ` +
+      `${medidaPorModulo}, e o contorno do logÃ³tipo pode tremer na imagem ` +
+      `exportada. Acima de 8 px por mÃ³dulo jÃ¡ Ã© nitido; fecha a imagem para ` +
+      `uns ${Math.ceil(modulos * 8)}Ã—${Math.ceil(modulos * 8)} px se quiser ` +
       `o melhor resultado.`;
 }
 
 /**
- * Carrega a imagem do logótipo.
+ * Carrega a imagem do logÃ³tipo.
  *
- * A imagem é lida por `FileReader` e não por um `<img>` escondido, porque o
- * que interessa é a **dimensão natural** e um elemento no DOM pode ter sido
- * reescalado pelo CSS. A resolução é a única coisa que decide se o logótipo
- * fica nítido, e é a que se diz ao utilizador.
+ * A imagem Ã© lida por `FileReader` e nÃ£o por um `<img>` escondido, porque o
+ * que interessa Ã© a **dimensÃ£o natural** e um elemento no DOM pode ter sido
+ * reescalado pelo CSS. A resoluÃ§Ã£o Ã© a Ãºnica coisa que decide se o logÃ³tipo
+ * fica nÃ­tido, e Ã© a que se diz ao utilizador.
  */
 function carregarLogotipo(ficheiro) {
   if (!ficheiro) {
@@ -528,8 +559,8 @@ function carregarLogotipo(ficheiro) {
   if (!ficheiro.type.startsWith('image/')) {
     state.logotipo = null;
     state.nomeLogotipo = '';
-    dom.ajudaFrameImagem.textContent = `"${ficheiro.name}" não é uma imagem.`;
-    mostrarErro(`"${ficheiro.name}" não é uma imagem. Escolhe um PNG, um JPEG ou um SVG.`);
+    dom.ajudaFrameImagem.textContent = `"${ficheiro.name}" nÃ£o Ã© uma imagem.`;
+    mostrarErro(`"${ficheiro.name}" nÃ£o Ã© uma imagem. Escolhe um PNG, um JPEG ou um SVG.`);
     return;
   }
 
@@ -540,14 +571,14 @@ function carregarLogotipo(ficheiro) {
     imagem.onload = () => {
       state.logotipo = imagem;
       state.nomeLogotipo = ficheiro.name;
-      // Um erro anterior pode estar a tapar o código, e agora já há código.
+      // Um erro anterior pode estar a tapar o cÃ³digo, e agora jÃ¡ hÃ¡ cÃ³digo.
       dom.erro.hidden = true;
       atualizar();
     };
     imagem.onerror = () => {
       state.logotipo = null;
       state.nomeLogotipo = '';
-      mostrarErro(`Não consegui ler "${ficheiro.name}". O ficheiro pode estar corrompido.`);
+      mostrarErro(`NÃ£o consegui ler "${ficheiro.name}". O ficheiro pode estar corrompido.`);
     };
     imagem.src = leitor.result;
   };
@@ -555,22 +586,22 @@ function carregarLogotipo(ficheiro) {
   leitor.onerror = () => {
     state.logotipo = null;
     state.nomeLogotipo = '';
-    mostrarErro(`Não consegui ler "${ficheiro.name}".`);
+    mostrarErro(`NÃ£o consegui ler "${ficheiro.name}".`);
   };
 
   leitor.readAsDataURL(ficheiro);
 }
 
 /**
- * Mostra e esconde o que só faz sentido num dos formatos.
+ * Mostra e esconde o que sÃ³ faz sentido num dos formatos.
  *
- * A correção de erros é o caso obvio: é uma propriedade do QR, e um código de
- * barras não tem. Deixá-la visível e a fingir que funciona é pior do que
- * escondê-la.
+ * A correÃ§Ã£o de erros Ã© o caso obvio: Ã© uma propriedade do QR, e um cÃ³digo de
+ * barras nÃ£o tem. DeixÃ¡-la visÃ­vel e a fingir que funciona Ã© pior do que
+ * escondÃª-la.
  *
- * O PDF417 complica: **tem** correção de erros, e é a mais ajustável dos três
- * — nove níveis, de 0 a 8. Por isso o campo aparece, mas com o texto do PDF417
- * e não o do QR, porque os níveis não são os mesmos e dizer "H — máximo" seria
+ * O PDF417 complica: **tem** correÃ§Ã£o de erros, e Ã© a mais ajustÃ¡vel dos trÃªs
+ * â€” nove nÃ­veis, de 0 a 8. Por isso o campo aparece, mas com o texto do PDF417
+ * e nÃ£o o do QR, porque os nÃ­veis nÃ£o sÃ£o os mesmos e dizer "H â€” mÃ¡ximo" seria
  * mentira.
  */
 function alternarFormato() {
@@ -580,40 +611,40 @@ function alternarFormato() {
   const cifrado = ehSqrc();
 
   /*
-   * O painel do SQRC aparece e desaparece com o formato, e **é a única coisa que
-   * muda**. O resto do formulário — a categoria, a correcção de erros, o
-   * logótipo — é o do QR, porque o desenho é o do QR.
+   * O painel do SQRC aparece e desaparece com o formato, e **Ã© a Ãºnica coisa que
+   * muda**. O resto do formulÃ¡rio â€” a categoria, a correcÃ§Ã£o de erros, o
+   * logÃ³tipo â€” Ã© o do QR, porque o desenho Ã© o do QR.
    *
-   * A categoria fica visível no SQRC **de propósito**: o conteúdo a cifrar é
+   * A categoria fica visÃ­vel no SQRC **de propÃ³sito**: o conteÃºdo a cifrar Ã©
    * o que a pessoa escolheria para escrever num QR, e pedir texto solto seria
    * pedir duas vezes a mesma coisa.
    */
   dom.campoCategoria.hidden = !(qr || cifrado);
   dom.campoSqrc.hidden = !cifrado;
 
-  // O campo de correção de erros serve para o QR e para o PDF417, cada um com
-  // as suas opções. São reconstruídos porque as opções são diferentes e não
+  // O campo de correÃ§Ã£o de erros serve para o QR e para o PDF417, cada um com
+  // as suas opÃ§Ãµes. SÃ£o reconstruÃ­dos porque as opÃ§Ãµes sÃ£o diferentes e nÃ£o
   // vale a pena trocar os valores a meio.
   //
-  // **O Data Matrix fica de fora, e não por ser 2D.** É que ele tem um único
-  // nível, o ECC200, e não se escolhe: o `dom.campoEcc` ficaria visível com as
-  // opções do PDF417, que são nove, e nenhuma delas se aplicaria. Deixar um
-  // campo de correção de erros que não faz nada é pior do que não o ter — é o
-  // que a nota do `campoEcc` diz, e o Data Matrix é o caso onde a tentação de o
-  // mostrar é maior porque "é 2D, como o QR".
+  // **O Data Matrix fica de fora, e nÃ£o por ser 2D.** Ã‰ que ele tem um Ãºnico
+  // nÃ­vel, o ECC200, e nÃ£o se escolhe: o `dom.campoEcc` ficaria visÃ­vel com as
+  // opÃ§Ãµes do PDF417, que sÃ£o nove, e nenhuma delas se aplicaria. Deixar um
+  // campo de correÃ§Ã£o de erros que nÃ£o faz nada Ã© pior do que nÃ£o o ter â€” Ã© o
+  // que a nota do `campoEcc` diz, e o Data Matrix Ã© o caso onde a tentaÃ§Ã£o de o
+  // mostrar Ã© maior porque "Ã© 2D, como o QR".
   dom.campoEcc.hidden = !(qr || empilhado);
   if (qr) preencherEcc(eccQr);
   else if (empilhado) preencherEcc(eccPdf417);
 
   /*
-   * O SQRC fica com a correcção de erros do QR, e a **razão é a mesma do
-   * logótipo**: um QR sem correcção de erros que apague um módulo devolve
-   * bytes errados, e num SQRC isso é pior — quem lê recebe texto cifrado que
-   * não descifra, e o erro é "chave errada" a apontar para o software.
+   * O SQRC fica com a correcÃ§Ã£o de erros do QR, e a **razÃ£o Ã© a mesma do
+   * logÃ³tipo**: um QR sem correcÃ§Ã£o de erros que apague um mÃ³dulo devolve
+   * bytes errados, e num SQRC isso Ã© pior â€” quem lÃª recebe texto cifrado que
+   * nÃ£o descifra, e o erro Ã© "chave errada" a apontar para o software.
    *
-   * Por isso o logótipo **fica disponível** no SQRC: apagar módulos é
-   * exactamente o caso em que a correcção de erros faz o seu trabalho, e é a
-   * parte do QR que dá mais jeito a quem põe um logótipo numa etiqueta
+   * Por isso o logÃ³tipo **fica disponÃ­vel** no SQRC: apagar mÃ³dulos Ã©
+   * exactamente o caso em que a correcÃ§Ã£o de erros faz o seu trabalho, e Ã© a
+   * parte do QR que dÃ¡ mais jeito a quem pÃµe um logÃ³tipo numa etiqueta
    * cifrada.
    */
   dom.campoEcc.hidden = !(qr || empilhado || cifrado);
@@ -621,52 +652,52 @@ function alternarFormato() {
   else if (empilhado) preencherEcc(eccPdf417);
 
   dom.ajudaMargem.textContent = qr || cifrado
-    ? 'A norma do QR pede 4. Só mexa se souber o que está a fazer.'
+    ? 'A norma do QR pede 4. SÃ³ mexa se souber o que estÃ¡ a fazer.'
     : empilhado || matriz
       ? matriz
-        ? 'O Data Matrix funciona com 0 ou 1. Só mexa se souber o que está a fazer.'
-        : 'A norma do PDF417 pede 2. Só mexa se souber o que está a fazer.'
-      : 'A ISO/IEC 15420 pede 10 módulos. Só mexa se souber o que está a fazer.';
+        ? 'O Data Matrix funciona com 0 ou 1. SÃ³ mexa se souber o que estÃ¡ a fazer.'
+        : 'A norma do PDF417 pede 2. SÃ³ mexa se souber o que estÃ¡ a fazer.'
+      : 'A ISO/IEC 15420 pede 10 mÃ³dulos. SÃ³ mexa se souber o que estÃ¡ a fazer.';
 
-  // A margem do QR e do PDF417 vai de 0 a 8; a do código de barras é bem maior, e
-  // um campo que não deixa escrever 10 seria mais uma coisa a explicar. A do
-  // Data Matrix é pequena como a do QR - ele tem guias, e a zona muda é de 2.
+  // A margem do QR e do PDF417 vai de 0 a 8; a do cÃ³digo de barras Ã© bem maior, e
+  // um campo que nÃ£o deixa escrever 10 seria mais uma coisa a explicar. A do
+  // Data Matrix Ã© pequena como a do QR - ele tem guias, e a zona muda Ã© de 2.
   dom.margem.max = qr || empilhado || matriz || cifrado ? '8' : '20';
   if (!qr && !cifrado) dom.margem.value = empilhado || matriz ? '2' : '10';
 
-  // O quadrado do logótipo é um conceito do QR. Num código de barras não há
-  // correção de erros que reconstrua o que se apaga, e o resultado seria um
-  // código com um buraco no meio que ninguém lê.
+  // O quadrado do logÃ³tipo Ã© um conceito do QR. Num cÃ³digo de barras nÃ£o hÃ¡
+  // correÃ§Ã£o de erros que reconstrua o que se apaga, e o resultado seria um
+  // cÃ³digo com um buraco no meio que ninguÃ©m lÃª.
   dom.campoFrame.hidden = !qr && !cifrado;
 
   dom.vazio.textContent = qr
-    ? 'Preenche o conteúdo para o QR code aparecer aqui.'
+    ? 'Preenche o conteÃºdo para o QR code aparecer aqui.'
     : cifrado
-      ? 'Preenche o conteúdo e a chave para o SQRC aparecer aqui.'
+      ? 'Preenche o conteÃºdo e a chave para o SQRC aparecer aqui.'
       : empilhado
-        ? 'Preenche o conteúdo para o PDF417 aparecer aqui.'
-        : 'Preenche o código para as barras aparecerem aqui.';
+        ? 'Preenche o conteÃºdo para o PDF417 aparecer aqui.'
+        : 'Preenche o cÃ³digo para as barras aparecerem aqui.';
 
   desenharCampos();
   atualizar();
 }
 
-// --- Geração ---------------------------------------------------------------
+// --- GeraÃ§Ã£o ---------------------------------------------------------------
 
 /**
  * O caminho do PDF417.
  *
- * Não é o do QR com outros valores, e também não o do código de barras. É uma
- * grelha de duas dimensões, como o QR, mas o que se escreve dentro é o texto
- * tal e qual — o PDF417 é um transportador de texto, não um gerador de tipos
- * como o QR, e não há categorias nem payloads estruturados.
+ * NÃ£o Ã© o do QR com outros valores, e tambÃ©m nÃ£o o do cÃ³digo de barras. Ã‰ uma
+ * grelha de duas dimensÃµes, como o QR, mas o que se escreve dentro Ã© o texto
+ * tal e qual â€” o PDF417 Ã© um transportador de texto, nÃ£o um gerador de tipos
+ * como o QR, e nÃ£o hÃ¡ categorias nem payloads estruturados.
  *
- * **As linhas são mais altas do que largas**, e é o que o distingue à primeira
- * vista. Um módulo é um módulo quadrado num código de barras 1D e num QR, mas
- * no PDF417 a especificação pede que a linha tenha cerca de três a quatro
- * vezes a altura do módulo. Desenhar a grelha com módulos quadrados dá um
- * código que o leitor lê, e que não parece com nenhum PDF417 do mundo — o que
- * é sinal de que alguma coisa está errada antes de o ler.
+ * **As linhas sÃ£o mais altas do que largas**, e Ã© o que o distingue Ã  primeira
+ * vista. Um mÃ³dulo Ã© um mÃ³dulo quadrado num cÃ³digo de barras 1D e num QR, mas
+ * no PDF417 a especificaÃ§Ã£o pede que a linha tenha cerca de trÃªs a quatro
+ * vezes a altura do mÃ³dulo. Desenhar a grelha com mÃ³dulos quadrados dÃ¡ um
+ * cÃ³digo que o leitor lÃª, e que nÃ£o parece com nenhum PDF417 do mundo â€” o que
+ * Ã© sinal de que alguma coisa estÃ¡ errada antes de o ler.
  */
 function atualizarPdf417() {
   const input = document.getElementById('campo-valor');
@@ -675,7 +706,7 @@ function atualizarPdf417() {
   const colunas = 6;
 
   if (texto.length === 0) {
-    mostrarErro('Escreve alguma coisa para codificar.', 'Preenche o conteúdo para o PDF417 aparecer aqui.');
+    mostrarErro('Escreve alguma coisa para codificar.', 'Preenche o conteÃºdo para o PDF417 aparecer aqui.');
     return;
   }
 
@@ -684,8 +715,8 @@ function atualizarPdf417() {
     const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 2));
     const alvo = Math.max(64, Number(dom.tamanho.value) || 512);
 
-    // O alvo é a largura, como no QR. A escala em píxeis por módulo sai da
-    // largura, e a altura vem da razão das linhas.
+    // O alvo Ã© a largura, como no QR. A escala em pÃ­xeis por mÃ³dulo sai da
+    // largura, e a altura vem da razÃ£o das linhas.
     const modulos = codigo.modules[0].length + margem * 2;
     const escala = Math.max(1, Math.ceil(alvo / modulos));
     const largura = modulos * escala;
@@ -711,7 +742,7 @@ function atualizarPdf417() {
 
     state.payload = texto;
     // A matriz guarda-se para o SVG sair igual ao PNG, pelo mesmo motivo que
-    // no QR com o logótipo.
+    // no QR com o logÃ³tipo.
     state.qr = codigo;
     state.valido = true;
     dom.erro.hidden = true;
@@ -719,15 +750,15 @@ function atualizarPdf417() {
     dom.acoes.hidden = false;
     dom.payload.textContent = texto;
     dom.contagem.textContent =
-      `${codigo.linhas} linhas × ${codigo.colunas} colunas · ` +
-      `${codigo.palavras} codewords · ECC ${nivel} (${2 ** (nivel + 1)} de correcção) · ` +
-      `${codigo.modules[0].length} módulos de largura`;
+      `${codigo.linhas} linhas Ã— ${codigo.colunas} colunas Â· ` +
+      `${codigo.palavras} codewords Â· ECC ${nivel} (${2 ** (nivel + 1)} de correcÃ§Ã£o) Â· ` +
+      `${codigo.modules[0].length} mÃ³dulos de largura`;
   } catch (exception) {
-    mostrarErro(exception.message || 'Não foi possível gerar o PDF417.');
+    mostrarErro(exception.message || 'NÃ£o foi possÃ­vel gerar o PDF417.');
   }
 }
 
-/** A razão entre a altura e a largura de um módulo no PDF417. */
+/** A razÃ£o entre a altura e a largura de um mÃ³dulo no PDF417. */
 const RAZAO_LINHA_PDF417 = 4;
 
 function opcoes() {
@@ -761,17 +792,17 @@ function desenharCamposDataMatrix() {
 
   const label = document.createElement('label');
   label.htmlFor = input.id;
-  label.textContent = gs1 ? 'Campos GS1' : 'Conteúdo';
+  label.textContent = gs1 ? 'Campos GS1' : 'ConteÃºdo';
 
   const ajuda = document.createElement('p');
   ajuda.className = 'ajuda';
   ajuda.textContent = gs1
-    ? 'Cada campo começa por (AI) entre parênteses. O (01) é o GTIN de 14 ' +
-      'dígitos, o (10) o lote e o (17) a validade, em AAMMDD. O quadradinho ' +
-      'é o que vai em ampolas de farmácia e em chips — é o código 2D mais ' +
+    ? 'Cada campo comeÃ§a por (AI) entre parÃªnteses. O (01) Ã© o GTIN de 14 ' +
+      'dÃ­gitos, o (10) o lote e o (17) a validade, em AAMMDD. O quadradinho ' +
+      'Ã© o que vai em ampolas de farmÃ¡cia e em chips â€” Ã© o cÃ³digo 2D mais ' +
       'denso que existe.'
-    : 'Texto solto, sem AI. Para etiquetas de farmácia e chips, o GS1 ' +
-      'DataMatrix é o certo: traz o GTIN, o lote e a validade juntos.';
+    : 'Texto solto, sem AI. Para etiquetas de farmÃ¡cia e chips, o GS1 ' +
+      'DataMatrix Ã© o certo: traz o GTIN, o lote e a validade juntos.';
 
   div.append(label, input, ajuda);
   dom.campos.append(div);
@@ -780,15 +811,15 @@ function desenharCamposDataMatrix() {
 /**
  * O caminho do Data Matrix e do GS1 DataMatrix.
  *
- * **O Data Matrix é o código 2D mais denso que existe**, e isso é a razão de ele
- * ser pequeno e não haver mush choices. Um símbolo de 22×22 leva 44 caracteres
- * de dados, que é quase o que um QR de nível L com a mesma informação leva em
- * área. A razão é a correção de erros: o ECC200 põe até 62% do símbolo em
- * codewords de correcção, três vezes mais do que o QR mais robusto, porque as
- * etiquetas são pequenas e apanham inferno.
+ * **O Data Matrix Ã© o cÃ³digo 2D mais denso que existe**, e isso Ã© a razÃ£o de ele
+ * ser pequeno e nÃ£o haver mush choices. Um sÃ­mbolo de 22Ã—22 leva 44 caracteres
+ * de dados, que Ã© quase o que um QR de nÃ­vel L com a mesma informaÃ§Ã£o leva em
+ * Ã¡rea. A razÃ£o Ã© a correÃ§Ã£o de erros: o ECC200 pÃµe atÃ© 62% do sÃ­mbolo em
+ * codewords de correcÃ§Ã£o, trÃªs vezes mais do que o QR mais robusto, porque as
+ * etiquetas sÃ£o pequenas e apanham inferno.
  *
- * O que ele não tem são os três padrões de localização nos cantos que o QR tem.
- * A orientação vem de duas guias em L. É por isso que é muito mais pequeno.
+ * O que ele nÃ£o tem sÃ£o os trÃªs padrÃµes de localizaÃ§Ã£o nos cantos que o QR tem.
+ * A orientaÃ§Ã£o vem de duas guias em L. Ã‰ por isso que Ã© muito mais pequeno.
  */
 function atualizarDataMatrix() {
   const input = document.getElementById('campo-valor');
@@ -798,8 +829,8 @@ function atualizarDataMatrix() {
     mostrarErro(
       'Escreve alguma coisa para codificar.',
       ehGs1DataMatrix()
-        ? 'Preenche os campos GS1 para o código aparecer aqui.'
-        : 'Preenche o conteúdo para o Data Matrix aparecer aqui.',
+        ? 'Preenche os campos GS1 para o cÃ³digo aparecer aqui.'
+        : 'Preenche o conteÃºdo para o Data Matrix aparecer aqui.',
     );
     return;
   }
@@ -816,7 +847,7 @@ function atualizarDataMatrix() {
 
     state.payload = texto;
     // A matriz guarda-se para o SVG sair igual ao PNG, pelo mesmo motivo que no
-    // QR com o logótipo e no PDF417.
+    // QR com o logÃ³tipo e no PDF417.
     /*
      * A matriz do Data Matrix guarda-se tal como a do QR e a do PDF417, e pelo
      * mesmo motivo: o SVG tem de sair **igual** ao PNG, e para isso precisa da
@@ -831,11 +862,11 @@ function atualizarDataMatrix() {
     dom.payload.textContent = texto;
 
     const info = ehGs1DataMatrix()
-      ? `${codigo.campos.length} campos GS1 · ${codigo.separadores} FNC1 · ` +
-        `${codigo.colunas}×${codigo.linhas} módulos · ${codigo.usado} de ` +
+      ? `${codigo.campos.length} campos GS1 Â· ${codigo.separadores} FNC1 Â· ` +
+        `${codigo.colunas}Ã—${codigo.linhas} mÃ³dulos Â· ${codigo.usado} de ` +
         `${codigo.capacidade} codewords`
-      : `${codigo.colunas}×${codigo.linhas} módulos · ${codigo.usado} de ` +
-        `${codigo.capacidade} codewords · ECC200`;
+      : `${codigo.colunas}Ã—${codigo.linhas} mÃ³dulos Â· ${codigo.usado} de ` +
+        `${codigo.capacidade} codewords Â· ECC200`;
     dom.contagem.textContent = info;
   } catch (exception) {
     mostrarErro(exception.message);
@@ -854,17 +885,17 @@ function atualizar() {
   }
 
   /*
-   * O SQRC é o único caminho que é **assíncrono**, porque cifrar é uma operação
-   * da Web Crypto e não há versão síncrona.
+   * O SQRC Ã© o Ãºnico caminho que Ã© **assÃ­ncrono**, porque cifrar Ã© uma operaÃ§Ã£o
+   * da Web Crypto e nÃ£o hÃ¡ versÃ£o sÃ­ncrona.
    *
-   * E a razão de o `atualizar` não poder simplesmente devolver: quem o chama
-   * não espera, e não deve passar a esperar — um evento de `input` que
-   * bloqueasse o fio a cada tecla seria um cliente que não responde, e a
-   * pessoa_notaria antes de eu perceber porquê.
+   * E a razÃ£o de o `atualizar` nÃ£o poder simplesmente devolver: quem o chama
+   * nÃ£o espera, e nÃ£o deve passar a esperar â€” um evento de `input` que
+   * bloqueasse o fio a cada tecla seria um cliente que nÃ£o responde, e a
+   * pessoa_notaria antes de eu perceber porquÃª.
    *
-   * A alternativa — cifrar só quando se carrega num botão — afasta a
-   * pré-visualização, e quem faz um QR quer ver o QR enquanto escreve. Por isso
-   * a cifra corre a cada alteração e o desenho espera por ela.
+   * A alternativa â€” cifrar sÃ³ quando se carrega num botÃ£o â€” afasta a
+   * prÃ©-visualizaÃ§Ã£o, e quem faz um QR quer ver o QR enquanto escreve. Por isso
+   * a cifra corre a cada alteraÃ§Ã£o e o desenho espera por ela.
    */
   if (ehSqrc()) {
     atualizarSqrc();
@@ -878,7 +909,7 @@ function atualizar() {
 
   const category = dom.categoria.value;
 
-  // Relê os valores do DOM — a fonte da verdade é o que o utilizador escreveu.
+  // RelÃª os valores do DOM â€” a fonte da verdade Ã© o que o utilizador escreveu.
   const fields = { ...emptyFields(category) };
   for (const field of CATEGORIES.find((c) => c.id === category).fields) {
     const input = document.getElementById(`campo-${field.key}`);
@@ -905,8 +936,8 @@ function atualizar() {
  * primeira versao do SQRC tinha o desenho **repetido** dentro do seu `atualizar`,
  * e a consequencia foi concreta:
  *
- *  - o **logotipo nao funcionava**. O `aplicarFrame` — que apaga os modulos
- *    para o logotipo caber — so era chamado no caminho do QR. No SQRC o painel
+ *  - o **logotipo nao funcionava**. O `aplicarFrame` â€” que apaga os modulos
+ *    para o logotipo caber â€” so era chamado no caminho do QR. No SQRC o painel
  *    aparecia, o cursor arrastava-se, e nao apagava nada. **Um campo que aceita
  *    ser mexido e que nao faz nada e' pior do que um campo que nao existe**,
  *    porque a pessoa acredita que funcionou e imprime;
@@ -914,7 +945,7 @@ function atualizar() {
  *    segunda ficava para tras. E o que acontece com um caminho repetido.
  *
  * Por isso o SQRC calcula o payload e chama isto, e o que muda entre os dois
- * e' so o que entra no `state.payload` — que ja esta posto antes da chamada.
+ * e' so o que entra no `state.payload` â€” que ja esta posto antes da chamada.
  *
  * ## O que este metodo sabe
  *
@@ -924,7 +955,7 @@ function atualizar() {
  *
  * E a razao de o `ajudaFrame` sair daqui: **o limite do logotipo depende do
  * tamanho do codigo**, que so se sabe depois de codificar. Um SQRC tem a base64
- * maior do que o texto — a cifra acrescenta 28 bytes e a base64 cresce de 4/3 —
+ * maior do que o texto â€” a cifra acrescenta 28 bytes e a base64 cresce de 4/3 â€”
  * e por isso que o codigo e' maior e o logotipo disponivel e' menor. A mensagem
  * tem de dizer o limite **deste** codigo, e nao o de outro.
  */
@@ -938,7 +969,7 @@ function desenharQr(payload) {
      *
      * **A mensagem do SQRC e' diferente, e a razao e' que a culpa nao e' do
      * texto.** Quem escreve "peca-4471" e ve "o conteudo ocupa 200 bytes" pensa
-     * que o texto e' grande demais — e nao e'. E' a **cifra** que cresceu: 28
+     * que o texto e' grande demais â€” e nao e'. E' a **cifra** que cresceu: 28
      * bytes de nonce e etiqueta, mais a base64 a 4/3. Por isso a mensagem diz
      * que e' a cifra, e nao repete o numero sem contexto.
      */
@@ -947,15 +978,15 @@ function desenharQr(payload) {
     if (usados > limite) {
       mostrarErro(
         ehSqrc()
-          ? `O conteúdo cifrado ocupa ${usados} bytes e o limite com ECC ${ecl} é ${limite}. ` +
-            'É a cifra que cresceu, não o teu texto: encurta o conteúdo.'
-          : `O conteúdo ocupa ${usados} bytes e o limite com ECC ${ecl} é ${limite}.`,
+          ? `O conteÃºdo cifrado ocupa ${usados} bytes e o limite com ECC ${ecl} Ã© ${limite}. ` +
+            'Ã‰ a cifra que cresceu, nÃ£o o teu texto: encurta o conteÃºdo.'
+          : `O conteÃºdo ocupa ${usados} bytes e o limite com ECC ${ecl} Ã© ${limite}.`,
       );
       return;
     }
 
-    // A escala só pode ser calculada depois de saber quantos módulos tem a
-    // matriz. Com `ceil` o resultado nunca fica abaixo do tamanho pedido —
+    // A escala sÃ³ pode ser calculada depois de saber quantos mÃ³dulos tem a
+    // matriz. Com `ceil` o resultado nunca fica abaixo do tamanho pedido â€”
     // arredondar para baixo dava 456 px quando se pediu 512.
     const info = encode(payload, { ecl });
 
@@ -963,7 +994,7 @@ function desenharQr(payload) {
      * O quadrado do logotipo, se estiver ligado.
      *
      * O limite vem de `modulosMaximos`, que e' medido com o ZXing e nao deduzido
-     * da percentagem teorica da norma — a teorica e' 4 a 6 vezes o que um QR
+     * da percentagem teorica da norma â€” a teorica e' 4 a 6 vezes o que um QR
      * pequeno aguenta, e usa-la da logotipos que as vezes leem. O pior
      * resultado possivel, porque o defeito so aparece no cartao impresso.
      *
@@ -974,23 +1005,48 @@ function desenharQr(payload) {
     let codigo = info;
     let zona = null;
 
+    const forma = dom.frameForma.value || 'quadrado';
+    const angulo = Number(dom.frameAngulo.value) || 0;
+    const desloc = Number(dom.framePosicao.value) || 0;
+
+    /*
+     * **O limite Ã© por forma, e o cursor tem de o seguir.**
+     *
+     * A forma decide quantos mÃ³dulos se apagam, e isso decide se o cÃ³digo se lÃª.
+     * O mesmo QR aguenta um logÃ³tipo maior em estrela do que em quadrado, e
+     * dizer o nÃºmero do quadrado a quem escolheu uma redonda Ã© ser conservador
+     * demais para quem escolheu a forma por ser mais legÃ­vel.
+     */
+    const maximo = modulosMaximos(info.size, ecl, undefined, forma);
+
     if (dom.frame.checked) {
-      const maximo = modulosMaximos(info.size, ecl);
       const pedido = Math.min(Number(dom.frameTamanho.value) || 0, maximo);
 
       if (pedido > 0) {
-        codigo = aplicarFrame(info, { modulos: pedido });
+        codigo = aplicarFrame(info, { modulos: pedido, forma });
         zona = codigo.zona;
       }
     }
 
-    // O cursor fica sempre no maior valor que ainda le. Se o texto e' grande e
-    // a matriz sai pequena, o logotipo disponivel e' menor — e um cursor acima
-    // do limite seria uma promessa que o leitor nao cumpre.
-    const maximoFrame = modulosMaximos(info.size, ecl);
-    dom.frameTamanho.max = String(maximoFrame);
-    if (Number(dom.frameTamanho.value) > maximoFrame) {
-      dom.frameTamanho.value = String(maximoFrame);
+    /*
+     * **Mover o logÃ³tipo aproxima-o dos padrÃµes de funÃ§Ã£o.**
+     *
+     * O deslocamento nÃ£o muda quantos mÃ³dulos se apagam â€” muda *quais* â€” e um
+     * mÃ³dulo apagado Ã  mais junto de um padrÃ£o de localizaÃ§Ã£o vale por mais do
+     * que um no meio. O limite Ã© por isso que desce de `maximo` para
+     * `maximo - |desloc|` e nÃ£o fica no mesmo nÃºmero: **dar o mesmo limite para
+     * a posiÃ§Ã£o 0 e para a 8 seria uma promessa que o leitor nÃ£o cumpre**, e o
+     * sintoma seria um cÃ³digo que lÃª no ecrÃ£ e nÃ£o lÃª no cartÃ£o.
+     */
+    const limiteLogotipo = Math.max(0, maximo - Math.abs(desloc));
+
+    // O cursor fica sempre no maior valor que ainda lÃª.
+    dom.frameTamanho.max = String(maximo);
+    if (Number(dom.frameTamanho.value) > maximo) {
+      dom.frameTamanho.value = String(maximo);
+    }
+    if (Number(dom.frameTamanho.value) > limiteLogotipo) {
+      dom.frameTamanho.value = String(limiteLogotipo);
     }
 
     /*
@@ -1004,11 +1060,39 @@ function desenharQr(payload) {
      */
     dom.ajudaFrame.textContent = !dom.frame.checked
       ? ''
-      : maximoFrame === 0
-        ? `Neste código não cabe um logótipo com ECC ${ecl}: a correção de ` +
-          'erros não tem módulos a mais para reconstruir a zona. Suba para Q ou H.'
-        : `Até ${maximoFrame} módulos de lado com ECC ${ecl} neste código. ` +
-          'Acima disso a correção de erros já não chega.';
+      : maximo === 0
+        ? `Neste cÃ³digo nÃ£o cabe um logÃ³tipo com ECC ${ecl}: a correÃ§Ã£o de ` +
+          'erros nÃ£o tem mÃ³dulos a mais para reconstruir a zona. Suba para Q ou H.'
+        : (limiteLogotipo < maximo
+            ? `AtÃ© ${maximo} mÃ³dulos de lado em ${nomeDaForma(forma)}, ` +
+              `mas com o logÃ³tipo a ${Math.abs(desloc)} mÃ³dulo${Math.abs(descol) === 1 ? '' : 's'} ` +
+              `do centro sÃ³ atÃ© ${limite} â€” quanto mais longe do centro, ` +
+              `mais perto dos padrÃµes de localizaÃ§Ã£o, e mais custa reconstruir.`
+            : `AtÃ© ${maximo} mÃ³dulos de lado em ${nomeDaForma(forma)} com ECC ${ecl} ` +
+              'neste cÃ³digo. Acima disso a correÃ§Ã£o de erros jÃ¡ nÃ£o chega.');
+
+    /*
+     * O Ã¢ngulo e a posiÃ§Ã£o **nÃ£o mexem em quantos mÃ³dulos se apagam** â€” mexem em
+     * quais. Por isso que a mensagem do Ã¢ngulo diz o que ele faz e nÃ£o dÃ¡ um
+     * limite: um logÃ³tipo rodado lÃª se o apagado Ã© o mesmo, e o teste com o
+     * ZXing Ã© que diz se o rodado atrapalha.
+     */
+    dom.ajudaFrameAngulo.textContent = !dom.frame.checked
+      ? ''
+      : angulo === 0
+        ? 'Sem rotaÃ§Ã£o.'
+        : `Rodado ${angulo}Â°. O Ã¢ngulo nÃ£o muda os mÃ³dulos apagados, sÃ³ a ` +
+          'posiÃ§Ã£o deles, e o conteÃºdo continua a ler-se. A roda Ã© Ã  volta do ' +
+          'centro da Ã¡rea, nÃ£o da imagem.';
+
+    dom.ajudaFramePosicao.textContent = !dom.frame.checked
+      ? ''
+      : desloc === 0
+        ? 'No centro.'
+        : `${desloc > 0 ? 'Ã€ direita' : 'Ã€ esquerda'} ${Math.abs(desloc)} ` +
+          `mÃ³dulo${Math.abs(desloc) === 1 ? '' : 's'}. ` +
+          'Mover o logÃ³tipo aproxima-o dos padrÃµes de localizaÃ§Ã£o, por isso o ' +
+          'limite ao lado Ã© menor.';
 
     const scale = Math.max(1, Math.ceil(targetPx / (info.size + border * 2)));
 
@@ -1028,14 +1112,14 @@ function desenharQr(payload) {
         /*
          * **Isto e' `offset`, e nao `margem`.** A margem do codigo entra como
          * deslocamento em modulos, porque a zona apagada e' dada em coordenadas
-         * do *codigo* e o canvas desenha a partir da *margem* — a mesma grelha
+         * do *codigo* e o canvas desenha a partir da *margem* â€” a mesma grelha
          * com origens diferentes.
          *
          * **A chamada passou `margem: border` durante muito tempo, e o nome
          * estava errado.** O `offset` ficava no seu valor por omissao de zero e
          * o logotipo saia `border` modulos para a esquerda e para cima: medido,
          * 40 px a 10 px por modulo, e o QR continuava a ler. Nenhum teste falhava
-         * porque o codigo estava certo — so o desenho saia torto.
+         * porque o codigo estava certo â€” so o desenho saia torto.
          *
          * E' o bug que a `AGENTS.md` descreve com "o logotipo saiu 4 modulos a
          * esquerda", e a correccao estava escrita no comentario **e** no sitio
@@ -1043,6 +1127,12 @@ function desenharQr(payload) {
          * importa e' o nome do argumento, que e' o que o codigo le.
          */
         offset: border,
+        /*
+         * O ângulo vem do mesmo sítio que o SVG usa, e não de outro estado. **O
+         * ângulo em dois sítios diferentes é um bug esperando**: o PNG saía com o
+         * logótipo rodado e o SVG sem, e os dois ficheiros têm o mesmo nome.
+         */
+        angulo,
       });
     }
 
@@ -1055,37 +1145,37 @@ function desenharQr(payload) {
     dom.acoes.hidden = false;
     dom.payload.textContent = payload;
     dom.contagem.textContent =
-      `${info.size}×${info.size} módulos · versão ${info.version} · ` +
+      `${info.size}Ã—${info.size} mÃ³dulos Â· versÃ£o ${info.version} Â· ` +
       `${usados} de ${limite} bytes (ECC ${ecl})` +
       (zona
-        ? ` · ${codigo.apagados} módulos apagados para o logotipo (${codigo.percentagem.toFixed(1)}%)`
+        ? ` Â· ${codigo.apagados} mÃ³dulos apagados para o logotipo (${codigo.percentagem.toFixed(1)}%)`
         : '');
   } catch (exception) {
-    mostrarErro(exception.message || 'Não foi possível gerar o QR code.');
+    mostrarErro(exception.message || 'NÃ£o foi possÃ­vel gerar o QR code.');
   }
 }
 
 /**
- * O caminho do SQRC: um QR com o conteúdo cifrado.
+ * O caminho do SQRC: um QR com o conteÃºdo cifrado.
  *
- * ## A ordem é o que interessa aqui, e não é a óbvia
+ * ## A ordem Ã© o que interessa aqui, e nÃ£o Ã© a Ã³bvia
  *
- * O conteúdo é lido, a chave é lida, o conteúdo é **cifrado**, e só então é que
- * há payload. O payload do SQRC **não é o que a pessoa escreveu** — é a base64
- * do contentor. E é isso que vai para o campo de texto, para o PNG, para o SVG e
- * para o botão de copiar, que é o que uma pessoa precisa de levar para outro
- * sítio.
+ * O conteÃºdo Ã© lido, a chave Ã© lida, o conteÃºdo Ã© **cifrado**, e sÃ³ entÃ£o Ã© que
+ * hÃ¡ payload. O payload do SQRC **nÃ£o Ã© o que a pessoa escreveu** â€” Ã© a base64
+ * do contentor. E Ã© isso que vai para o campo de texto, para o PNG, para o SVG e
+ * para o botÃ£o de copiar, que Ã© o que uma pessoa precisa de levar para outro
+ * sÃ­tio.
  *
- * Se o payload fosse o texto original, o botão de cópia entregaria o segredo em
+ * Se o payload fosse o texto original, o botÃ£o de cÃ³pia entregaria o segredo em
  * claro, e o QR desenhado seria uma coisa e o copiado outra. **Um SQRC cuja
- * exportação não é o SQRC é o pior dos dois.**
+ * exportaÃ§Ã£o nÃ£o Ã© o SQRC Ã© o pior dos dois.**
  *
- * ## Por que a chave vai para uma `CryptoKey` e não para os bytes
+ * ## Por que a chave vai para uma `CryptoKey` e nÃ£o para os bytes
  *
- * `crypto.subtle.importKey` não aceita uma `CryptoKey` de outro sítio, e não
- * guarda a chave em lado nenhum do nosso lado: a `CryptoKey` que este módulo
- * tem é a única cópia, e vai para o lixo quando a função acaba. O texto da
- * chave continua no campo — quem o escreve é quem o tem.
+ * `crypto.subtle.importKey` nÃ£o aceita uma `CryptoKey` de outro sÃ­tio, e nÃ£o
+ * guarda a chave em lado nenhum do nosso lado: a `CryptoKey` que este mÃ³dulo
+ * tem Ã© a Ãºnica cÃ³pia, e vai para o lixo quando a funÃ§Ã£o acaba. O texto da
+ * chave continua no campo â€” quem o escreve Ã© quem o tem.
  */
 async function atualizarSqrc() {
   const category = dom.categoria.value;
@@ -1107,12 +1197,12 @@ async function atualizarSqrc() {
   const texto = build(category, fields);
 
   /*
-   * **Uma chave vazia é o estado inicial, não um erro**, e pela mesma razão que
-   * um campo de código de barras vazio não é: o aviso a vermelho em cima de um
-   * formulário em branco é ruído. A pessoa ainda não fez nada de errado.
+   * **Uma chave vazia Ã© o estado inicial, nÃ£o um erro**, e pela mesma razÃ£o que
+   * um campo de cÃ³digo de barras vazio nÃ£o Ã©: o aviso a vermelho em cima de um
+   * formulÃ¡rio em branco Ã© ruÃ­do. A pessoa ainda nÃ£o fez nada de errado.
    *
-   * Mas o aviso do painel — "sem a chave perdeste isto para sempre" — está lá
-   * sempre, porque esse é sobre o que vai acontecer, e não sobre o que
+   * Mas o aviso do painel â€” "sem a chave perdeste isto para sempre" â€” estÃ¡ lÃ¡
+   * sempre, porque esse Ã© sobre o que vai acontecer, e nÃ£o sobre o que
    * aconteceu.
    */
   const textoChave = dom.sqrcChave.value;
@@ -1123,18 +1213,18 @@ async function atualizarSqrc() {
 
   try {
     /*
-     * **A chave sai de uma frase com PBKDF2, e não de ser usada como bytes.**
+     * **A chave sai de uma frase com PBKDF2, e nÃ£o de ser usada como bytes.**
      *
-     * A DENSO especifica uma derivação, e ela não é opcional: uma frase de 12
-     * caracteres são 12 bytes, e o AES-128 quer 16 ou 32. Usar os bytes da frase
+     * A DENSO especifica uma derivaÃ§Ã£o, e ela nÃ£o Ã© opcional: uma frase de 12
+     * caracteres sÃ£o 12 bytes, e o AES-128 quer 16 ou 32. Usar os bytes da frase
      * directamente daria menos entropia do que parece e, pior, daria chaves
-     * diferentes para frases com o mesmo comprimento — o que faria duas pessoas
-     * com a mesma frase terem códigos que não abrem um no outro.
+     * diferentes para frases com o mesmo comprimento â€” o que faria duas pessoas
+     * com a mesma frase terem cÃ³digos que nÃ£o abrem um no outro.
      *
-     * O sal é fixo e o custo é alto de propósito: o sal fixo é porque quem tem
-     * a frase e o código tem de dar a mesma chave, e o custo é para que
-     * adivinhar a frase a partir do código seja caro. **Aqui não há
-     * armazenamento de senhas a proteger**, e por isso o custo é o mesmo para
+     * O sal Ã© fixo e o custo Ã© alto de propÃ³sito: o sal fixo Ã© porque quem tem
+     * a frase e o cÃ³digo tem de dar a mesma chave, e o custo Ã© para que
+     * adivinhar a frase a partir do cÃ³digo seja caro. **Aqui nÃ£o hÃ¡
+     * armazenamento de senhas a proteger**, e por isso o custo Ã© o mesmo para
      * toda a gente.
      */
     const material = await crypto.subtle.importKey(
@@ -1157,8 +1247,8 @@ async function atualizarSqrc() {
     const codigo = await codificarSqrc(texto, chave, id);
 
     /*
-     * **O payload é a base64 do contentor, e é o que vai para tudo** — o canvas,
-     * o SVG, a cópia e a partilha. Um único valor, e é o que a nota acima do
+     * **O payload Ã© a base64 do contentor, e Ã© o que vai para tudo** â€” o canvas,
+     * o SVG, a cÃ³pia e a partilha. Um Ãºnico valor, e Ã© o que a nota acima do
      * `state.payload` quer dizer.
      */
     state.payload = codigo.base64;
@@ -1190,12 +1280,12 @@ async function atualizarSqrc() {
 }
 
 /**
- * O caminho dos códigos de barras.
+ * O caminho dos cÃ³digos de barras.
  *
- * Não é o do QR com outros valores: um código de barras não tem payload, não
- * tem versão, não tem correção de erros e não tem limite de bytes. Tem um valor
- * e uma simbologia, e a validação é da própria simbologia — está no registo em
- * `symbologies/index.js`, e é lá que vive a regra do número de dígitos.
+ * NÃ£o Ã© o do QR com outros valores: um cÃ³digo de barras nÃ£o tem payload, nÃ£o
+ * tem versÃ£o, nÃ£o tem correÃ§Ã£o de erros e nÃ£o tem limite de bytes. Tem um valor
+ * e uma simbologia, e a validaÃ§Ã£o Ã© da prÃ³pria simbologia â€” estÃ¡ no registo em
+ * `symbologies/index.js`, e Ã© lÃ¡ que vive a regra do nÃºmero de dÃ­gitos.
  */
 function atualizarLinear() {
   const simbologia = simbologiaActual();
@@ -1209,9 +1299,9 @@ function atualizarLinear() {
   state.fields = { [simbologia.campo.key]: valor };
 
   if (valor.trim() === '') {
-    // Um campo vazio não é um erro: é o estado inicial. O aviso a vermelho de
-    // "escreve alguma coisa" em cima de um formulário em branco é apenas ruído.
-    mostrarErro(null, 'Preenche o código para o ver aqui.');
+    // Um campo vazio nÃ£o Ã© um erro: Ã© o estado inicial. O aviso a vermelho de
+    // "escreve alguma coisa" em cima de um formulÃ¡rio em branco Ã© apenas ruÃ­do.
+    mostrarErro(null, 'Preenche o cÃ³digo para o ver aqui.');
     return;
   }
 
@@ -1222,10 +1312,10 @@ function atualizarLinear() {
     const margem = Math.min(20, Math.max(0, Number(dom.margem.value) || 10));
 
     /*
-     * A escala é calculada a partir do tamanho pedido e da largura que a
-     * simbologia vai ter. `ceil` garante que nunca fica abaixo do pedido —
+     * A escala Ã© calculada a partir do tamanho pedido e da largura que a
+     * simbologia vai ter. `ceil` garante que nunca fica abaixo do pedido â€”
      * arredondar para baixo dava 508 px quando se pediu 512, e o utilizador
-     * fica com uma imagem que não pediu.
+     * fica com uma imagem que nÃ£o pediu.
      */
     const larguraModulos = codigo.modules.length + margem * 2;
     const escala = Math.max(1, Math.ceil(targetPx / larguraModulos));
@@ -1241,23 +1331,23 @@ function atualizarLinear() {
     dom.acoes.hidden = false;
     dom.payload.textContent = codigo.legenda;
     dom.contagem.textContent =
-      `${simbologia.rotulo} · ${codigo.modules.length} módulos · ` +
-      `${d.pxLargura}×${d.pxAltura} px · escala ${escala} px/módulo`;
+      `${simbologia.rotulo} Â· ${codigo.modules.length} mÃ³dulos Â· ` +
+      `${d.pxLargura}Ã—${d.pxAltura} px Â· escala ${escala} px/mÃ³dulo`;
     dom.ajudaTamanho.textContent =
-      'A altura segue a proporção que o leitor aguenta, e é por isso que a ' +
-      'imagem não fica quadrada.';
+      'A altura segue a proporÃ§Ã£o que o leitor aguenta, e Ã© por isso que a ' +
+      'imagem nÃ£o fica quadrada.';
   } catch (exception) {
-    mostrarErro(exception.message || 'Não foi possível gerar o código de barras.');
+    mostrarErro(exception.message || 'NÃ£o foi possÃ­vel gerar o cÃ³digo de barras.');
   }
 }
 
 /**
- * Mostra o estado de erro, ou o estado inicial quando não há erro nenhum.
+ * Mostra o estado de erro, ou o estado inicial quando nÃ£o hÃ¡ erro nenhum.
  *
- * `mensagem === null` não é um erro: é o formulário ainda vazio. A diferença
+ * `mensagem === null` nÃ£o Ã© um erro: Ã© o formulÃ¡rio ainda vazio. A diferenÃ§a
  * importa, porque pintar de vermelho um campo em branco que o utilizador ainda
- * não preencheu é ruído — e obriga a leitura de ecrã a anunciar um erro que
- * não existe.
+ * nÃ£o preencheu Ã© ruÃ­do â€” e obriga a leitura de ecrÃ£ a anunciar um erro que
+ * nÃ£o existe.
  */
 function mostrarErro(mensagem, textoVazio) {
   state.valido = false;
@@ -1274,30 +1364,30 @@ function mostrarErro(mensagem, textoVazio) {
   }
 
   dom.erro.hidden = true;
-  dom.vazio.textContent = textoVazio ?? 'Preenche o conteúdo para o QR code aparecer aqui.';
+  dom.vazio.textContent = textoVazio ?? 'Preenche o conteÃºdo para o QR code aparecer aqui.';
   dom.vazio.hidden = false;
 }
 
 // --- Guardar, copiar, partilhar -------------------------------------------
 
 function nomeFicheiro(extensao) {
-  // O nome do ficheiro diz o que foi gerado. Um `qrcode-pix.png` que é na
-  // verdade um EAN-13 obriga a abrir o ficheiro para saber o que é.
+  // O nome do ficheiro diz o que foi gerado. Um `qrcode-pix.png` que Ã© na
+  // verdade um EAN-13 obriga a abrir o ficheiro para saber o que Ã©.
   const nome = ehQr() ? `qrcode-${dom.categoria.value}` : `codigo-${dom.formato.value}`;
   return `${nome}.${extensao}`;
 }
 
 /**
- * O PDF417 em SVG, com a mesma grelha que está no canvas.
+ * O PDF417 em SVG, com a mesma grelha que estÃ¡ no canvas.
  *
- * Sai da **mesma matriz**, e não de codificar o texto outra vez. É a mesma
- * razão do QR com o logótipo: se os dois ficheiros saíssem de codificações
- * diferentes, o PNG e o SVG seriam códigos diferentes com o mesmo nome, e
- * ninguém saberia qual dos dois está certo.
+ * Sai da **mesma matriz**, e nÃ£o de codificar o texto outra vez. Ã‰ a mesma
+ * razÃ£o do QR com o logÃ³tipo: se os dois ficheiros saÃ­ssem de codificaÃ§Ãµes
+ * diferentes, o PNG e o SVG seriam cÃ³digos diferentes com o mesmo nome, e
+ * ninguÃ©m saberia qual dos dois estÃ¡ certo.
  *
- * `shape-rendering="crispEdges"` é o que impede o browser de pôr módulos
- * cinzentos nas margens entre eles. Num código de barras 2D isso é a diferença
- * entre se ler e não se ler.
+ * `shape-rendering="crispEdges"` Ã© o que impede o browser de pÃ´r mÃ³dulos
+ * cinzentos nas margens entre eles. Num cÃ³digo de barras 2D isso Ã© a diferenÃ§a
+ * entre se ler e nÃ£o se ler.
  */
 function svgPdf417() {
   const grade = state.qr.modules;
@@ -1332,8 +1422,8 @@ function guardar(blob, filename) {
   document.body.append(link);
   link.click();
   link.remove();
-  // Espera antes de libertar: no Safari, revogar já durante o click
-  // cancela a transferência.
+  // Espera antes de libertar: no Safari, revogar jÃ¡ durante o click
+  // cancela a transferÃªncia.
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
@@ -1376,13 +1466,13 @@ function guardarSvg() {
   }
 
   /*
-   * A mesma matriz que está no canvas, e não o payload outra vez.
+   * A mesma matriz que estÃ¡ no canvas, e nÃ£o o payload outra vez.
    *
-   * Sem isto, o PNG saía com o logótipo e o SVG saía sem ele — dois ficheiros
-   * diferentes com o mesmo nome, e nenhum aviso. Guardar o `qr` em `state` é o
-   * que garante que os dois são o mesmo código.
+   * Sem isto, o PNG saÃ­a com o logÃ³tipo e o SVG saÃ­a sem ele â€” dois ficheiros
+   * diferentes com o mesmo nome, e nenhum aviso. Guardar o `qr` em `state` Ã© o
+   * que garante que os dois sÃ£o o mesmo cÃ³digo.
    *
-   * E o logotipo vai embutido no SVG como uma imagem, senão o mesmo problema
+   * E o logotipo vai embutido no SVG como uma imagem, senÃ£o o mesmo problema
    * numa forma diferente: o PNG com o logotipo e o SVG com o buraco.
    */
   const svg = toSvg(state.payload, {
@@ -1392,11 +1482,20 @@ function guardarSvg() {
     logotipo: state.logotipo,
     escala: state.escalaQr,
     zona: state.zonaFrame,
+    /*
+     * **O ângulo vai para o SVG, senão os dois ficheiros divergem.**
+     *
+     * O PNG sai do canvas, que roda com `translate` + `rotate`; o SVG sai de um
+     * `transform`. **Um dos dois a rodar e o outro não dá dois ficheiros com o
+     * mesmo nome e conteúdos diferentes** — que é o que o comentário logo acima
+     * descreve, e que já aconteceu com o logotipo a desaparecer do SVG.
+     */
+    angulo: Number(dom.frameAngulo.value) || 0,
   });
   guardar(new Blob([svg], { type: 'image/svg+xml' }), nomeFicheiro('svg'));
 }
 
-/** `navigator.clipboard` só existe em contexto seguro. */
+/** `navigator.clipboard` sÃ³ existe em contexto seguro. */
 async function copiar(texto, botao) {
   const original = botao.textContent;
 
@@ -1408,7 +1507,7 @@ async function copiar(texto, botao) {
     }
     botao.textContent = 'Copiado!';
   } catch {
-    botao.textContent = 'Não foi possível copiar';
+    botao.textContent = 'NÃ£o foi possÃ­vel copiar';
   }
 
   setTimeout(() => {
@@ -1443,7 +1542,7 @@ async function partilhar() {
       }
     }, 'image/png');
   } catch (exception) {
-    console.warn('Partilha indisponível:', exception);
+    console.warn('Partilha indisponÃ­vel:', exception);
     guardarPng();
   }
 }
@@ -1451,12 +1550,12 @@ async function partilhar() {
 // --- Arranque --------------------------------------------------------------
 
 function registarServiceWorker() {
-  // Em `file://` não há service worker; registar dá erro e polui a consola.
+  // Em `file://` nÃ£o hÃ¡ service worker; registar dÃ¡ erro e polui a consola.
   if (!('serviceWorker' in navigator)) return;
   if (!location.protocol.startsWith('http')) return;
 
   navigator.serviceWorker.register('sw.js').catch((error) => {
-    console.warn('Service worker não registado:', error);
+    console.warn('Service worker nÃ£o registado:', error);
   });
 }
 
@@ -1477,14 +1576,34 @@ function arranque() {
   }
 
   /*
-   * O `input` e nao o `change`: o cursor do logótipo arrasta-se, e com o
-   * `change` o código só se redesenhava no fim. Para um utilizador a arrastar
-   * um cursor isso é o código a ficar congelado enquanto se mexe, e a largura
-   * das barras de tools não justifica o custo — apagar módulos é barato, e
-   * `aplicarFrame` só percorre a zona.
+   * O `input` e nao o `change`: o cursor do logÃ³tipo arrasta-se, e com o
+   * `change` o cÃ³digo sÃ³ se redesenhava no fim. Para um utilizador a arrastar
+   * um cursor isso Ã© o cÃ³digo a ficar congelado enquanto se mexe, e a largura
+   * das barras de tools nÃ£o justifica o custo â€” apagar mÃ³dulos Ã© barato, e
+   * `aplicarFrame` sÃ³ percorre a zona.
    */
   dom.frame.addEventListener('change', atualizar);
   dom.frameTamanho.addEventListener('input', atualizar);
+  dom.frameAngulo.addEventListener('input', atualizar);
+  dom.framePosicao.addEventListener('input', atualizar);
+  dom.frameForma.addEventListener('change', atualizar);
+
+  /*
+   * **As formas do selector sao as do modulo**, e nao uma lista escrita aqui.
+   *
+   * Sao dois conjuntos que precisam de estar de acordo â€” o que o selector
+   * mostra e o que `frameqr.js` sabe desenhar â€” e a `AGENTS.md` chama a isso
+   * "duas listas do mesmo conjunto a divergir em silencio", com o exemplo do
+   * GS1-128: entrou no registo com o encoder, a validacao e os casos lidos pelo
+   * ZXing, e nao aparecia no selector. **Sem sintoma e sem erro; a aplicacao
+   * esta certa e a pessoa e' que nao consegue escolher.**
+   */
+  for (const [id, nome] of FORMAS) {
+    const opcao = document.createElement('option');
+    opcao.value = id;
+    opcao.textContent = nome;
+    dom.frameForma.append(opcao);
+  }
   dom.frameFicheiro.addEventListener('change', () => {
     carregarLogotipo(dom.frameFicheiro.files[0]);
   });
@@ -1492,16 +1611,16 @@ function arranque() {
   /*
    * Os campos do SQRC.
    *
-   * **`input` e nao `change`**, como nos campos de conteúdo: quem escreve a
-   * chave quer ver o código aparecer enquanto escreve. O custo é uma cifra por
-   * tecla, e o PBKDF2 a 210000 iterações **não é barato** — mas é a mesma cifra
-   * que se faria ao carregar num botão, e aqui a pessoa vê o resultado em vez de
+   * **`input` e nao `change`**, como nos campos de conteÃºdo: quem escreve a
+   * chave quer ver o cÃ³digo aparecer enquanto escreve. O custo Ã© uma cifra por
+   * tecla, e o PBKDF2 a 210000 iteraÃ§Ãµes **nÃ£o Ã© barato** â€” mas Ã© a mesma cifra
+   * que se faria ao carregar num botÃ£o, e aqui a pessoa vÃª o resultado em vez de
    * carregar em nada.
    *
-   * O que muda é a **espera**: sem um atraso, escrever uma frase de 20
+   * O que muda Ã© a **espera**: sem um atraso, escrever uma frase de 20
    * caracteres dispara vinte cifras em fila, e as vinte desenham fora de ordem
-   * — a que acaba primeiro desenha, e a que foi pedida primeiro fica por cima.
-   * O sintoma é o código piscar e o resultado final ser o de uma tecla atrás.
+   * â€” a que acaba primeiro desenha, e a que foi pedida primeiro fica por cima.
+   * O sintoma Ã© o cÃ³digo piscar e o resultado final ser o de uma tecla atrÃ¡s.
    */
   let sqrcTimer = null;
   const sqrcAdiado = () => {
@@ -1515,28 +1634,28 @@ function arranque() {
   /*
    * Gerar uma chave.
    *
-   * **O botão escreve no campo, e não aplica a chave.** Escrever no campo é o
+   * **O botÃ£o escreve no campo, e nÃ£o aplica a chave.** Escrever no campo Ã© o
    * que deixa a pessoa ver o que tem, confirmar que o guardou, e mudar um
-   * carácter se discoversse um erro. Aplicar a chave direto deixava-a sem
-   * maneira de a confirmar, e quem não sabe qual é a sua chave tem um problema
-   * que não tem solução.
+   * carÃ¡cter se discoversse um erro. Aplicar a chave direto deixava-a sem
+   * maneira de a confirmar, e quem nÃ£o sabe qual Ã© a sua chave tem um problema
+   * que nÃ£o tem soluÃ§Ã£o.
    *
-   * E por isso que **não vai para o histórico**: um botão de "não te esqueças"
-   * que põe a chave no histórico do browser está a fazer o contrário do que
+   * E por isso que **nÃ£o vai para o histÃ³rico**: um botÃ£o de "nÃ£o te esqueÃ§as"
+   * que pÃµe a chave no histÃ³rico do browser estÃ¡ a fazer o contrÃ¡rio do que
    * promete.
    */
   dom.sqrcGerarChave.addEventListener('click', () => {
     /*
      * **16 bytes de entropia, em base32 sem ambiguidade.**
      *
-     * O alfabeto base32 sem `I`, `L`, `O` e `U` — os que se confundem com o
-     * `1` e o `0`. Uma chave que a pessoa vai ler num ecrã e escrever num papel
-     * não pode ter caracteres que se confundem, porque o erro de transcrição é
-     * indetectável: dá "chave errada", e ninguém sabe que foi um `1` por um `I`.
+     * O alfabeto base32 sem `I`, `L`, `O` e `U` â€” os que se confundem com o
+     * `1` e o `0`. Uma chave que a pessoa vai ler num ecrÃ£ e escrever num papel
+     * nÃ£o pode ter caracteres que se confundem, porque o erro de transcriÃ§Ã£o Ã©
+     * indetectÃ¡vel: dÃ¡ "chave errada", e ninguÃ©m sabe que foi um `1` por um `I`.
      *
-     * E são 16 bytes, não 32: é o tamanho que a DENSO especifica, e uma chave
-     * de 256 bits numa frase que a pessoa tem de escrever à mão não é mais
-     * segura — é mais difícil de acertar.
+     * E sÃ£o 16 bytes, nÃ£o 32: Ã© o tamanho que a DENSO especifica, e uma chave
+     * de 256 bits numa frase que a pessoa tem de escrever Ã  mÃ£o nÃ£o Ã© mais
+     * segura â€” Ã© mais difÃ­cil de acertar.
      */
     const alfabeto = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
     const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -1553,30 +1672,30 @@ function arranque() {
   dom.btnCopiarPayload.addEventListener('click', () => copiar(state.payload, dom.btnCopiarPayload));
   dom.btnPartilhar.addEventListener('click', partilhar);
 
-  // Só faz sentido oferecer "partilhar" onde a API existe.
+  // SÃ³ faz sentido oferecer "partilhar" onde a API existe.
   if (navigator.share) dom.btnPartilhar.hidden = false;
 
   window.addEventListener('resize', atualizar, { passive: true });
   atualizar();
 
-  // O empacotador do ficheiro único define __FICHEIRO_UNICO__: nesse caso não
-  // há sw.js ao lado e registá-lo só provocaria um 404.
+  // O empacotador do ficheiro Ãºnico define __FICHEIRO_UNICO__: nesse caso nÃ£o
+  // hÃ¡ sw.js ao lado e registÃ¡-lo sÃ³ provocaria um 404.
   if (typeof __FICHEIRO_UNICO__ === 'undefined') registarServiceWorker();
 }
 
-/** Copiar a imagem: a Clipboard API só aceita texto em muitos browsers. */
+/** Copiar a imagem: a Clipboard API sÃ³ aceita texto em muitos browsers. */
 async function copiarImagem(botao) {
   const original = botao.textContent;
 
   try {
     if (!navigator.clipboard || !window.ClipboardItem || !window.isSecureContext) {
-      throw new Error('Clipboard de imagens indisponível');
+      throw new Error('Clipboard de imagens indisponÃ­vel');
     }
     const blob = await new Promise((resolve) => dom.canvas.toBlob(resolve, 'image/png'));
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     botao.textContent = 'Copiado!';
   } catch {
-    // Alternativa honesta: copiar o payload em texto, que é o que a maioria
+    // Alternativa honesta: copiar o payload em texto, que Ã© o que a maioria
     // dos browsers permite e o que interessa na maioria dos casos.
     await copiar(state.payload, botao);
   }

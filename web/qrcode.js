@@ -578,6 +578,7 @@ export function toSvg(text, options = {}) {
   const zona = qr.zona;
 
   if (imagem && zona) {
+    const anguloSvg = options.angulo ?? 0;
     /*
      * **O `viewBox` conta módulos, e as coordenadas também. A escala não entra.**
      *
@@ -622,9 +623,26 @@ export function toSvg(text, options = {}) {
     const x0 = zona.inicio + border + (lado - largura) / 2;
     const y0 = zona.inicio + border + (lado - altura) / 2;
 
+    /*
+     * **A rotação vai num `transform`, e não nas coordenadas.**
+     *
+     * Rodar `x` e `y` à mão daria um resultado que parece certo numa imagem
+     * quadrada e errado numa rectangular — e a imagem é quase sempre
+     * rectangular. **O `transform="rotate(...)"` roda em volta do ponto que se
+     * indica, que é o centro da caixa**, e o centro é a mesma coisa que o
+     * canvas usa.
+     *
+     * **O SVG e o PNG têm de rodar igual.** O canvas roda com
+     * `translate` + `rotate` + `drawImage`; aqui é um atributo. Se divergissem,
+     * os dois ficheiros saíam com o nome certo e conteúdos diferentes — que é o
+     * bug que o comentário no topo desta função descreve.
+     */
+    const centro = `rotate(${anguloSvg} ${(x0 + largura / 2).toFixed(4)} ${(y0 + altura / 2).toFixed(4)})`;
+
     logotipo =
       `<image x="${x0.toFixed(4)}" y="${y0.toFixed(4)}" ` +
       `width="${largura.toFixed(4)}" height="${altura.toFixed(4)}" ` +
+      `transform="${centro}" ` +
       `href="${imagem.src}" preserveAspectRatio="none"/>`;
   }
 
