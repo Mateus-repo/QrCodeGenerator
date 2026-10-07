@@ -721,6 +721,36 @@ o ZXing a ler o resultado.
 5. go/         ⬜ pasta e README prontos; código por fazer, e por último
 ```
 
+> **A tabela dos 541 AIs do GS1 já está nas cinco**, escrita por
+> `spec/gerar-tabelas-gs1.py`, e `web/tests/gs1-tabelas-paridade.test.mjs`
+> compara as cinco entrada a entrada. Falta o encoder GS1-128 e o GS1 DataMatrix
+> em Python, Java, Kotlin e C# — que não são encoders novos: são o Code 128 e o
+> Data Matrix com o FNC1 no início e um separador no fim de cada campo de
+> comprimento variável. A tabela é que diz onde é que esse separador vai, e sem
+> ela um `(10)LOTE-A1` engole o campo fixo seguinte.
+
+> **Um teste de paridade de tabelas é um teste que confirma um comentário, se o
+> teste for escrito a partir do comentário do código.** A primeira versão do
+> `gs1-tabelas-paridade.test.mjs` afirmava que o AI `31` existe e que o `3103`
+> sem ele seria lido a partir do `31` — copiado do `aiDe`, e **não há AI `31` na
+> GS1**. O teste passava porque confirmava o que o comentário dizia, e não o que
+> a tabela tem. O que ficou é o que a tabela **tem**: os três comprimentos de AI ao
+> mesmo tempo, e nenhum AI prefixo de outro.
+
+> **Um verificador que acusa dados iguais treina quem o lê a desconfiar dele.**
+> Este acusou duas vezes antes de estar certo: primeiro porque duas linguagens
+> escrevem `"N2+N14"` e três escrevem `N2+N14`, e depois porque o `JSON.parse`
+> desescapava um lado e não o outro — as cinco partilham o mesmo escape. A
+> correção natural, afrouxar a comparação, teria escondido o erro a seguir.
+
+> **O `javac` não aceita uma vírgula final numa lista de argumentos**, e a
+> mensagem é `illegal start of expression` **na linha do `)`** — que não fala de
+> vírgulas nem de argumentos. O primeiro gerador desta tabela gastou tempo a
+> contar parênteses e a suspectar do limite de 255 argumentos do `javac`, que não
+> é o problema: 541 entradas com `Map.ofEntries` compilam sem queixas. A vírgula
+> final é legal num inicializador de array e de objecto, que é de onde vem o
+> hábito, e é a diferença entre `[]` e `()`.
+
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
 > linguagens mais adequadas a isto: não tem `char`, a aritmética de `String` é
 > entre bytes, e cada cadeia é uma questão de UTF-8. Compensa pelo binário

@@ -1,24 +1,8 @@
 /**
- * A tabela de Application Identifiers do GS1. **Gerado** por
- * `tests/gerar-tabela-gs1.py` a partir do JSON-LD de `ref.gs1.org`.
- *
- * Sao 541 AIs e nao estao escritos a mao de proposito - ver o gerador para o
- * porque. A origem fica escrita aqui porque uma tabela sem origem e' uma tabela
- * em que ninguem pode confiar.
- *
- * **O que cada AI traz, e o que e' que o encoder usa:**
- *
- *  - `ai`    o numero, dois a quatro digitos;
- *  - `formato` a notacao da GS1, `N` numerico, `X` alfanumerico, `a` ate `..20`
- *    variavel, e o `+` a separar o AI do campo;
- *  - `separador` se o campo e' de comprimento variavel e precisa de um FNC1 a
- *    separar do seguinte. **E' a razao de existir esta tabela**: sem ela nao se
- *    sabe onde acaba `(10)LOTE-A1` e onde comeca o campo seguinte;
- *  - `regex` a expressao regular do valor, da propria GS1.
- *
- * **Nao vao aqui** as descricoes nem os titulos, que sao 1082 cadeias de texto.
- * Ficao no `tests/.tabelas-gs1.json` e sao coisa da interface: o encoder precisa
- * de saber quanto mede o campo, nao o que ele significa.
+ * A tabela de Application Identifiers do GS1. Gerado por
+ * ``spec/gerar-tabelas-gs1.py` a partir do JSON-LD de ref.gs1.org.
+ * * A origem e' https://ref.gs1.org/ai/?lang=en, e fica escrita aqui porque uma tabela sem
+ * origem e' uma tabela em que ninguem pode confiar.
  */
 
 /** Os AIs, por numero. Um objeto em vez de uma lista porque se procura por
@@ -567,17 +551,19 @@ export const AIS = {
   '97': { f: "N2+X..90", fixo: null, maximo: 90, campos: [{ t: 'X', f: null, m: 90 }], sep: true, re: "([!%-?A-Z_a-z\\x22]{1,90})" },
   '98': { f: "N2+X..90", fixo: null, maximo: 90, campos: [{ t: 'X', f: null, m: 90 }], sep: true, re: "([!%-?A-Z_a-z\\x22]{1,90})" },
   '99': { f: "N2+X..90", fixo: null, maximo: 90, campos: [{ t: 'X', f: null, m: 90 }], sep: true, re: "([!%-?A-Z_a-z\\x22]{1,90})" },
-
 };
+
 
 /**
  * O AI de um numero, ou `null` se esse numero nao existe.
  *
- * Procura pelo AI mais comprido primeiro, e nao pelo mais curto, porque e' o que
- * faz `(3103)` ser lido como o AI 3103 e nao como o 31 seguido de "03". Os AIs
- * de quatro digitos existem precisamente paralevar um digito a frente dos de
- * tres, e uma procura pela ordem errada le `(01)040...` como 0 seguido de 1 - o
- * que produz um codigo com o GTIN partido ao meio e o leitor nao diz nada.
+ * Procura pelo AI mais comprido primeiro, e nao pelo mais curto.
+ *
+ * **Nao e' por causa de um caso que exista hoje.** Ha AIs de dois, de tres e de
+ * quatro digitos ao mesmo tempo, e nenhum e' prefixo de outro — o que o teste
+ * confirma. A ordem errada seria um seguro contra o dia em que a GS1 publicar um
+ * `010`: a procura pelo mais curto leria-o como o AI `01` seguido de `0`, e
+ * produzia um codigo com o GTIN partido ao meio e um leitor que nao diz nada.
  */
 export function aiDe(numero) {
   if (AIS[numero]) return { numero, ...AIS[numero] };
