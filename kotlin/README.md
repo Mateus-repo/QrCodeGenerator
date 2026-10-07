@@ -1,7 +1,45 @@
 # Kotlin
 
-**Estado:** o core passa os 34 vectores de `spec/vectors.json`. A app Android
-ainda não existe.
+**Estado:** o core passa os 34 vectores de `spec/vectors.json` e tem **86 testes**
+— 10 formatos de código de barras e 24 casos de Data Matrix lidos pelo ZXing. A
+app Android ainda não existe.
+
+## Os códigos de barras
+
+`core/src/main/kotlin/com/qrcodegen/core/simbologias/` tem EAN-13, EAN-8,
+UPC-A, Code 39, Code 93, Code 128, ITF, ITF-14, Codabar e **Data Matrix
+(ECC200)**. **Nenhuma tabela está escrita à mão**: vêm de
+`spec/gerar-tabelas-*.py`, e o ficheiro gerado diz isso na primeira linha.
+
+Um código **2D** devolve um `CodigoMatriz`, que **não tem `guardas` nem
+`legenda`** — as guias em L estão na própria grelha e um Data Matrix não tem
+texto impresso por baixo. Um `guardas` vazio seria um campo que o desenho lê e
+não usa.
+
+| Ficheiro de teste | O que garante |
+|---|---|
+| `SimbologiasTestes.kt` | **Nível 2** — o Kotlin desenha e o ZXing lê os 1D |
+| `DataMatrixTestes.kt` | **Nível 2** — o mesmo, para o Data Matrix, que é 2D |
+| `CodificacaoDataMatrixTestes.kt` | Lê o fonte: o encoder pede o UTF-8 pelo nome |
+| `SpecVectorTests.kt` | **Nível 1** — bate com `spec/vectors.json` |
+| `ImagemLuminance.kt` | Auxiliar de desenho, partilhado pelos dois de leitura |
+
+```bash
+node ../spec/paridade-kotlin.mjs              # os 1D, módulo a módulo contra o Python
+node ../spec/paridade-kotlin-datamatrix.mjs   # o Data Matrix, grelha a grelha
+```
+
+**Um encoder só entra no repositório depois de o ZXing devolver a cadeia certa** —
+não há "quase": na fase dos códigos de barras, quatro encoders pareceram certos
+durante a escrita e não eram.
+
+**A leitura do Data Matrix compara codewords e não texto.** O `getText()` do
+ZXing, sem ECI, assume ISO-8859-1, e um Data Matrix não tem ECI: o texto devolvido
+não é o que foi escrito. O `getRawBytes()` são os codewords, um por byte.
+
+**E o `toByteArray()` sem argumento é um teste que lê o fonte.** O Java 18 faz de
+UTF-8 o *default*, por isso que um teste de execução não o apanha nesta máquina — e
+noutra máquina o encoder produzia um código diferente.
 
 ## Como compilar
 
