@@ -63,12 +63,12 @@ export const SIMBOLOS = [
  * *Nota para quem contar, porque e' um a menos e nao dois:* a primeira versao punha 154, e a conta dava 1556 em vez de 1558. **Dois codewords num codigo de 1558, e o leitor acusa isso como corrupcao e nao como tabela errada** — que e' o pior dos sintomas, porque a mensagem aponta para o leitor.
  */
 export const ULTIMO = {
-    SIMBOLO: 23,
-    BLOCOS: 10,
-    CHEIOS: 8,
-    DADOSCHEIO: 156,
-    DADOSULTIMOS: 155,
-    ERROS: 62,
+    simbolo: 23,
+    blocos: 10,
+    cheios: 8,
+    dadosCheio: 156,
+    dadosUltimos: 155,
+    erros: 62,
 };
 
 /** Os factors de Reed-Solomon, indexados pelo numero de codewords. */

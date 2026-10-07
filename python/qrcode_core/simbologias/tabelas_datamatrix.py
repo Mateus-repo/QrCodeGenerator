@@ -61,7 +61,7 @@ ULTIMO = {
 #: **Nenhum destes e' dedutivel**: o ZXing poe o coeficiente de `x^(n-1)`
 #: no primeiro lugar e o calculo poe o termo de ordem zero. Vem copiado da
 #: implementacao de referencia, e a verificacao e' funcional — um factor
-#: errado faz a correccao de erros nao batter e o ZXing nao devolve o texto.
+#: errado faz a correccao de erros nao bater e o ZXing nao devolve o texto.
 FATORES_EC = {
     5: [228, 48, 15, 111, 62],
     7: [23, 68, 144, 134, 240, 92, 254],

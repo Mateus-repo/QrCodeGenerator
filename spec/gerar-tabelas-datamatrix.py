@@ -254,7 +254,7 @@ def nota(prefixo: str) -> str:
     return NL.join(prefixo + linha for linha in NOTA.split(NL))
 
 
-def constantes_ultimo(indent: str, formato: str) -> str:
+def constantes_ultimo(indent: str, formato: str, maiusculas: bool = True) -> str:
     """
     As seis constantes do 144x144, uma por chave.
 
@@ -265,9 +265,16 @@ def constantes_ultimo(indent: str, formato: str) -> str:
 
     **O Python e' o unico com o dicionario**, porque nele um `=` dentro de
     `{...}` nao e' valido e um mapa com nomes e' a forma natural.
+
+    :param maiusculas: as tres linguagens compiladas põem o nome da chave em
+        `MAIUSCULAS`, e o web e o Python em `minusculas`. **Nao e' um
+        detalhe** — o `ULTIMO.simbolo` do web e' lido por nome em
+        `datamatrix.test.mjs`, e com a chave em maiusculas o teste rebenta com
+        `undefined is not iterable` numa linha a cem do encoder.
     """
     return "".join(
-        indent + formato.format(chave=chave.upper(), valor=valor) + NL
+        indent + formato.format(chave=chave.upper() if maiusculas else chave,
+                                valor=valor) + NL
         for chave, valor in ULTIMO.items()
     )
 
@@ -306,7 +313,7 @@ def web() -> str:
         "];" + NL + NL,
         "/**" + NL + " * " + nota(" * ") + NL + " */" + NL,
         "export const ULTIMO = {" + NL,
-        constantes_ultimo("  ", "  {chave}: {valor},"),
+        constantes_ultimo("  ", "  {chave}: {valor},", maiusculas=False),
         "};" + NL + NL,
         "/** Os factors de Reed-Solomon, indexados pelo numero de codewords. */" + NL,
         "export const FATORES = {" + NL,
@@ -348,7 +355,7 @@ def python() -> str:
         "`x^(n-1)`" + NL + "#: no primeiro lugar e o calculo poe o termo de ordem "
         "zero. Vem copiado da" + NL + "#: implementacao de referencia, e a "
         "verificacao e' funcional — um factor" + NL + "#: errado faz a correccao de "
-        "erros nao batter e o ZXing nao devolve o texto." + NL,
+        "erros nao bater e o ZXing nao devolve o texto." + NL,
         "FATORES_EC = {" + NL,
         # **A chave e' escrita.** Um `{` sem chaves em Python e' um conjunto, e
         # um conjunto de listas nao existe: o Python lia cada lista como valores
