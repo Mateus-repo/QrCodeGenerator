@@ -50,17 +50,19 @@ public static class Program
         // promete e o corpo ignora. Um `--datamatrx` com uma letra trocada dava
         // a saida dos 1D, que e' uma lista de modulos em vez de uma matriz - e o
         // script que o consome falhava a ler, longe do erro.
-        if (args.Length > 1 || (args.Length == 1 && args[0] != ModoMatriz))
+        if (args.Length > 1
+            || (args.Length == 1 && args[0] != ModoMatriz && args[0] != ModoGs1))
         {
             // **Os argumentos que chegaram vem na mensagem.** Um `uso:` que repete
             // o que ja se leu na linha de comando nao ajuda ninguem.
             Console.Error.WriteLine(
-                $"uso: Program [--datamatrix]  (casos em JSON por stdin); "
+                $"uso: Program [{ModoMatriz}|{ModoGs1}]  (casos em JSON por stdin); "
                     + $"recebi: [{string.Join(", ", args)}]");
             return 2;
         }
 
-        bool matriz = args.Length == 1;
+        bool matriz = args.Length == 1 && args[0] == ModoMatriz;
+        bool gs1 = args.Length == 1 && args[0] == ModoGs1;
 
         string entrada = Console.In.ReadToEnd();
         var casos = JsonDocument.Parse(entrada).RootElement;
@@ -76,7 +78,12 @@ public static class Program
             }
 
             primeiro = false;
-            saida.Append(matriz ? DescreverMatriz(MatrizDe(caso)) : Descrever(CodigoDe(caso)));
+            saida.Append(
+                matriz
+                    ? DescreverMatriz(MatrizDe(caso))
+                    : gs1
+                        ? DescreverGs1(caso)
+                        : Descrever(CodigoDe(caso)));
         }
 
         saida.Append(']');
@@ -90,6 +97,60 @@ public static class Program
         return 0;
     }
 
+    /// <summary>
+    /// Escapa uma cadeia para JSON, sem <c>Encoding.UTF8</c> e sem BOM.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Porque nao <c>JsonSerializer</c>.</b> Ele serialize um objecto inteiro
+    /// com os nomes de propriedade em minusculas, e o <c>spec/</c> le com os nomes que o
+    /// web e o Java escrevem. Serializar a mao e' o que mantem os nomes iguais, e o que a
+    /// <c>AGENTS.md</c> chama a unica coisa partilhada a ser uma spec e nao codigo.</para>
+    ///
+    /// <para><b>O <c>0x1D</c> e' o caso que a funcao resolve.</b> Um
+    /// <c>Encoding.UTF8</c> escrevia-o como um byte cru num ficheiro UTF-8 — que e' o
+    /// mesmo caractere — mas o <c>StringBuilder</c> com um <c>char</c> solto nao e'
+    /// escapado, e o <c>JSON.parse</c> do Nodevia um byte que nao e' JSON.</para>
+    /// </remarks>
+    private static string JsonEscape(string texto)
+    {
+        var sb = new StringBuilder(texto.Length + 8);
+
+        foreach (char c in texto)
+        {
+            switch (c)
+            {
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                default:
+                    if (c < 0x20 || c == 0x7F)
+                    {
+                        sb.Append("\\u").Append(((int)c).ToString("x4"));
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
     /// <summary>O argumento que pede a saida em matriz.</summary>
     /// <remarks>
     /// <b>E' uma constante e nao um literal repetido</b> - o nome aparece na
@@ -98,6 +159,92 @@ public static class Program
     /// coisas diferentes.
     /// </remarks>
     private const string ModoMatriz = "--datamatrix";
+
+    /// <summary>O argumento que pede a saida do GS1-128.</summary>
+    /// <remarks>
+    /// <b>E' um modo a parte e nao mais um <c>tipo</c> nos casos</b>, porque o GS1-128
+    /// devolve <b>tres cadeias</b> - <c>payload</c>, <c>gs1</c> e <c>legenda</c> - e o
+    /// <see cref="CodigoDeBarras"/> so tem <c>legenda</c>. Encaixa-lo no
+    /// <see cref="Descrever"/> obrigava a perder dois dos tres, e a perder era um
+    /// <c>KeyError</c> no script de paridade que so aparecia em C#.
+    /// </remarks>
+    private const string ModoGs1 = "--gs1";
+
+    /// <summary>
+    /// Um caso do GS1-128 e' so <c>[texto]</c>, e nao <c>[tipo, texto]</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>O modo ja diz que e' GS1, e um segundo sítio a dizer a mesma coisa e' um sítio
+    /// onde os dois divergem.</b> E o <see cref="DescreverGs1"/> le o texto do caso e
+    /// chama o encoder ele proprio, porque <b>a excepcao da recusa tem de ser apanhada
+    /// antes de haver um resultado para descrever</b> — e um <c>Descrever(CodigoDe(caso))</c>
+    /// para o GS1 deixaria a excecao sair.
+    /// </remarks>
+    /// <summary>
+    /// Passa um <see cref="CodigoGs1"/> para JSON.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Os modulos saem como 0 e 1, e nao como <c>true</c> e <c>false</c>.</b>
+    /// O script compara posicao a posicao, e um <c>true</c> onde se espera um <c>1</c>
+    /// contaria como divergencia num codigo que esta certo.</para>
+    ///
+    /// <para><b>Uma recusa e' um resultado, e nao uma excecao.</b> A primeira versao
+    /// deixava a excecao sair, e o script via um <c>stack trace</c> em vez de um caso -
+    /// o que dava uma falha que nao dizia qual dos dois encoder recusou.</para>
+    /// </remarks>
+    private static string DescreverGs1(JsonElement caso)
+    {
+        string texto = caso[0].GetString()!;
+
+        var sb = new StringBuilder();
+        sb.Append("{\"texto\":\"").Append(JsonEscape(texto)).Append('"');
+
+        CodigoGs1 codigo;
+        try
+        {
+            codigo = Gs1_128.Gerar(texto);
+        }
+        catch (SimbologiaException e)
+        {
+            sb.Append(",\"erro\":\"").Append(JsonEscape(e.Message)).Append("\"}");
+            return sb.ToString();
+        }
+
+        sb.Append(",\"modulos\":[");
+        for (int i = 0; i < codigo.Modulos.Length; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append(codigo.Modulos[i] ? 1 : 0);
+        }
+
+        sb.Append("],\"separadores\":").Append(codigo.Separadores);
+        sb.Append(",\"payload\":\"").Append(JsonEscape(codigo.Payload)).Append('"');
+        sb.Append(",\"gs1\":\"").Append(JsonEscape(codigo.Gs1)).Append('"');
+        sb.Append(",\"legenda\":\"").Append(JsonEscape(codigo.Legenda)).Append('"');
+        sb.Append(",\"campos\":[");
+
+        for (int i = 0; i < codigo.Campos.Count; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            CodigoGs1.Campo campo = codigo.Campos[i];
+            sb.Append("{\"ai\":\"").Append(JsonEscape(campo.Ai)).Append('"');
+            sb.Append(",\"valor\":\"").Append(JsonEscape(campo.Valor)).Append('"');
+            sb.Append(",\"conteudo\":\"").Append(JsonEscape(campo.Conteudo)).Append('"');
+            sb.Append(",\"separador\":").Append(campo.Separador ? "true" : "false");
+            sb.Append('}');
+        }
+
+        sb.Append("]}");
+        return sb.ToString();
+    }
 
     /// <summary>Um caso e' <c>[tipo, texto, {opcoes}]</c>.</summary>
     private static CodigoDeBarras CodigoDe(JsonElement caso)

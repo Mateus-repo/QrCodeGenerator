@@ -230,7 +230,22 @@ public static class Code128
     /// <b>A posicao e' que diz a cor, e nao o digito da cadeia</b> — a cadeia so tem
     /// <c>0</c> e <c>1</c> para dizer a largura, e a barra inicial e' sempre barra.
     /// </remarks>
-    private static List<bool> ModulosDoValor(int valor)
+    /// <summary>
+    /// Os modulos escuros de um valor, para o <see cref="Gs1_128"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>E' publico porque o GS1-128 precisa dele, e nao porque os padroes sejam
+    /// um segredo.</b> O GS1-128 nao chama o <see cref="Gerar(string)"/> - tem de ficar
+    /// no conjunto B, e o FNC1 e' um codeword que o <see cref="Gerar(string)"/> nao sabe
+    /// emitir - mas usa <i>a mesma tabela</i>. Uma segunda copia dos 107 padroes seria
+    /// uma tabela que diverge.</para>
+    ///
+    /// <para><b>Copiar a tabela nao e' reescrever o codigo duas vezes.</b> Reusar os
+    /// padroes e' o que garante que o GS1-128 e o Code 128 medem a mesma coisa, e e' o
+    /// que a <c>AGENTS.md</c> chama a unica coisa partilhada: uma tabela, nao um
+    /// algoritmo.</para>
+    /// </remarks>
+    public static List<bool> ModulosDoValor(int valor)
     {
         if (valor < 0 || valor > Paragem)
         {

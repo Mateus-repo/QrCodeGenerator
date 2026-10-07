@@ -892,6 +892,33 @@ o ZXing a ler o resultado.
 > **A tarefa do Gradle é a parte que se esquece**, e o `mainClass` leva o `Kt` no
 > fim — é o que o Kotlin junta ao nome do ficheiro. Sem ele o Gradle diz `Could
 > not find or load main class`, que não fala do ficheiro em falta.
+> **O GS1-128 está no C#, e foi ele quem mostrou que uma premissa errada
+> custa a verificação mais forte.** Escrevi um teste que dizia *«o ZXing para .NET não
+> devolve o `]C1`»* — suposto a partir de o Java e o `zxingcpp` o darem. **A sonda
+> mediu `SYMBOLOGY_IDENTIFIER=]C1` nos três.** Um leitor que se supõe é pior do que um
+> leitor que se mede, e a suposição tinha custado o `]C1`.
+>
+> **O membro do `ResultMetadataType` chama-se `SYMBOLOGY_IDENTIFIER`, em
+> maiúsculas.** O port do ZXing para .NET guardou os nomes de Java, e
+> `SymbologyIdentifier` dá `does not contain a definition`. **Foi descoberto por
+> reflexão sobre o enum, e não a tentativas** — e o `ToString()` de um enum imprime o
+> nome do *campo*, que foi exatamente a suposição que custou o erro.
+>
+> **O `Ler` é `LockBits` + `BarcodeReaderGeneric` + `DecodingOptions`, e nada
+> disso se escreve de memória.** O `RGBLuminanceSource` desta versão não tem
+> construtor de `Bitmap` — é `bytes, largura, altura, BitmapFormat`. As opções vão
+> num `DecodingOptions` e não num `Dictionary<DecodeHintType, object>`, e o
+> `DecodeHintType` aqui é de outro tipo. **Cinco APIs que não existem nesta versão**,
+> todas escritas por analogia com o Java.
+>
+> **`Simbologia` e não `Nome`** — o nome que o `CodigoDeBarras` já tinha, e a razão
+> de o Java usar `simbologia()` é ser Java.
+>
+> **Um `MemberData` tem de referenciar um membro `public`**, e é `error` e não
+> `warning`: o xUnit trata um `MemberData` invisível como um teste que não corre.
+> E um parâmetro `nome` que o corpo não usa é `xUnit1026` — que o `DataMatrixTests`
+> já tem, e aqui o `nome` é usado **na mensagem de cada `Assert`**, que é o que faz
+> um teste de onze casos dizer qual falhou.
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
 > linguagens mais adequadas a isto: não tem `char`, a aritmética de `String` é
 > entre bytes, e cada cadeia é uma questão de UTF-8. Compensa pelo binário
