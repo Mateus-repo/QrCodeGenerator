@@ -1025,7 +1025,17 @@ def test_o_registro_tem_os_tres_formatos():
         "code128",
     }
 
-    # O registo de todos tem os dois grupos, e cada entrada e' uma funcao.
+    # **O Code 93 tem registo proprio, e nao esta no dos lineares.** Nao e' uma
+    # excepcao: e' um ficheiro a parte porque tem as tabelas de escape de
+    # caracteres de controlo, que os outros nao tem, e o registo e' a lista do
+    # que este modulo sabe codificar - nao o que e' um codigo de barras. **Foi
+    # esta lista que o commit do Code 93 deixou por acertar**, e o sintoma foi
+    # um teste que falhava sem ninguem saber porque.
+    from qrcode_core.simbologias import SIMBOLOGIAS_CODE93
+
+    assert set(SIMBOLOGIAS_CODE93) == {"code93"}
+
+    # O registo de todos tem os tres grupos, e cada entrada e' uma funcao.
     assert set(SIMBOLOGIAS_TODAS) == {
         "ean13",
         "ean8",
@@ -1035,6 +1045,7 @@ def test_o_registro_tem_os_tres_formatos():
         "itf14",
         "codabar",
         "code128",
+        "code93",
     }
     assert all(callable(f) for f in SIMBOLOGIAS_TODAS.values())
 
