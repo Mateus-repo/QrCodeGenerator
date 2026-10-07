@@ -1032,10 +1032,13 @@ def test_o_registro_tem_os_tres_formatos():
     # esta lista que o commit do Code 93 deixou por acertar**, e o sintoma foi
     # um teste que falhava sem ninguem saber porque.
     from qrcode_core.simbologias import SIMBOLOGIAS_CODE93
+    from qrcode_core.simbologias import SIMBOLOGIAS_DATAMATRIX
 
     assert set(SIMBOLOGIAS_CODE93) == {"code93"}
+    assert set(SIMBOLOGIAS_DATAMATRIX) == {"datamatrix"}
 
-    # O registo de todos tem os tres grupos, e cada entrada e' uma funcao.
+    # O registo de todos tem os tres grupos de 1D e o de 2D, e cada entrada e'
+    # uma funcao.
     assert set(SIMBOLOGIAS_TODAS) == {
         "ean13",
         "ean8",
@@ -1046,6 +1049,7 @@ def test_o_registro_tem_os_tres_formatos():
         "codabar",
         "code128",
         "code93",
+        "datamatrix",
     }
     assert all(callable(f) for f in SIMBOLOGIAS_TODAS.values())
 
@@ -1073,3 +1077,21 @@ def test_o_registro_tem_os_tres_formatos():
         for chave in ("simbologia", "modulos", "legenda", "guardas"):
             assert chave in codigo, f"{nome} nao devolve {chave!r}"
         assert codigo["modulos"], nome
+
+    # **O 2D nao devolve as mesmas chaves, e nao deve.** Nao tem `guardas` - as
+    # guias em L estao na propria matriz - nem `legenda`, porque um Data Matrix nao
+    # tem texto por baixo. **Um registo so que se apanhasse num `for` deste dava
+    # ao Data Matrix as guardas de um EAN**, e o desenho ia沿 meter indices de
+    # modulo onde so ha linhas.
+    codigo = SIMBOLOGIAS_TODAS["datamatrix"]("MAST-2024-0001")
+
+    for chave in ("simbologia", "modulos", "colunas", "linhas", "dados", "correccao"):
+        assert chave in codigo, f"datamatrix nao devolve {chave!r}"
+
+    assert "guardas" not in codigo, "o Data Matrix nao tem guardas: tem guias na matriz"
+    assert "legenda" not in codigo, "o Data Matrix nao tem legenda"
+
+    # E a matriz e' uma lista de linhas todas do mesmo comprimento, que e' o que o
+    # desenho 2D assume quando percorre `modulos[y][x]`.
+    assert len(codigo["modulos"]) == codigo["linhas"]
+    assert all(len(linha) == codigo["colunas"] for linha in codigo["modulos"])

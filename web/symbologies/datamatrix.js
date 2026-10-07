@@ -450,7 +450,14 @@ function colocar(codewords, colunas, linhas) {
   } while (row < linhas || col < colunas);
 
   // O canto de baixo à direita, se sobrou por preencher.
-  if (bits[linhas * colunas + colunas - 1] < 0) {
+  //
+  // **O índice é `linhas * colunas - 1` e não `+ colunas - 1`.** Com o `+` o
+  // índice fica `colunas - 1` posições a mais, e um `Uint8Array` fora do fim dá
+  // `undefined` — e `undefined < 0` é falso, portanto **o bloco nunca corria e
+  // o bug ficava dormido**, com o encoder a passar nos testes e o ZXing a ler
+  // o que ele desenhava. Ao portar para Python o mesmo índice levanta
+  // `IndexError`, e foi aí que apareceu.
+  if (bits[linhas * colunas - 1] < 0) {
     por(colunas - 1, linhas - 1, 1);
     por(colunas - 2, linhas - 2, 1);
   }

@@ -17,6 +17,7 @@ o teste desse cliente passe.
 """
 
 from .code93 import SIMBOLOGIAS_CODE93, code93
+from .datamatrix import SIMBOLOGIAS_DATAMATRIX, data_matrix, data_matrix_de_codewords
 from .lineares import (
     SIMBOLOGIAS_LINEARES,
     codabar,
@@ -38,10 +39,16 @@ from .upcean import SIMBOLOGIAS, SimbologiaError, digito_de_controlo, ean8, ean1
 #: Nao ha segunda lista a acertar aqui, e' a **unica** entrada que o resto do core
 #: consulta. Um cliente novo, ou um registo que cresca, tem de acrescentar a esta
 #: e nao a uma copia sua.
+#:
+#: **O Data Matrix tem o seu proprio registo e nao e' uma excepcao**: e' um codigo
+#: **2D**, e os dois registos sao os de **1D**. Um registo so de duas dimensoes
+#: pareceria mais limpo, e era a lista que se deixa de actualizar quando entra um
+#: formato de uma linha - que e' exactamente o que aconteceu ao Code 93.
 SIMBOLOGIAS_TODAS = {
     **SIMBOLOGIAS,
     **SIMBOLOGIAS_LINEARES,
     **SIMBOLOGIAS_CODE93,
+    **SIMBOLOGIAS_DATAMATRIX,
 }
 
 __all__ = [
@@ -60,4 +67,7 @@ __all__ = [
     "code128",
     "SIMBOLOGIAS_CODE93",
     "code93",
+    "SIMBOLOGIAS_DATAMATRIX",
+    "data_matrix",
+    "data_matrix_de_codewords",
 ]

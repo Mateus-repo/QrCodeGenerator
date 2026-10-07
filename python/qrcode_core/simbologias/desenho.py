@@ -1,7 +1,7 @@
 """
-O desenho dos codigos de barras de uma linha.
+O desenho dos codigos de barras.
 
-    from qrcode_core.simbologias.desenho import to_bitmap, dimensoes
+    from qrcode_core.simbologias.desenho import to_bitmap, to_bitmap_2d, dimensoes
 
 ## Porque isto e' separado do `render.py`
 
@@ -9,6 +9,12 @@ O desenho dos codigos de barras de uma linha.
 codigo de barras e' uma linha com guardas mais altas.** Sao formatos diferentes
 com areas e dimensoes diferentes, e o que o ZXing le e' a imagem, nao a
 matriz — por isso a funcao devolve bytes e nao uma lista de listas.
+
+**E o quadrado nao e' a unica forma de matriz que o ZXing le.** O Data Matrix
+tambem e' uma matriz e nao uma linha, e sobe aqui por :func:`to_bitmap_2d`. Sao
+duas funcoes e nao uma com um parametro, porque as duas coisas que as separam nao
+sao opcoes: a guarda que desce e' um indice numa lista de modulos e a zona muda
+e' um quadrado em volta dos quatro lados.
 
 ## A guarda desce, e nao e' um detalhe
 
@@ -113,3 +119,62 @@ def _em_png(imagem) -> bytes:
     saida = io.BytesIO()
     imagem.save(saida, format="PNG")
     return saida.getvalue()
+
+
+#: A zona muda de um codigo 2D, em modulos.
+#:
+#: **E' 1, e nao 10 como no EAN.** Um Data Matrix e' sensivel a ela de um jeito que
+#: um codigo de barras nao e': o leitor orienta-se pelos cantos tracejados, e sem
+#: margem a deteccao falha. Quatro modulos tambem nao arranjam, e o Reader do ZXing
+#: exige pelo menos um. **Um Data Matrix desenhado com a margem do EAN fica maior do
+#: que a precisa e nao e' por isso que nao se lê** — e o inverso tambem.
+ZONA_MUDA_2D = 1
+
+
+def dimensoes_2d(colunas: int, linhas: int, zona_muda: int = ZONA_MUDA_2D) -> tuple[int, int]:
+    """A largura e a altura em modulos, com a zona muda dos quatro lados."""
+    return colunas + 2 * zona_muda, linhas + 2 * zona_muda
+
+
+def to_bitmap_2d(
+    modulos: list[list[bool]],
+    escala: int = 4,
+    zona_muda: int = ZONA_MUDA_2D,
+) -> bytes:
+    """
+    A imagem, em PNG, de um codigo 2D com guias na propria matriz.
+
+    **Nao ha guardas para descer, porque as guias ja estao na matriz.** O que o
+    leitor usa para se orientar no Data Matrix sao as duas guias em L nas pontas -
+    uma cheia em baixo e a esquerda, outra tracejada em cima e a direita - e elas
+    fazem parte dos modulos que o encoder devolveu. Nao ha nada a acrescentar, e
+    acrescentar seria pior do que nao fazer nada.
+
+    :param modulos: a matriz, em que ``True`` e' modulo escuro.
+    :param escala: quantos pixele por modulo.
+    :param zona_muda: o silencio a volta, em modulos.
+
+    **A zona muda e' um quadrado em volta dos quatro lados, e nao uma margem so em
+    cima e em baixo.** Um leitor de 2D detecta os limites pelo contraste com o
+    fundo nas quatro direccoes, e uma margem so vertical deixa de o fazer.
+    """
+    from PIL import Image, ImageDraw
+
+    linhas = len(modulos)
+    colunas = len(modulos[0])
+
+    largura_px = (colunas + zona_muda * 2) * escala
+    altura_px = (linhas + zona_muda * 2) * escala
+
+    imagem = Image.new("L", (largura_px, altura_px), 255)
+    desenho = ImageDraw.Draw(imagem)
+
+    for y, linha in enumerate(modulos):
+        for x, escuro in enumerate(linha):
+            if not escuro:
+                continue
+            x0 = (x + zona_muda) * escala
+            y0 = (y + zona_muda) * escala
+            desenho.rectangle([x0, y0, x0 + escala - 1, y0 + escala - 1], fill=0)
+
+    return _em_png(imagem)
