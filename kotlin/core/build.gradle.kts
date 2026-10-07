@@ -119,3 +119,26 @@ tasks.register<JavaExec>("runLinear") {
 
     standardInput = System.`in`
 }
+
+/**
+ * A ponta de Kotlin da comparação de um código **2D**.
+ *
+ * **E' uma tarefa a parte e não mais um tipo na [runLinear],** porque um Data
+ * Matrix devolve uma matriz e não uma lista de módulos: ver a nota do
+ * `ParidadeDataMatrix` para o que acontece quando se tenta encaixar os dois no
+ * mesmo formato.
+ *
+ * O `standardInput` é explícito pela mesma razão que na `runLinear`: o `JavaExec`
+ * não o herda por omissão, e sem esta linha o Gradle lê do seu próprio stdin e a
+ * comparação fica sem casos — com um erro que fala de rede.
+ */
+tasks.register<JavaExec>("runDatamatrix") {
+    group = "verification"
+    description = "Casos de Data Matrix em JSON (stdin) -> matrizes em JSON (stdout)"
+
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.qrcodegen.tools.ParidadeDataMatrixKt")
+
+    standardInput = System.`in`
+}
