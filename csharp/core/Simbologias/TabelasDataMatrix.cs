@@ -8,7 +8,7 @@ public static class TabelasDataMatrix
 {
     /// <summary>Os 24 simbolos quadrados, por ordem de capacidade.</summary>
     /// <remarks><b>Os dois ultimos valem <c>-1</c></b> quando o bloco e' o simbolo inteiro.</remarks>
-    public static readonly int[][] SIMBOLOS =
+    public static readonly int[][] Simbolos =
     {
         new[] { 3, 5, 8, 8, 1, -1, -1 },
         new[] { 5, 7, 10, 10, 1, -1, -1 },
@@ -49,7 +49,7 @@ public static class TabelasDataMatrix
         public const int ULTIMO_ERROS = 62;
 
     /// <summary>Os factors de Reed-Solomon, por numero de codewords.</summary>
-    public static readonly Dictionary<int, int[]> FATORES =
+    public static readonly Dictionary<int, int[]> Fatores =
     new()
     {
         { 5, new[] { 228, 48, 15, 111, 62 } },

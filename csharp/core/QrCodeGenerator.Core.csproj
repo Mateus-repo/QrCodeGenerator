@@ -15,4 +15,24 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!--
+      **Os testes veem os `internal` do core, e nao uma copia deles.**
+
+      O `DataMatrix.Colocar` e' `internal` porque nao e' API, e o teste da
+      colocacao precisa de o chamar: **pela grelha final nao se sabe se o bloco
+      do canto de baixo a direita correu**, porque com o bloco desligado o canto
+      fica a menos dois modulos - o que tambem acontece, ou nao, conforme o valor
+      dos codewords. So a regiao nua responde.
+
+      **A alternativa seria um `public` no encoder** para servir um teste, o que e'
+      pior: uma API que existe porque um teste a quer e' uma API que ninguem pediu.
+      O `InternalsVisibleTo` expoe aos testes e so a eles.
+
+      E' a mesma razao pela qual a stack Java e a stack Kotlin medem a regiao nua
+      - no pacote da `simbologias`, e nao no do teste.
+    -->
+    <InternalsVisibleTo Include="QrCodeGenerator.Tests" />
+  </ItemGroup>
+
 </Project>

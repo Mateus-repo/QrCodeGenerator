@@ -445,7 +445,7 @@ def csharp() -> str:
         "    /// <summary>Os 24 simbolos quadrados, por ordem de capacidade.</summary>"
         + NL + "    /// <remarks><b>Os dois ultimos valem <c>-1</c></b> quando o bloco "
         "e' o simbolo inteiro.</remarks>" + NL,
-        "    public static readonly int[][] SIMBOLOS =" + NL + "    {" + NL,
+        "    public static readonly int[][] Simbolos =" + NL + "    {" + NL,
         simbolos("new[] { ", ", ", " }", "        ") + NL + "    };" + NL + NL,
         "    /// <summary>" + NL,
         nota("    /// ") + NL,
@@ -454,12 +454,16 @@ def csharp() -> str:
         NL,
         "    /// <summary>Os factors de Reed-Solomon, por numero de codewords."
         "</summary>" + NL,
-        "    public static readonly Dictionary<int, int[]> FATORES =" + NL
+        # **Os arrays e os mapas em PascalCase, e as constantes em MAIUSCULAS.**
+        # E' a convencao que o `TabelasCode93.cs` ja segue — `Controles`, `Indice`
+        # e `PADROES` — e nao uma preferencia: um ficheiro gerado com os nomes de
+        # outra linguagem aparece no meio de um ficheiro que nao segue essa
+        # convencao, e ninguem sabe dizer qual das duas e' a errada. **O gerador
+        # escreve o codigo de cada linguagem, nao os nomes de uma delas em todas.**
+        "    public static readonly Dictionary<int, int[]> Fatores =" + NL
         # **O `new()` nao e' opcional.** Sem ele o compilador trata o `{` como
-        # inicio de um inicializador de *array* e diz `CS0622` — «so se podem usar
-        # inicializadores de array para atribuir a tipos de array» — e `CS0131`
-        # em cada `[chave] =`, que e' a segunda metade da primeira. **A forma
-        # `{ chave, valor }` dentro de `new()` nao sofre disso**, e e' a que vai.
+        # inicio de um inicializador de *array* e diz `CS0622`, e `CS0131` em cada
+        # chave. A forma `{ chave, valor }` dentro de `new()` nao sofre disso.
         + "    new()" + NL + "    {" + NL,
         # **O C# escreve a chave e o Java nao** — e' a unica diferenca entre os
         # dois lados do mesmo array bidimensional: um `Dictionary` sem chave nao

@@ -29,8 +29,39 @@ namespace QrCodeGenerator.Tools;
 /// </remarks>
 public static class Program
 {
-    public static int Main()
+    public static int Main(string[] args)
     {
+        // **O modo vem num argumento, e nao de um ficheiro de configuracao.**
+        // Ha dois formatos com formas de saida diferentes - a lista plana dos 1D e
+        // a matriz do 2D - e um ficheiro de configuracao seria um segundo sítio
+        // onde o `spec/` teria de acertar.
+        //
+        // **E o `--datamatrix` e' um argumento a parte, e nao mais um `tipo` nos
+        // casos**, porque um Data Matrix devolve uma matriz e nao uma lista de
+        // modulos: ver a nota do `DescreverMatriz`.
+        // **A guarda e' estrita, e o motivo e' concreto.** O `--nologo` nao e' uma
+        // opcao do `dotnet run` - e' uma do `dotnet build` - e por isso que o
+        // `dotnet run` a repassa ao programa como se fosse argumento dele. Um
+        // programa que le `args[0]` sem verificar recebia `--nologo` e achava que
+        // o modo pedido era `--nologo`.
+        //
+        // **Aceitar o que nao se reconhece e' a pior forma de bug**, que a
+        // `AGENTS.md` regista com o `offset` do `desenharLogotipo`: a assinatura
+        // promete e o corpo ignora. Um `--datamatrx` com uma letra trocada dava
+        // a saida dos 1D, que e' uma lista de modulos em vez de uma matriz - e o
+        // script que o consome falhava a ler, longe do erro.
+        if (args.Length > 1 || (args.Length == 1 && args[0] != ModoMatriz))
+        {
+            // **Os argumentos que chegaram vem na mensagem.** Um `uso:` que repete
+            // o que ja se leu na linha de comando nao ajuda ninguem.
+            Console.Error.WriteLine(
+                $"uso: Program [--datamatrix]  (casos em JSON por stdin); "
+                    + $"recebi: [{string.Join(", ", args)}]");
+            return 2;
+        }
+
+        bool matriz = args.Length == 1;
+
         string entrada = Console.In.ReadToEnd();
         var casos = JsonDocument.Parse(entrada).RootElement;
 
@@ -45,7 +76,7 @@ public static class Program
             }
 
             primeiro = false;
-            saida.Append(Descrever(CodigoDe(caso)));
+            saida.Append(matriz ? DescreverMatriz(MatrizDe(caso)) : Descrever(CodigoDe(caso)));
         }
 
         saida.Append(']');
@@ -58,6 +89,15 @@ public static class Program
         Console.Out.Write(saida.ToString());
         return 0;
     }
+
+    /// <summary>O argumento que pede a saida em matriz.</summary>
+    /// <remarks>
+    /// <b>E' uma constante e nao um literal repetido</b> - o nome aparece na
+    /// comparacao, na mensagem de uso e no script do <c>spec/</c>, e tres sitios
+    /// com a mesma cadeia e' tres sitios onde trocar um nome deixa dois a falar de
+    /// coisas diferentes.
+    /// </remarks>
+    private const string ModoMatriz = "--datamatrix";
 
     /// <summary>Um caso e' <c>[tipo, texto, {opcoes}]</c>.</summary>
     private static CodigoDeBarras CodigoDe(JsonElement caso)
@@ -95,9 +135,101 @@ public static class Program
                 paragem: Opcao("paragem", "A"),
                 largo: Bandeira("largo")),
             "code128" => Code128.Gerar(texto),
-        "code93" => Code93.Codificar(texto),
+            "code93" => Code93.Codificar(texto),
             _ => throw new ArgumentException("tipo desconhecido: " + tipo),
         };
+    }
+
+    /// <summary>
+    /// Um caso de Data Matrix, que e' <c>[tipo, texto, {opcoes}]</c> como os
+    /// outros e devolve uma coisa diferente.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>O <c>tipo</c> existe mesmo com so um Data Matrix.</b> E' a mesma
+    /// forma que a lista partilhada usa para os 1D, e um dia entra aqui o GS1 Data
+    /// Matrix - que nao e' um encoder novo, e' o mesmo com uma lista de codewords
+    /// em vez de um texto.</para>
+    /// </remarks>
+    private static CodigoMatriz MatrizDe(JsonElement caso)
+    {
+        string tipo = caso[0].GetString()!;
+
+        if (tipo == "datamatrix")
+        {
+            return DataMatrix.Gerar(caso[1].GetString()!);
+        }
+
+        if (tipo == "gs1-datamatrix")
+        {
+            var opcoes = caso.GetArrayLength() > 2 ? caso[2] : default;
+
+            if (opcoes.ValueKind != JsonValueKind.Object
+                || !opcoes.TryGetProperty("codewords", out var brutos))
+            {
+                throw new ArgumentException("o caso gs1-datamatrix nao traz 'codewords'");
+            }
+
+            var codewords = new int[brutos.GetArrayLength()];
+            int i = 0;
+            foreach (var bruto in brutos.EnumerateArray())
+            {
+                codewords[i++] = bruto.GetInt32();
+            }
+
+            string nome = opcoes.TryGetProperty("nome", out var n) ? n.GetString()! : "GS1 Data Matrix";
+            return DataMatrix.GerarDeCodewords(codewords, nome);
+        }
+
+        throw new ArgumentException("tipo desconhecido: " + tipo);
+    }
+
+    /// <summary>
+    /// Passa um <see cref="CodigoMatriz"/> para JSON.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Os modulos saem como 0 e 1</b>, pelo mesmo motivo que em
+    /// <see cref="Descrever"/>: o script compara posicao a posicao.</para>
+    ///
+    /// <para><b>A matriz sai como lista de linhas, e nao achatada.</b> E' o que
+    /// separa um <c>datamatrix</c> de um <c>DataMatrix</c>: no achatado o script
+    /// nao sabe onde muda a linha, e uma divergencia dizia "o modulo 137" em vez
+    /// de dizer "(linha 8, modulo 9)" - que e' onde o problema esta'. <b>Um formato
+    /// que nao descreve a coisa faz o teste medir outra coisa</b>, que e' o que a
+    /// <c>AGENTS.md</c> regista com o <c>ComboBox</c> do C#.</para>
+    /// </remarks>
+    private static string DescreverMatriz(CodigoMatriz codigo)
+    {
+        var linhas = new StringBuilder("[");
+        for (int y = 0; y < codigo.Linhas; y++)
+        {
+            if (y > 0)
+            {
+                linhas.Append(',');
+            }
+
+            var modulos = new StringBuilder("[");
+            for (int x = 0; x < codigo.Colunas; x++)
+            {
+                if (x > 0)
+                {
+                    modulos.Append(',');
+                }
+
+                modulos.Append(codigo.Modulos[y, x] ? '1' : '0');
+            }
+
+            modulos.Append(']');
+            linhas.Append(modulos);
+        }
+
+        linhas.Append(']');
+
+        return $"{{\"modulos\":{linhas},"
+            + $"\"colunas\":{codigo.Colunas},"
+            + $"\"linhas\":{codigo.Linhas},"
+            + $"\"dados\":{codigo.Dados},"
+            + $"\"correccao\":{codigo.Correccao},"
+            + $"\"usado\":{codigo.Usado}}}";
     }
 
     /// <summary>

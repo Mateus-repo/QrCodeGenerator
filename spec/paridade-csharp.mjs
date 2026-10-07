@@ -79,7 +79,10 @@ print(json.dumps(saida))
 function modulosDoCsharp(casos) {
   const resultado = spawnSync(
     'dotnet',
-    ['run', '--project', 'csharp/tools/QrCodeGenerator.Tools.csproj', '-v', 'q', '--nologo'],
+    // **Sem `--nologo`**: nao e' uma opcao do `dotnet run` e ele repassa-a ao
+    // programa como argumento. Com a guarda de argumentos do `Program` a
+    // estrita, um `--nologo` a mais dava um erro de uso em vez de um codigo.
+    ['run', '--project', 'csharp/tools/QrCodeGenerator.Tools.csproj', '-v', 'q'],
     {
       input: JSON.stringify(casos),
       encoding: 'utf8',
