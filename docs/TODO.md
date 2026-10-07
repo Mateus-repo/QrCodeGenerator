@@ -858,6 +858,40 @@ o ZXing a ler o resultado.
 > do C# vão precisar de ser. **Um `public` sem chamador é um campo que ninguém
 > sabe porque existe**, e é por isso que o `modulosDoValor` do `Code128` passou a
 > público com o porque escrito.
+> **O GS1-128 está no Kotlin, e foi ele quem mostrou que os leitores não
+> concordam sobre o mesmo formato.** As afirmações de leitura do Kotlin são
+> diferentes das de Python e não são uma tradução delas, porque o ZXing em Java
+> `getRawBytes()` devolve os **codewords** e o `getText()` devolve o payload
+> **sem** os separadores e sem parênteses. O `CodigoGs1` é a segunda classe de
+> resultado a parte — a primeira foi o `CodigoMatriz` — e pelo mesmo motivo: um
+> campo que existe e está sempre vazio é pior do que um campo que não existe.
+>
+> **O Kotlin não tem `junit-jupiter-params`,** e `@ParameterizedTest` dá
+> `Unresolved reference 'params'` — que é o melhor dos erros, porque fala do
+> símbolo. O `DataMatrixTestes` já sabia e usa `@TestFactory` com `DynamicTest`.
+> **A forma de um teste segue o que a stack tem.**
+>
+> **`0xFFFFFFFF` é um `Long` em Kotlin e um `int` em Java.** O `javac` promove um
+> literal hexadecimal que caiba em 32 bits sem sinal e o Kotlin não: o mesmo
+> `imagem.setRGB(x, y, 0xFFFFFFFF)` compila em Java e dá `actual type is 'Long',
+> but 'Int' was expected` em Kotlin. A correção são as cores nomeadas, `Color.WHITE.rgb` e
+> `Color.BLACK.rgb` — que são `int` nas duas e dizem o que é em vez de repetir o
+> número.
+>
+> **Um `Caso` de teste que leva uma função para se construir pode receber o texto
+> errado sem ninguém ver.** Onze sítios levavam `{ Gs1_128.gs1_128(it) }` e o `it`
+> não existia — não há parâmetro nenhum. A correção não foi trocar `it` por um nome:
+> foi **tirar a função**, e o `Caso` constrói-se a si próprio. Com a função, o nome
+> dizia uma coisa e a construção fazia outra, e a falha aparecia na leitura com um
+> sintoma que aponta para o encoder.
+>
+> **`JsonArray.parse` não existe no gson** — a forma é `JsonParser.parseString`, e
+> escrever a primeira por analogia com o construtor dá `UNRESOLVED_REFERENCE` a
+> apontar para a linha.
+>
+> **A tarefa do Gradle é a parte que se esquece**, e o `mainClass` leva o `Kt` no
+> fim — é o que o Kotlin junta ao nome do ficheiro. Sem ele o Gradle diz `Could
+> not find or load main class`, que não fala do ficheiro em falta.
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
 > linguagens mais adequadas a isto: não tem `char`, a aritmética de `String` é
 > entre bytes, e cada cadeia é uma questão de UTF-8. Compensa pelo binário

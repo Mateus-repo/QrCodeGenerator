@@ -213,7 +213,19 @@ object Code128 {
      * **A posicao e' que diz a cor, e nao o digito da cadeia** — a cadeia so
      * tem `0` e `1` para dizer a largura, e a barra inicial e' sempre barra.
      */
-    private fun modulosDoValor(valor: Int): List<Boolean> {
+    /**
+     * Os modulos escuros de um valor, para o [Gs1_128].
+     *
+     * **E' publico porque o GS1-128 precisa dele, e nao porque os padroes sejam um
+     * segredo.** O GS1-128 nao chama o [code128] - tem de ficar no conjunto B, e o
+     * FNC1 e' um codeword que o [code128] nao sabe emitir - mas usa *a mesma
+     * tabela*. Uma segunda copia dos 107 padroes seria uma tabela que diverge.
+     *
+     * **Copiar a tabela nao e' reescrever o codigo duas vezes.** Reusar os padroes
+     * e' o que garante que o GS1-128 e o Code 128 medem a mesma coisa, e e' o que o
+     * `AGENTS.md` chama a unica coisa partilhada: uma tabela, nao um algoritmo.
+     */
+    fun modulosDoValor(valor: Int): List<Boolean> {
         if (valor < 0 || valor > PARAGEM) {
             throw SimbologiaException("Code 128: o valor $valor nao existe")
         }

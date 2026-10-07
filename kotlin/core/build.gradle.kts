@@ -142,3 +142,30 @@ tasks.register<JavaExec>("runDatamatrix") {
 
     standardInput = System.`in`
 }
+
+/**
+ * A ponta de Kotlin da comparacao do **GS1-128**.
+ *
+ * **E' uma tarefa a parte e nao mais um tipo na [runLinear],** porque o GS1-128
+ * devolve **tres textos** - `payload`, `gs1` e `legenda` - e o `CodigoDeBarras` so
+ * tem `legenda`. Encaixa-lo obrigava a perder dois dos tres, e a perder era um
+ * `KeyError` no script de paridade que so aparecia em Kotlin.
+ *
+ * O `standardInput` e' explicito pela mesma razao que na [runLinear]: o `JavaExec` nao
+ * o herda por omissao, e sem esta linha o Gradle le do seu proprio stdin e a
+ * comparacao fica sem casos - com um erro que fala de rede.
+ *
+ * **O `mainClass` tem o `Kt` no fim**, que e' o que o Kotlin junta ao nome do
+ * ficheiro. Sem ele o Gradle diz `Could not find or load main class`, que nao fala
+ * do ficheiro em falta - e e' o mesmo disfarce do `gradle-wrapper.jar`.
+ */
+tasks.register<JavaExec>("runGs1") {
+    group = "verification"
+    description = "Casos de GS1-128 em JSON (stdin) -> modulos e tres textos em JSON (stdout)"
+
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.qrcodegen.tools.ParidadeGs1Kt")
+
+    standardInput = System.`in`
+}
