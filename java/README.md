@@ -4,7 +4,7 @@ A app desktop multiplataforma. O mesmo código corre em **Windows, macOS e
 Linux**, e o `jpackage` gera o instalador nativo de cada um.
 
 **Stack:** Java 21 / JavaFX / ZXing
-**Estado:** ✅ 11 tipos · ✅ 177 testes · ✅ payloads idênticos às outras stacks
+**Estado:** ✅ 11 tipos · ✅ 205 testes · ✅ payloads idênticos às outras stacks
 
 ---
 
@@ -158,12 +158,16 @@ Mais:
 cd java && ./build.sh test
 ```
 
-177 testes, em quatro grupos:
+205 testes, em seis grupos:
 
 | Ficheiro | O que garante |
 |---|---|
 | `SpecVectorTests.java` | **Nível 1** — bate com `../../spec/vectors.json` |
 | `RenderTests.java` | **Nível 2** — gera o PNG com o ZXing e lê com o ZXing |
+| `SimbologiasTestes.java` | **Nível 2** — o Java desenha e o ZXing lê os códigos de barras 1D |
+| `DataMatrixTestes.java` | **Nível 2** — o mesmo, para o Data Matrix, que é 2D |
+| `ColocacaoDataMatrixTestes.java` | O `colocar()` antes das guias, no mesmo pacote |
+| `CodificacaoDataMatrixTestes.java` | Lê o fonte: o encoder pede o UTF-8 pelo nome |
 | `BugFixTests.java` | Regressões para os 7 defeitos do `QrService.cs` original |
 | `PixTests.java` | PIX: CRC, chaves, truncagens, leitura, **e portabilidade** |
 
@@ -171,6 +175,32 @@ O `RenderTests` gera e lê com a mesma biblioteca, o que é menos forte do que
 nos testes em Python — lá a leitura é feita pelo `zxing-cpp` de fora. Para
 compensar, o PNG gerado pela CLI do Java foi verificado à mão com o
 `zxing-cpp` do Python.
+
+### Os códigos de barras
+
+`core/src/main/java/com/qrcodegen/core/simbologias/` tem EAN-13, EAN-8, UPC-A,
+Code 39, Code 93, Code 128, ITF, ITF-14, Codabar e **Data Matrix (ECC200)**.
+**Nenhuma tabela está escrita à mão**: vêm de `spec/gerar-tabelas-*.py`, e o
+ficheiro gerado diz isso na primeira linha.
+
+Um código **2D** devolve um `CodigoMatriz`, que **não tem `guardas` nem
+`legenda`** — as guias em L estão na própria grelha e um Data Matrix não tem
+texto impresso por baixo. Um `guardas` vazio seria um campo que o desenho lê e
+não usa.
+
+```bash
+node ../spec/paridade-java.mjs              # os 1D, módulo a módulo contra o Python
+node ../spec/paridade-java-datamatrix.mjs   # o Data Matrix, grelha a grelha
+```
+
+Os casos vêm do `spec/casos-barras.mjs` e do gerador do web. **Um encoder só
+entra no repositório depois de o ZXing devolver a cadeia certa** — não há
+"quase": na fase dos códigos de barras, quatro encoders pareceram certos durante
+a escrita e não eram.
+
+**A leitura do Data Matrix compara codewords e não texto.** O `getText()` do
+ZXing, sem ECI, assume ISO-8859-1, e um Data Matrix não tem ECI: o texto devolvido
+não é o que foi escrito. O `getRawBytes()` são os codewords, um por byte.
 
 ---
 
