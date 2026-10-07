@@ -751,6 +751,60 @@ o ZXing a ler o resultado.
 > final é legal num inicializador de array e de objecto, que é de onde vem o
 > hábito, e é a diferença entre `[]` e `()`.
 
+> **O GS1-128 está no Python, e o web foi corrigido por causa disso.** A
+> paridade entre os dois deu duas falhas que nenhum teste estrutural apanhava: os
+> dois recusavam um AI com o comprimento errado, mas o Python dizia *«tem 14
+> dígitos fixos e o valor tem 13»* e o web dizia *«não corresponde ao que a GS1
+> define»*. **Um teste que compara "recusa ou não recusa" passa com os dois.** É o
+> mesmo caso do `ComboBox` do C#, que media a categoria errada em onze iterações
+> a verde — a comparação tinha de ser sobre a mensagem.
+>
+> **E a mesma paridade apanhou um bug que recusava valores válidos.** O `maximo` da
+> tabela é o do **último** componente, e ele serve para **dividir** o valor, que é
+> o que vai até ao fim. Para o **conferir** o número certo é a soma de todos: o
+> AI `253` é `N3+N13[+X..17]`, o último componente tem máximo 17 e um valor válido
+> pode ter trinta. **47 dos 541 AIs recusavam um valor que a GS1 aceita**, e o
+> sintoma é o pior dos possíveis — quem escreve o valor certo recebe um erro que
+> fala de um comprimento que não é o do campo. Havia `comprimento_total` no Python
+> e `comprimentoTotal` no web, e as outras três stacks precisam dos dois.
+>
+> **Um `try` que devolve `null` transforma uma excepção num valor, e um valor
+> compara-se.** A primeira versão da paridade lançava `undefined` para uma recusa, e
+> comparava isso com a excepção do Python — que nunca são a mesma coisa, e dava
+> uma falha que não dizia qual dos dois tinha errado.
+>
+> **O nível 2 do GS1-128 do web nunca tinha corrido.** O `gerar-gs1.mjs` pedia
+> `c.modulos` e o encoder devolve `modules` — o `undefined` desaparece no
+> `JSON.stringify`, a chave nunca chega ao `.gs1.json`, e o `descodificar-gs1.py`
+> acaba em `KeyError: 'modulos'`. **O erro não era silencioso; o que ninguém
+> corria era o script**, porque a leitura é um passo a mais depois da suite e não
+> faz parte dela. É a terceira vez que o mesmo defeito aparece com outro nome: **o
+> teste correu, e o que ele exercita não era a coisa defeituosa.** Corrigido, o
+> leitor confirma o `]C1` e os separadores no sítio em oito casos.
+>
+> **O `]C1` é o único sintoma da diferença entre um GS1-128 e um Code 128.** Os
+> `bytes` são o payload com o `0x1D` cru, o `text` é a **forma humana entre
+> parênteses** — o ZXing parseia o GS1 e devolve os AIs entre parênteses, que é uma
+> terceira representação e não a que se compara — e o `symbology_identifier` diz
+> `]C1` onde um Code 128 sem FNC1 diz `]C0`. Medido nos dois.
+>
+> **Um teste de paridade que só compara os módulos não apanha metade do que há para
+> apanhar.** O GS1-128 e o Code 128 **dão exatamente o mesmo número de módulos** com
+> o mesmo texto — treze codewords nos dois, porque o Code 128 comutativo troca dois
+> dígitos por um valor e gasta um codeword na troca, e o GS1-128 gasta um no FNC1.
+> Por isso que a contagem de FNC1 é uma afirmação à parte: **um separador a mais dá
+> treze codewords em vez de treze.**
+>
+> **Um `pytest.raises` sem mais passa com qualquer excepção**, incluindo uma que não
+> seja a do encoder. Cada recusa nomeia a razão, e cada teste afirma que essa
+> palavra está na mensagem — que é o que distingue uma validação do AI de uma
+> `TypeError` vinda de uma linha a cima. Quatro dos treze casos de recusa
+> acrescentados eram meus e estavam errados: o `(98)XYZ` suposto ser um AI
+> inexistente **existe e é de até 90 caracteres**, o `(999)` existe como prefixo do
+> `99`, e o acento é recusado pelo `regex` da GS1 e não pela ASCII — **uma
+> mensagem a dizer `ASCII` seria mentira**, porque o encoder nunca chega à
+> validação do Code 128.
+
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
 > linguagens mais adequadas a isto: não tem `char`, a aritmética de `String` é
 > entre bytes, e cada cadeia é uma questão de UTF-8. Compensa pelo binário

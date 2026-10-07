@@ -999,9 +999,15 @@ def _blocos(guardas: list[int]) -> list[tuple[int, int]]:
 # --- o registo --------------------------------------------------------------
 
 
-def test_o_registro_tem_os_tres_formatos():
+def test_o_registro_tem_o_que_se_declara():
     """
     O registo dos de uma linha, e o registo de todos.
+
+    **O nome dizia "os tres formatos" e nunca houve tres.** Havia cinco grupos no
+    registo de todos — UPC/EAN, lineares, Code 93, Data Matrix e GS1 — e o nome
+    ficou do tempo em que havia dois. **Um nome que diz um numero errado e' um
+    nome que ninguem corrige**, porque ninguem o lee a ver se bate: le-se a ver
+    porque o ficheiro se chama `test_lineares`.
 
     **O registo e' uma lista do mesmo conjunto escrita a segunda vez.** O selector
     de formatos vive no `index.html` e o registo vive no modulo, e nada os ligava
@@ -1033,11 +1039,19 @@ def test_o_registro_tem_os_tres_formatos():
     # um teste que falhava sem ninguem saber porque.
     from qrcode_core.simbologias import SIMBOLOGIAS_CODE93
     from qrcode_core.simbologias import SIMBOLOGIAS_DATAMATRIX
+    from qrcode_core.simbologias import SIMBOLOGIAS_GS1
 
     assert set(SIMBOLOGIAS_CODE93) == {"code93"}
     assert set(SIMBOLOGIAS_DATAMATRIX) == {"datamatrix"}
 
-    # O registo de todos tem os tres grupos de 1D e o de 2D, e cada entrada e'
+    #: **O GS1-128 tem registo proprio, e nao e' uma excepcao.** Nao e' por ser de
+    #: outra dimensao — e' uma linha como o Code 128 — e sim porque **nao e' um
+    #: formato, e' uma notacao**: um GS1-128 e' um Code 128 com o FNC1 no sitio
+    #: certo. Regista-lo ao lado do Code 128 diria que sao dois formatos, quando so
+    #: um deles aceita texto solto e o outro aceita `(01)040…`.
+    assert set(SIMBOLOGIAS_GS1) == {"gs1-128"}
+
+    # O registo de todos tem os quatro grupos de 1D e o de 2D, e cada entrada e'
     # uma funcao.
     assert set(SIMBOLOGIAS_TODAS) == {
         "ean13",
@@ -1050,6 +1064,7 @@ def test_o_registro_tem_os_tres_formatos():
         "code128",
         "code93",
         "datamatrix",
+        "gs1-128",
     }
     assert all(callable(f) for f in SIMBOLOGIAS_TODAS.values())
 

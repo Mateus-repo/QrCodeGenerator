@@ -380,6 +380,39 @@ function analisar(texto) {
  * Um `trim` sem isto parece um detalhe, e e' a diferenca entre aceitar e recusar
  * metade dos exemplos que a propria GS1 escreve.
  */
+/**
+ * O comprimento maximo do valor de um AI, e nao o do ultimo componente.
+ *
+ * **A tabela so traz o do ultimo componente, e os dois numeros sao diferentes.**
+ * E' o que serve para **dividir** o valor — o ultimo componente e' o que vai ate
+ * ao fim do texto — e nao para o **conferir**: um AI de varios componentes tem um
+ * valor que e' a soma deles.
+ *
+ * | AI | formato | ultimo | total |
+ * |---|---|---|---|
+ * | `253` | `N3+N13[+X..17]` | 17 | **30** |
+ * | `421` | `N3+N3+X..9` | 9 | **12** |
+ * | `8008` | `N4+N8[+N..4]` | 4 | **12** |
+ *
+ * **Sao 47 dos 541 AIs que tem mais de um componente**, e todos eles recusavam um
+ * valor que a GS1 aceita. O sintoma e' o pior dos possiveis: quem escreve o
+ * valor certo recebe um erro que fala de um comprimento que nao e' o do campo.
+ */
+export function comprimentoTotal(ai) {
+  let soma = 0;
+  let temVariavel = false;
+
+  for (const campo of ai.campos) {
+    if (campo.f !== null) soma += campo.f;
+    if (campo.m !== null) {
+      soma += campo.m;
+      temVariavel = true;
+    }
+  }
+
+  return temVariavel ? soma : null;
+}
+
 function validar(ai, valor, texto) {
   const limpo = valor.trim();
 
@@ -387,9 +420,31 @@ function validar(ai, valor, texto) {
     throw new Error(`GS1-128: o AI (${ai.numero}) nao tem valor.`);
   }
 
-  if (ai.maximo !== null && limpo.length > ai.maximo) {
+  /*
+   * O comprimento fixo conferido, e **com os dois numeros na mensagem**.
+   *
+   * A versao anterior deixava o `regex` fazer este trabalho e dizia "nao
+   * corresponde ao que a GS1 define" — que e' verdade e nao ajuda ninguem: o
+   * utilizador tem um campo de catorze e nao sabe qual. **Uma recusa sem numeros
+   * e' uma recusa com que ninguem consegue corrigir o campo.**
+   *
+   * E o comprimento antes do `regex` porque um `regex` que aceite variacos
+   * deixaria passar um valor de trinta e dois caracteres, e o leitor do GS1
+   * recusa-o. A tabela sabe o maximo e a validacao usa o saber; o `regex` e' a
+   * segunda linha, para o que o comprimento nao apanha, que e' o mes 56.
+   */
+  if (ai.fixo !== null && limpo.length !== ai.fixo) {
+    const unidade = ai.fixo === 1 ? 'digito' : 'digitos';
     throw new Error(
-      `GS1-128: o AI (${ai.numero}) aceita no maximo ${ai.maximo} caracteres e o ` +
+      `GS1-128: o AI (${ai.numero}) tem ${ai.fixo} ${unidade} fixos e o valor ` +
+        `"${limpo}" tem ${limpo.length}.`,
+    );
+  }
+
+  const maximo = comprimentoTotal(ai);
+  if (maximo !== null && limpo.length > maximo) {
+    throw new Error(
+      `GS1-128: o AI (${ai.numero}) aceita no maximo ${maximo} caracteres e o ` +
         `valor "${limpo}" tem ${limpo.length}.`,
     );
   }

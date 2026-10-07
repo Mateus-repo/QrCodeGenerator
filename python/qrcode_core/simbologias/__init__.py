@@ -18,6 +18,7 @@ o teste desse cliente passe.
 
 from .code93 import SIMBOLOGIAS_CODE93, code93
 from .datamatrix import SIMBOLOGIAS_DATAMATRIX, data_matrix, data_matrix_de_codewords
+from .gs1 import SIMBOLOGIAS_GS1, gs1_128
 from .lineares import (
     SIMBOLOGIAS_LINEARES,
     codabar,
@@ -44,11 +45,18 @@ from .upcean import SIMBOLOGIAS, SimbologiaError, digito_de_controlo, ean8, ean1
 #: **2D**, e os dois registos sao os de **1D**. Um registo so de duas dimensoes
 #: pareceria mais limpo, e era a lista que se deixa de actualizar quando entra um
 #: formato de uma linha - que e' exactamente o que aconteceu ao Code 93.
+#:
+#: O GS1-128 tem registo proprio pelo mesmo motivo, mas **por um diferente**: nao
+#: por ser de outra dimensao - e' uma linha como o Code 128 - e sim porque nao e'
+#: um formato e' **uma notacao**. Um GS1-128 e' um Code 128 com o FNC1 no sitio
+#: certo, e o que muda sao os campos que vao dentro. Regista-lo ao lado do Code 128
+#: diria que sao dois formatos quando so um deles aceita texto solto.
 SIMBOLOGIAS_TODAS = {
     **SIMBOLOGIAS,
     **SIMBOLOGIAS_LINEARES,
     **SIMBOLOGIAS_CODE93,
     **SIMBOLOGIAS_DATAMATRIX,
+    **SIMBOLOGIAS_GS1,
 }
 
 __all__ = [
@@ -65,6 +73,8 @@ __all__ = [
     "itf14",
     "codabar",
     "code128",
+    "SIMBOLOGIAS_GS1",
+    "gs1_128",
     "SIMBOLOGIAS_CODE93",
     "code93",
     "SIMBOLOGIAS_DATAMATRIX",

@@ -69,9 +69,27 @@ for (const caso of CASOS) {
    * e' criar uma segunda fonte de verdade sobre a mesma regra, e e' assim que as
    * duas diviram.
    */
+  /*
+   * O `modules` e' o nome do campo no encoder, e nao `modulos`.
+   *
+   * **Este era um bug, e um bug que fazia o nivel 2 nao existir.** O script pedia
+   * `c.modulos`, que da `undefined`, e o `JSON.stringify` **nao escreve uma chave
+   * cujo valor e' `undefined`** — o `.gs1.json` saia sem `modulos`, e o
+   * `descodificar-gs1.py` acabava em `KeyError: 'modulos'`.
+   *
+   * A `AGENTS.md` chama a isto o que ja aconteceu tres vezes: **o teste correu, e
+   * o que ele exercita nao era a coisa defeituosa**. O erro aparecia — um
+   * `KeyError` nao e' silencioso — mas **ninguem corria o script**, porque o
+   * comando de leitura e' um passo a mais depois da suite e nao faz parte dela.
+   *
+   * A convencao do repositorio e' `modules` em todas as linguagens, e e' a que o
+   * `linear.js` e o `app.js` leem. O `linear.test.mjs` verifica que cada registo
+   * sabe codificar o seu exemplo, e e' por isso que apanha um nome errado **no
+   * encoder**; o que nao apanha e' um nome errado **no gerador dos casos**.
+   */
   casos.push({
     ...caso,
-    modulos: c.modulos,
+    modulos: c.modules,
     gs1: c.gs1,
     payload: c.payload,
     separadores: c.separadores,
