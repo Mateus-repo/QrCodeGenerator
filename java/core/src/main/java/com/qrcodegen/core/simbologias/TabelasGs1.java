@@ -621,8 +621,23 @@ public final class TabelasGs1 {
      * {@code 01} seguido de {@code 0}, e produzia um codigo com o GTIN partido ao
      * meio e um leitor que nao diz nada.
      */
-    public static Ai aiDe(String numero) {
-        Ai entrada = AIS.get(numero);
+    /**
+     * O AI de um numero, numa tabela que se escolhe.
+     *
+     * <p><strong>E' a mesma procura, com a tabela como argumento em vez de global.</strong>
+     * Nao e' uma sobrecarga feita para um teste: e' que a procura nao tem razao para
+     * depender do global, e o {@link #aiDe(String)} e' o caso particular de usar o
+     * {@link #AIS}.
+     *
+     * <p><strong>E' o que da cobertura ao ramo do {@code resto}.</strong> Nenhum AI e'
+     * prefixo de outro na GS1 hoje — o {@code gs1-tabelas-paridade.test.mjs} confirma
+     * isso — e por isso que {@code resto} nunca e' preenchido por um AI real. Com o
+     * {@code AIS} a ser um {@code Map.ofEntries}, imutavel, um teste nao o consegue
+     * alterar; <strong>virar a tabela mutavel por causa de um teste seria tornar o
+     * encoder pior para o unico uso que nao existe</strong>.
+     */
+    public static Ai aiDe(String numero, Map<String, Ai> tabela) {
+        Ai entrada = tabela.get(numero);
         if (entrada != null) {
             return new Ai(numero, entrada.formato(), entrada.fixo(), entrada.maximo(),
                 entrada.campos(), entrada.separador(), entrada.regex(), null);
@@ -631,7 +646,7 @@ public final class TabelasGs1 {
         // Corta o ultimo digito ate dar, que e' a forma de tentar 4, 3 e 2.
         for (int n = numero.length() - 1; n >= 2; n--) {
             String prefixo = numero.substring(0, n);
-            entrada = AIS.get(prefixo);
+            entrada = tabela.get(prefixo);
             if (entrada != null) {
                 return new Ai(prefixo, entrada.formato(), entrada.fixo(), entrada.maximo(),
                     entrada.campos(), entrada.separador(), entrada.regex(),
@@ -640,5 +655,9 @@ public final class TabelasGs1 {
         }
 
         return null;
+    }
+
+    public static Ai aiDe(String numero) {
+        return aiDe(numero, AIS);
     }
 }

@@ -70,7 +70,21 @@ public final class Code128 {
      * a cadeia so tem {@code 0} e {@code 1} para dizer a largura, e a barra
      * inicial e' sempre barra.
      */
-    private static List<Boolean> modulosDoValor(int valor) {
+    /**
+     * Os modulos escuros de um valor, para o {@link Gs1_128}.
+     *
+     * <p><strong>E' publico porque o GS1-128 precisa dele, e nao porque os padroes
+     * sejam um segredo.</strong> O GS1-128 nao chama o {@code code128()} — tem de ficar
+     * no conjunto B, e o FNC1 e' um codeword que o {@code code128()} nao sabe emitir —
+     * mas usa <em>a mesma tabela</em>. Uma segunda copia dos 107 padroes seria uma
+     * tabela que diverge.
+     *
+     * <p><strong>Copiar a tabela nao e' reescrever o codigo duas vezes.</strong> Reusar
+     * os padroes e' o que garante que o GS1-128 e o Code 128 medem a mesma coisa, e o
+     * que o {@code AGENTS.md} chama a unica coisa partilhada: uma tabela, nao um
+     * algoritmo.
+     */
+    public static List<Boolean> modulosDoValor(int valor) {
         if (valor < 0 || valor > PARAGEM) {
             throw new SimbologiaException("Code 128: o valor " + valor + " nao existe");
         }

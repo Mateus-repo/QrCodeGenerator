@@ -805,6 +805,59 @@ o ZXing a ler o resultado.
 > mensagem a dizer `ASCII` seria mentira**, porque o encoder nunca chega à
 > validação do Code 128.
 
+> **O GS1-128 está no Java, e foi o ZXing em Java quem disse que os testes
+> tinham de ser diferentes dos de Python.** O `zxingcpp` — o port em C++ que o
+> `descodificar-gs1-python.py` usa — devolve `bytes` com o payload e o `0x1D` no
+> sítio certo, e `text` com os AIs entre parênteses. **O ZXing em Java devolve
+> `getRawBytes()` com os CODEWORDS**, que é o mesmo comportamento do Data Matrix
+> (e por isso que o `DataMatrixTestes` compara por aí), e devolve `getText()`
+> com o payload **sem os separadores** e sem parênteses.
+>
+> | | `zxingcpp` (Python) | ZXing (Java) |
+> |---|---|---|
+> | payload | `bytes` | `text`, **sem** o `0x1D` |
+> | forma humana entre parênteses | `text` | **não existe** |
+> | `]C1` | `symbology_identifier` | `getResultMetadata()` |
+> | codewords | não devolve | `getRawBytes()` |
+>
+> **Comparar `getRawBytes()` com o payload dava «expected 16 but was 20» em todos
+> os casos** — quatro bytes a mais, que são o `h` do início, o `f` do FNC1 e o `j`
+> da paragem. E `getSymbologyIdentifier()` **não existe no ZXing em Java**: é do
+> `zxingcpp`. Assumi que um leitor tinha o que o outro tinha, e a suposição custou
+> um `cannot find symbol`. **Em Java o `]C1` conta-se nos `rawBytes`** — e é essa
+> contagem que confirma que o FNC1 foi emitido *e* lido, dos dois lados.
+>
+> **O `DecodeHintType` tem um `ASSUME_GS1`, e o teste não o põe.** Diz ao leitor
+> para *assumir* que o código é GS1; o que se quer é que ele diga que é GS1 **sem
+> ninguém lhe dizer**. Com a dica, o teste passaria mesmo sem o FNC1 no início — que
+> é exactamente o que o teste tem de apanhar.
+>
+> **Um `Map.ofEntries` é imutável, e um ramo sem caso não se resolve tornando a
+> tabela mutável.** Nenhum AI é prefixo de outro na GS1, e por isso que `resto`
+> nunca é preenchido por um AI real. O teste do ramo queria injectar um `31` ao
+> lado do `3103` — e o `AIS.remove("3103")` deu `UnsupportedOperationException`. A
+> correção é **uma sobrecarga do `aiDe` que recebe a tabela**, que é uma
+> decomposição a sério: a procura não tem razão para depender do global. **Virar a
+> tabela mutável por causa de um teste seria tornar o encoder pior para o único uso
+> que não existe.**
+>
+> **Um `@ParameterizedTest(name = "{0}")` rebenta num caso cujo texto é vazio.**
+> O caso `("", "campo")` produz um nome de exibição em branco, e o JUnit diz
+> `displayName must not be null or blank` — que é uma falha de nome de teste e
+> não uma falha do GS1. O nome passou a levar o índice.
+>
+> **Um valor de teste gerado só com dígitos e letras falha nos AIs que têm uma
+> forma.** O `8008` é `YYMMDDHH` mais minutos e segundos, e `1234567890`
+> repetido nunca casa — o `34` não é um mês. **E os comprimentos dos valores de
+> teste não são escritos à mão**: o `7030` tem máximo 30 e o valor que escrevi
+> tinha 29, e o teste falhou porque acrescentar um carácter dava exactamente 30. Um
+> teste com o número escrito à mão passa com o número errado.
+>
+> **Oitenta e um AIs têm mais de um componente e quarenta e sete têm algum
+> variável** — e o `comprimentoTotal` é público, e o `comprimentoTotal` do Kotlin e
+> do C# vão precisar de ser. **Um `public` sem chamador é um campo que ninguém
+> sabe porque existe**, e é por isso que o `modulosDoValor` do `Code128` passou a
+> público com o porque escrito.
 > **A app em Go é a última por decisão, não por dificuldade.** O Go não é das
 > linguagens mais adequadas a isto: não tem `char`, a aritmética de `String` é
 > entre bytes, e cada cadeia é uma questão de UTF-8. Compensa pelo binário

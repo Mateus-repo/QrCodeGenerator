@@ -15,6 +15,10 @@
 #   ./build.sh run-datamatrix <casos-json>  o mesmo para o Data Matrix, que e' 2D
 #                                         e devolve uma matriz, para o
 #                                         spec/paridade-java-datamatrix.mjs
+#e devolve tres textos: o `payload`, o `gs1` e a
+#legenda. E' um comando a parte porque o
+#CodigoDeBarras so tem a legenda.
+#spec/paridade-gs1-java.mjs
 
 set -euo pipefail
 
@@ -221,6 +225,19 @@ case "${1:-test}" in
     exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
       com.qrcodegen.tools.ParidadeDataMatrix "$@"
     ;;
+
+    # A ponta de Java da comparacao do **GS1-128**. E' um comando a parte e nao
+    # mais um `case` no `run-linear`, porque o GS1-128 devolve **tres textos** —
+    # `payload`, `gs1` e `legenda` — e o `CodigoDeBarras` so tem `legenda`.
+    # Encaixa-lo obrigava a perder dois dos tres, e a perder era um `KeyError` no
+    # script de paridade que so aparecia em Java.
+    run-gs1)
+      fetch_jars
+      { compile_core; compile_tools; } >&2
+      shift || true
+      exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
+        com.qrcodegen.tools.ParidadeGs1 "$@"
+      ;;
 
   app)
     fetch_jars; fetch_javafx
