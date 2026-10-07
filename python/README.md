@@ -9,7 +9,9 @@ Biblioteca + linha de comandos. É a **implementação de referência** da spec.
 python/
 ├── qrcode_core/     ← biblioteca: payloads + geração de imagem
 │   ├── pix.py       ← PIX / BR Code (EMV-QRCPS-MPM)
-│   └── render.py    ← PNG/SVG a partir de um payload
+│   ├── render.py    ← PNG/SVG a partir de um payload
+│   └── simbologias/ ← códigos de barras: EAN, UPC, Code 39/93/128, ITF,
+│                       Codabar e o Data Matrix (ECC200)
 ├── cli/             ← linha de comandos (qrcli)
 ├── gui/             ← interface gráfica (por fazer)
 ├── tests/           ← pytest
@@ -39,9 +41,37 @@ cd python
 python -m pytest tests -q
 ```
 
-323 testes. Cobrem a spec partilhada (`spec/vectors.json`), o exemplo oficial do
+381 testes. Cobrem a spec partilhada (`spec/vectors.json`), o exemplo oficial do
 Banco Central, e — o mais importante — **descodificam o PNG gerado** com o
 ZXing e confirmam que devolvem o payload original.
+
+### Os códigos de barras
+
+O `qrcode_core/simbologias/` é a implementação de referência, e o `spec/` tem os
+geradores das tabelas: **nenhuma tabela se escreve de memória**. O registo é
+`SIMBOLOGIAS_TODAS`, e é o único — a `AGENTS.md` regista o que acontece quando o
+mesmo conjunto está escrito duas vezes sem nada que as ligue.
+
+| Formato | Módulo | Onde se lê |
+|---|---|---|
+| EAN-13, EAN-8, UPC-A | `upcean.py` | `zxingcpp` |
+| Code 39, ITF, ITF-14, Codabar, Code 128 | `lineares.py` | `zxingcpp` |
+| Code 93 | `code93.py` | `zxingcpp`, com os caracteres de controlo |
+| **Data Matrix (ECC200)** | `datamatrix.py` | `zxingcpp` |
+
+O Data Matrix é o único **2D** e o único **sem escolha**: não há máscaras nem
+versões com nomes, escolhe-se o menor símbolo que caiba e a correção é fixa.
+
+```bash
+python ../web/tests/paridade-datamatrix.py            # Python == web, módulo a módulo
+python ../web/tests/descodificar-datamatrix-python.py # o ZXing devolve a string
+python ../web/tests/descodificar-code93-python.py     # o mesmo para o Code 93
+```
+
+O desenho 1D é `desenho.to_bitmap(modulos, guardas=...)` e o 2D é
+`desenho.to_bitmap_2d(modulos)`. **São duas funções e não uma com um parâmetro**:
+nos 1D a guarda desce abaixo do corpo, e nos 2D as guias já estão na matriz e não
+há nada a acrescentar.
 
 ## Linha de comandos
 

@@ -350,7 +350,17 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       codewords, é partilhada.
 - [x] **Data Matrix (ECC200)** — o padrão da indústria farmacêutica,
       aeroespacial e de defesa. Pequeno e quadrado, sem os quadrados grandes
-      nos cantos. **Feito e verificado: 12 casos lidos pelo ZXing.**
+      nos cantos. **Feito e verificado: 12 casos lidos pelo ZXing, e a
+      implementação de referência passou a ser o Python.** O web tem a
+      tabela gerada e nenhum encoder — e uma tabela gerada sem encoder
+      é um ficheiro morto, não uma capacidade.
+      > **Propagar um encoder 2D não é como propagar um 1D.** Não há
+      > `guardas` nem `legenda` — as guias em L estão na própria matriz e
+      > não há texto impresso por baixo —, por isso que o desenho é uma
+      > função à parte (`to_bitmap_2d`) e não `to_bitmap` com um parâmetro.
+      > E a zona muda é **1 módulo e não 10**: o leitor orienta-se pelos
+      > cantos tracejados, e sem margem a detecção falha.
+      >
       > **A referência não é um pacote de Python.** Não há, ao contrário dos
       > códigos de barras, e por isso a tabela dos factores de Reed-Solomon
       > veio da implementação de referência do ZXing — que é também o leitor
@@ -364,7 +374,8 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > errado dá um símbolo que o leitor **rejeita por corrupção**, o que é
       > mais forte do que uma comparação entrada a entrada, não mais fraco.
       >
-      > Três coisas que só apareceram na leitura:
+      > Quatro coisas que apareceram na leitura, e as três primeiras só
+      > apareceram nela:
       >
       > 1. **A guia de baixo não era reposta a zero.** Escrevia a partir da
       >    coluna onde a linha de dados tinha acabado, e a última linha do
@@ -384,6 +395,23 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       >    um de 154.** Com 154 a conta dava 1556 em vez de 1558, e dois
       >    codewords a menos num código de 1558 é o que o leitor acusa como
       >    corrupção, não como tabela errada.
+      >
+      > **E um quarto, que só apareceu ao portar para o Python** — e que vale
+      > mais que os outros três, porque o sintoma em JavaScript era *nada*:
+      >
+      > 4. **O canto de baixo à direita nunca era posto.** O índice era
+      >    `bits[linhas * colunas + colunas - 1]`, que é `colunas - 1` posições
+      >    a mais: um `Uint8Array` fora do fim dá `undefined`, e
+      >    `undefined < 0` é falso, portanto **o bloco nunca corria**. O
+      >    encoder desenhava o código, o ZXing lia-o, e a diferença eram dois
+      >    módulos que ninguém via. O Python levantou `IndexError` na mesma
+      >    linha.
+      >
+      >    **Duas linguagens, o mesmo bug, e só uma delas o conta.** Em JS o
+      >    sintoma de um índice fora do fim é não passar nada; em Python é uma
+      >    excepção que aponta para a linha. E é a razão de a paridade entre
+      >    as duas valer mais do que um teste de leitura: apanhou o que a
+      >    leitura, que passava, não apanhou.
       >
       > **Em conjunto, isto destrava o GS1 DataMatrix**, que é Data Matrix com
       > um cabeçalho FNC1 e nada mais. Fica de fora de propósito por agora: só
