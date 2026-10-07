@@ -7,7 +7,7 @@ O desenho dos codigos de barras de uma linha.
 
 **O `render.py` desenha matrizes quadradas com um logo de correccao de erro; um
 codigo de barras e' uma linha com guardas mais altas.** Sao formatos diferentes
-comaude引流 dimensoes diferentes, e o que o ZXing le e' a imagem, nao a
+com areas e dimensoes diferentes, e o que o ZXing le e' a imagem, nao a
 matriz — por isso a funcao devolve bytes e nao uma lista de listas.
 
 ## A guarda desce, e nao e' um detalhe
