@@ -118,6 +118,13 @@ dependencies {
      * para ler. **Aqui e' para gerar** — `QRCodeWriter` — e no nivel 2 e' para
      * ler de volta. Um encoder so esta verificado se um leitor que nao foi
      * escrito pela mesma mao o le, e o ZXing e' esse leitor nas duas direccoes.
+     *
+     * **E hoje nao e' usada em nada.** Nenhum ficheiro de `src/main` da app nem
+     * do `:core` a importa — o ZXing e' dos ficheiros de *teste* do `:core`, que
+     * e' onde se le o que os encoders desenham. Esta linha e' a promessa do
+     * encoder de matriz, e **o comentario dizia o que ela faria em vez do que
+     * faz** — que e' a forma de um comentario convidar alguem a "corrigir" o
+     * codigo certo. Sao ~2 MB no APK ate la chegar.
      */
     implementation("com.google.zxing:core:3.5.3")
 }

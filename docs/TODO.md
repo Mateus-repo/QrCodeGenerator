@@ -997,7 +997,7 @@ Coisas que ficaram por fazer e que se notam:
       > um `o` com um acento por cima, pelo que o NFD não o decompõe. As duas
       > cópias davam o mesmo resultado errado — **e é por isso que um teste de
       > paridade não o apanha**.
-- [ ] **Kotlin/Android: o core existe e tem as simbologias, a app não.**
+- [ ] **Kotlin/Android: o core tem as simbologias; a app não mostra imagem.**
       É a última stack, e o que está feito é o `:core` — Kotlin/JVM puro,
       os onze tipos de payload, o PIX e **as quatro simbologias de barras**, a
       passar os vectores de `spec/vectors.json` byte a byte com
@@ -1021,11 +1021,44 @@ Coisas que ficaram por fazer e que se notam:
       >
       > **O que ficou a fazer, por ordem:**
       >
-      > - **O encoder de QR.** Sem ele não há nível 2, e o nível 2 é o que
-      >   apanha o que nenhum teste estrutural vê. É a peça que falta.
-      > - **A app Android** — o `README.md` da pasta tem o plano, e a
-      >   decisão em BLOQUEIO 4 continua por responder: conta de Play Store ou
-      >   APK sideload. Isso muda a assinatura e o keystore.
+      > - **O encoder de QR em Kotlin.** Sem ele não há nível 2, e o nível 2 é o
+      >   que apanha o que nenhum teste estrutural vê. É a peça que falta.
+      > - **O ecrã de códigos de barras na app.** O `:core` tem `Lineares`,
+      >   `Gs1_128` e `CodigoGs1`, verificados com o ZXing nos 139 testes — **e a
+      >   tela não mostra nenhum deles.** É o registo que funciona e não aparece
+      >   no selector, que é o que a `AGENTS.md` descreve e que o
+      >   `formatos.test.mjs` apanha no web e **não apanha aqui**, porque em
+      >   Kotlin não há esse teste. **Um registo que não é verificado é um registo
+      >   que não existe para quem o quer usar.**
+      > - **Testes na app.** `kotlin/android/src/test` não existe. Os três bugs que
+      >   os comentários da `CasaActivity` descrevem foram todos encontrados à
+      >   mão, e há uma verificação que os apanha todos:
+      >
+      >   ```powershell
+      >   python kotlin/android/tools/verificar-app.py
+      >   ```
+      >
+      >   **Constrói o APK, arranca um emulador, instala, e mede o que a tela
+      >   mostra** — o processo, a Activity em primeiro plano, o ecrã com pixels,
+      >   as onze categorias no selector, e se o que se escreve no campo
+      >   **volta como payload num `TextView`**, que é o `:core` a responder. Sai
+      >   com código diferente de zero se alguma falhar, e está verificado
+      >   **reintroduzindo dois bugs**: o selector com dez em vez de onze, e o
+      >   `Text` do payload trocado por uma constante.
+      >
+      >   **Foi a verificação que mostrou que o `README.md` desta pasta estava
+      >   errado.** Dizia que a app não existia, e ela compilava, instalava e
+      >   aceitava escrita. **Um documento que descreve uma peça que ninguém
+      >   correu está a descrever uma intenção** — e a `AGENTS.md` obriga a
+      >   documentação a mudar com o código, o que aqui só foi verdade depois de
+      >   correr a app.
+      >
+      >   **O ZXing está declarado e não é usado.** Nenhum ficheiro de `src/main`
+      >   da app nem do `:core` o importa; só os de *teste* do `:core`. São ~2 MB
+      >   no APK à espera do encoder de matriz, e o comentário do
+      >   `build.gradle.kts` dizia o que a linha ía fazer em vez do que faz.
+      > - **A decisão em BLOQUEIO 4** continua por responder: conta de Play Store
+      >   ou APK sideload. Isso muda a assinatura e o keystore.
       > - **A leitura pela câmara**, que é a razão de ser desta plataforma.
       >
       > **A máquina não precisa de nada novo.** O Android Studio já lá está,

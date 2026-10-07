@@ -94,6 +94,7 @@ Os testes correm antes de qualquer commit. Só os das stacks tocadas:
 | `python/` | `cd python && python -m pytest tests -q` |
 | `web/` | `node --test "web/tests/*.test.mjs"` |
 | `kotlin/core/` | `cd kotlin && gradlew.bat :core:test` |
+| `kotlin/android/` | `python kotlin/android/tools/verificar-app.py` |
 
 O `gradlew` não precisa de Gradle instalado — descarrega a versão fixada em
 `kotlin/gradle/wrapper/`. O toolchain está fixado em **Java 21**, e isso importa
@@ -108,6 +109,14 @@ não fala de um ficheiro em falta. A excepção está escrita no `.gitignore` co
 razão, e não numa excepção na memória de alguém.
 
 Em Windows o `./build.sh` é `C:\Program Files\Git\bin\bash.exe build.sh test`.
+
+**A linha da app é a única que precisa de um dispositivo**, e é a única que não é
+um `gradlew test`: `gradlew :app:test` não existe, porque `src/test` não existe
+na app. O `verificar-app.py` compila o APK, arranca um emulador se não houver
+nenhum, e mede o que a tela mostra — e é a **única** forma de apanhar um bug de
+interface nesta stack, porque não há testes de interface. Ver
+`kotlin/android/README.md`. O `--sem-emulador` só compila, para quando se quer
+saber se o APK sai sem gastar um arranque de emulador.
 
 O teste que apanha mais bugs é o de nível 2, no qual se **gera a imagem e
 descodifica-a com um leitor independente** (ZXing). Os testes estruturais
@@ -445,6 +454,32 @@ que ficou é: um script que edita `docs/` substitui **blocos inteiros** — do
 cabeçalho do item ao fim dele —, declara o texto novo por inteiro, e no fim
 relê o resultado em memória para confirmar que cada título aparece **uma vez
 só**. E se a procura do texto a substituir falhar, o script não escreve nada.
+
+**E uma tela é um estado, e um teste que mede o estado anterior mede o estado
+anterior.** A app Android compilava e ninguém a correra, e o verificador que a
+pôs a correr mediu três coisas erradas antes de medir uma bem:
+
+- **Tocou em `(540, 560)`, que é o meio do ecrã e não o campo** — e concluiu que a
+  app não aceitava escrita. Aceitava. **Um toque no sítio errado não falha:** o
+  `input text` não tem para onde ir, a tela fica igual, e a conclusão é firme a
+  partir de uma medição que não mediu nada. A regra é **medir o nó e tocar no
+  centro dele**, que é o que o `uiautomator` dá.
+- **Abriu o selector para contar as categorias e não o fechou.** O toque seguinte
+  foi recebido pelo menu aberto, o campo ficou com o texto antigo colado ao novo,
+  e o teste disse que o payload não batia. **Cada medida parte de um estado
+  conhecido**, e o estado conhecido é o estado inicial — que é o que o
+  `force-stop` dá.
+- **Afirmou que o payload aparecia, e affirmava que a string aparecia.** Passava
+  com o `Text` do payload trocado por uma constante, porque **o campo tem a
+  string** e basta. Um `EditText` com o link é o campo; um `TextView` com o link
+  é o payload. **Não se pergunta *onde* está uma coisa; pergunta-se *em que nó*
+  está** — e o tipo do nó é o que diz de quem é a culpa quando não aparece.
+
+**E o caminho do erro de um verificador é o primeiro a ser executado.** Com o bug
+do selector reintroduzido, o verificador disse `10 de 11` e morreu com um
+`NameError` a tentar dizer *qual* faltava. Passou semanas sem dar sinal, porque
+um caminho só corre quando algo está mal — e quando algo está mal é exactamente
+quando ele tem de funcionar.
 
 ### O QR code é sempre preto sobre branco
 
