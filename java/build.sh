@@ -12,6 +12,9 @@
 #   ./build.sh package    gera o instalador nativo (jpackage)
 #   ./build.sh run-linear <casos-json>   devolve os módulos de códigos de barras
 #                                         em JSON, para o spec/paridade-java.mjs
+#   ./build.sh run-datamatrix <casos-json>  o mesmo para o Data Matrix, que e' 2D
+#                                         e devolve uma matriz, para o
+#                                         spec/paridade-java-datamatrix.mjs
 
 set -euo pipefail
 
@@ -205,6 +208,18 @@ case "${1:-test}" in
     shift || true
     exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
       com.qrcodegen.tools.ParidadeLineares "$@"
+    ;;
+
+  # A ponta de Java da comparação de um codigo **2D**. E' um comando a parte e
+  # nao mais um tipo no `run-linear`, porque um Data Matrix devolve uma matriz
+  # e nao uma lista de modulos: ver a nota do `ParidadeDataMatrix` para o que
+  # acontece quando se tenta encaixar os dois no mesmo formato.
+  run-datamatrix)
+    fetch_jars
+    { compile_core; compile_tools; } >&2
+    shift || true
+    exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
+      com.qrcodegen.tools.ParidadeDataMatrix "$@"
     ;;
 
   app)
