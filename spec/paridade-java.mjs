@@ -44,13 +44,18 @@ sys.path.insert(0, "python")
 from qrcode_core.simbologias.code93 import code93
 from qrcode_core.simbologias.lineares import codabar, code39, code128, itf, itf14
 
-# **`sys.stdin.buffer`, e nao `sys.stdin`**: o `sys.stdin` usa a codificacao da
+# **O sys.stdin em vez do sys.stdin**: o sys.stdin usa a codificacao da
 # locale, que no Windows e' cp1252, e o Node escreve os casos em UTF-8. Nao ha
 # nenhum caso com acentos na lista de hoje, por isso que isto nunca deu problema -
 # **e e' por isso que e' um bug silencioso**: um caso com acento chegaria partido,
 # o Python mediria outra coisa, e a divergencia apontaria para a stack que esta
-# certa. O `paridade-java-datamatrix.mjs` apanhou-o com os dois payloads com
+# certa. O paridade-java-datamatrix.mjs apanhou-o com os dois payloads com
 # acentos, e a correccao e' a mesma aqui.
+#
+# **E o comentario nao leva acentos graves**, porque a linha anterior e' uma
+# template literal do JavaScript e um acento grave fecha-a. O sintoma e'
+# "SyntaxError: Unexpected identifier 'sys'" numa linha que e' Python valido, e o
+# Node nao diz que o problema e' um acento dentro de uma cadeia.
 casos = json.loads(sys.stdin.buffer.read().decode("utf-8"))
 saida = []
 
