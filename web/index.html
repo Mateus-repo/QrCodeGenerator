@@ -9,19 +9,35 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <link rel="manifest" href="manifest.json" />
     <!--
-  Os icones, por ordem de preferencia.
+  Os icones, e ha dois que sao coisas diferentes.
 
-  **O SVG primeiro**, porque e' um QR que este gerador produz e e' o que a
-  maioria dos browsers de hoje usa. O `png` a seguir, para os que nao
-  percebem SVG — e existe porque o `gerar-icones.py` o gera a partir do
-  mesmo SVG, e nao porque se desenhou a mao.
+  **A marca e' o logo do projecto** (`logo/qrcodegenerator-logo.svg`), e e' o que
+  identifica o programa: a aba do browser, o ecra principal do iPhone, o ecra
+  de inicio do Android. Entra primeiro porque e' o que se ve sem ler o
+  conteudo.
 
-  O `apple-touch-icon` vem no fim porque e' o que o iOS usa no ecra principal
-  de um PWA, e so aceita PNG.
+  **O QR tambem e' um icone** (`assets/icon-192.png`), gerado pelo encoder de
+  verdade e verificado pelo `descodificar-icones.py`, que o le com o ZXing e
+  confirma que devolve o endereco do gerador. Escanear o icone abre o gerador,
+  e isso vale mais do que a imagem se parecer com o logo.
+
+  **Os dois, e nao um.** Um icone que e' so um desenho perde a funcao de abrir o
+  programa a partir de si; um icone que e' so um QR nao se reconhece. Trocar um
+  pelo outro era trocar uma funcao por parecerenca.
+
+  O `favicon.ico` vem primeiro de tudo porque e' o que a **aba** mostra, e leva
+  16, 32 e 48 num ficheiro so — o browser escolhe conforme o zoom, e um icone
+  de 32 sozinho fica esbatido numa aba a 125%.
+
+  O `apple-touch-icon` e' a marca e nao o QR: o ecra principal do telemovel e'
+  onde se reconhece um programa, e o iOS so aceita PNG.
 -->
+<link rel="icon" href="favicon.ico" sizes="any" />
+<link rel="icon" href="assets/marca.svg" type="image/svg+xml" />
+<link rel="icon" href="assets/marca-192.png" type="image/png" />
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
 <link rel="alternate icon" href="assets/icon-192.png" type="image/png" />
-<link rel="apple-touch-icon" href="assets/icon-192.png" />
+<link rel="apple-touch-icon" href="assets/marca-192.png" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="themes.css" />
 

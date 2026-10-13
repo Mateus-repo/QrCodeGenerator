@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gerado por web/tests/gerar-marca.py. Nao editar a mao. -->
+<!--
+  O conteudo do SVG ocupa 320 dos 512, centrado em 256. A zona segura do
+  Android sao 72 dos 108, centrados em 54: escala 0.2250.
+
+  **Os `translate` ficam a zero de proposito.** O `pivotX`/`pivotY` a 54 faz
+  a escala em volta do centro, e um `translate` a mais aqui da o logotipo
+  deslocado — o mesmo bug do `offset` que a `AGENTS.md` ja registou.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.225000"
+        android:scaleY="0.225000">
+        <path
+            android:fillColor="#FF0F1B3D"
+            android:pathData="M132,120h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="#FF0F1B3D"
+            android:pathData="M332,120h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="#FF0F1B3D"
+            android:pathData="M132,320h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path android:pathData="M356 296 Q362 350 416 356 Q362 362 356 416 Q350 362 296 356 Q350 350 356 296 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="356" android:startY="296"
+                    android:endX="416" android:endY="416">
+                    <item android:offset="0" android:color="#FF67E8F9" />
+                    <item android:offset="1" android:color="#FF22D3EE" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

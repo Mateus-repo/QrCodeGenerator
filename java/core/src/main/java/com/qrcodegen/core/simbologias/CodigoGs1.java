@@ -51,14 +51,24 @@ public final class CodigoGs1 {
      * @param valor o valor do campo, com a parte implicita do AI no inicio
      * @param conteudo o valor sem a parte implicita
      * @param separador se o campo precisa de um FNC1 a separa-lo do seguinte
+     * @param numerico se o valor vai no modo de digitos do Data Matrix
      *
      * <p><strong>O {@code valor} e o {@code conteudo} sao dois campos porque num
      * {@code 3103} o ultimo digito e' a posicao decimal implicita</strong> e faz
      * parte do valor. E' a razao de a procura do AI ir do mais comprido para o mais
      * curto: o {@code 31} seguido de {@code 03} e' o mesmo campo com o digito no
      * sitio certo.
+     *
+     * <p><strong>O {@code numerico} decide do AI e nao do valor</strong>, e por isso
+     * que vive no campo e nao se calcula a hora de codificar. O {@code 01} e' o GTIN
+     * e e' numerico por definicao, e o {@code 10} e' o lote e e' alfanumerico — e
+     * so o AI o diz. Perguntar "o valor so tem digitos?" seria o jeito facil e errado,
+     * porque mandaria o lote para o modo de digitos, e o {@code LOTE} nao cabe la. E' o
+     * GS1-128 que o ignora — o GS1-128 so usa o conjunto B — mas o GS1 DataMatrix
+     * precisa dele, porque e' a decisao que torna o 232 ambiguo.
      */
-    public record Campo(String ai, String valor, String conteudo, boolean separador) {
+    public record Campo(String ai, String valor, String conteudo, boolean separador,
+            boolean numerico) {
     }
 
     private final boolean[] modulos;

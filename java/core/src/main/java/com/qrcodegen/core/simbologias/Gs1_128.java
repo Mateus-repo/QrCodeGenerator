@@ -89,6 +89,19 @@ public final class Gs1_128 {
      */
     public static final char GS = '\u001D';
 
+    /**
+     * O rotulo do formato, para as mensagens de recusa.
+     *
+     * <p><strong>E' o mesmo para o GS1-128 e para o GS1 DataMatrix.</strong> A tabela
+     * de 541 AIs, o <code>fixo</code>, o <code>maximo</code>, o <code>resto</code> e o
+     * <code>regex</code> da GS1 sao os mesmos nos dois, e o {@code analisar} e' o mesmo —
+     * o que muda entre os dois formatos e' o desenho, nao a notacao dos campos. O rotulo
+     * existe para uma mensagem identificar o formato certo, porque <strong>uma mensagem
+     * que diz "GS1-128" quando o utilizador fez um GS1 DataMatrix manda-o procurar o
+     * erro no sitio errado</strong>.
+     */
+    static final String ROTULO = "GS1-128";
+
     /** O codeword de inicio do conjunto B, que e' o unico que o GS1-128 usa. */
     private static final int INICIO_B = 104;
 
@@ -105,7 +118,7 @@ public final class Gs1_128 {
      *     ao contrario dos parenteses.
      */
     public static CodigoGs1 gs1_128(String elementoString) {
-        List<CodigoGs1.Campo> campos = analisar(elementoString);
+        List<CodigoGs1.Campo> campos = analisar(elementoString, ROTULO);
 
         /*
          * A forma de maquina: os campos concatenados, com o FNC1 onde a GS1 o quer.
@@ -240,14 +253,14 @@ public final class Gs1_128 {
      * <p>A forma humana da GS1 nao tem separadores: os campos estao separados por
      * parenteses. O FNC1 so existe na forma de maquina, e e' o encoder que o poe.
      */
-    static List<CodigoGs1.Campo> analisar(String texto) {
+    static List<CodigoGs1.Campo> analisar(String texto, String rotulo) {
         List<CodigoGs1.Campo> campos = new ArrayList<>();
         String fonte = texto == null ? "" : texto;
         int i = 0;
 
         while (i < fonte.length()) {
             if (fonte.charAt(i) != '(') {
-                throw new SimbologiaException("GS1-128: esperava um \"(\" na posicao "
+                throw new SimbologiaException(rotulo + ": esperava um \"(\" na posicao "
                         + i + " de \"" + fonte + "\". A forma de leitura humana e' "
                         + "(01)04012345678901(10)LOTE-A1, com os AIs entre parenteses.");
             }
@@ -261,18 +274,18 @@ public final class Gs1_128 {
             int fecho = fonte.indexOf(')', i);
             if (fecho < 0) {
                 throw new SimbologiaException(
-                        "GS1-128: o \"(\" na posicao " + i + " de \"" + fonte + "\" nao fecha.");
+                        rotulo + ": o \"(\" na posicao " + i + " de \"" + fonte + "\" nao fecha.");
             }
 
             String numero = fonte.substring(i + 1, fecho);
             if (!numero.matches("\\d+")) {
                 throw new SimbologiaException(
-                        "GS1-128: o AI \"" + numero + "\" nao e' so digitos.");
+                        rotulo + ": o AI \"" + numero + "\" nao e' so digitos.");
             }
 
             TabelasGs1.Ai encontrado = TabelasGs1.aiDe(numero);
             if (encontrado == null) {
-                throw new SimbologiaException("GS1-128: o AI (" + numero
+                throw new SimbologiaException(rotulo + ": o AI (" + numero
                         + ") nao existe. A tabela tem " + TabelasGs1.AIS.size() + " AIs.");
             }
 
@@ -305,18 +318,24 @@ public final class Gs1_128 {
                 conteudo = fonte.substring(inicioValor, fim);
             }
 
-            String limpo = validar(encontrado, conteudo);
+            String limpo = validar(encontrado, conteudo, rotulo);
 
             campos.add(new CodigoGs1.Campo(encontrado.numero(),
                     (encontrado.resto() == null ? "" : encontrado.resto()) + limpo,
-                    limpo, encontrado.separador()));
+                    limpo, encontrado.separador(),
+                    /* O `numerico` decide do AI e nao do valor: o `01` e' o GTIN e e'
+                     * numerico por definicao, e o `10` e' o lote e e' alfanumerico. E'
+                     * so o AI o diz — perguntar "o valor so tem digitos?" mandaria o
+                     * lote para o modo de digitos, e o `LOTE` nao cabe la. E' o que
+                     * torna o 232 ambiguo no GS1 DataMatrix. */
+                    "N".equals(encontrado.campos().get(0).tipo())));
 
             i = fim;
         }
 
         if (campos.isEmpty()) {
             throw new SimbologiaException(
-                    "GS1-128: o texto nao tem nenhum campo. Escreve (01)04012345678901.");
+                    rotulo + ": o texto nao tem nenhum campo. Escreve (01)04012345678901.");
         }
 
         return campos;
@@ -354,11 +373,11 @@ public final class Gs1_128 {
      * passe.</strong> Sem {@code ^} e {@code $} um regex nao ancorado aceita o valor
      * se <em>contiver</em> um match.
      */
-    static String validar(TabelasGs1.Ai ai, String valor) {
+    static String validar(TabelasGs1.Ai ai, String valor, String rotulo) {
         String limpo = valor.trim();
 
         if (limpo.isEmpty()) {
-            throw new SimbologiaException("GS1-128: o AI (" + ai.numero() + ") nao tem valor.");
+            throw new SimbologiaException(rotulo + ": o AI (" + ai.numero() + ") nao tem valor.");
         }
 
         /*
@@ -370,7 +389,7 @@ public final class Gs1_128 {
          * consegue corrigir o campo.**
          */
         if (ai.fixo() != null && limpo.length() != ai.fixo().intValue()) {
-            throw new SimbologiaException("GS1-128: o AI (" + ai.numero() + ") tem "
+            throw new SimbologiaException(rotulo + ": o AI (" + ai.numero() + ") tem "
                     + ai.fixo() + " digitos fixos e o valor \"" + limpo + "\" tem "
                     + limpo.length() + ".");
         }
@@ -385,12 +404,12 @@ public final class Gs1_128 {
          */
         Integer maximo = comprimentoTotal(ai);
         if (maximo != null && limpo.length() > maximo.intValue()) {
-            throw new SimbologiaException("GS1-128: o AI (" + ai.numero() + ") aceita no maximo "
+            throw new SimbologiaException(rotulo + ": o AI (" + ai.numero() + ") aceita no maximo "
                     + maximo + " caracteres e o valor \"" + limpo + "\" tem " + limpo.length() + ".");
         }
 
         if (!Pattern.matches(ai.regex(), limpo)) {
-            throw new SimbologiaException("GS1-128: o valor \"" + limpo + "\" do AI ("
+            throw new SimbologiaException(rotulo + ": o valor \"" + limpo + "\" do AI ("
                     + ai.numero() + ") nao corresponde ao que a GS1 define. O formato e' "
                     + ai.formato() + ".");
         }

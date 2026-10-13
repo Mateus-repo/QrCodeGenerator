@@ -2,14 +2,33 @@
 <!--
   O icone adaptativo.
 
-  **E' um vector drawable, e nao um PNG, e a razao tem tres partes.** Um PNG
-  teria de vir em varias densidades e o repositorio diria qual e' o certo; um
-  vector e' uma geometria e o Android escala. E a mesma forma que o
-  `web/tools/gerar-icone.mjs` gera para o site — **o mesmo QR como icone nas
-  duas plataformas**, o que faz a app e o site serem reconhecíveis como o mesmo
-  programa.
+  **E' um vector drawable, e nao um PNG, e a razao tem tres partes.** Um PNG teria de
+  vir em varias densidades e o repositorio diria qual e' o certo; um vector e' uma
+  geometria e o Android escala. **Os dois ficheiros sao gerados por
+  `web/tests/gerar-marca.py` a partir de `logo/qrcodegenerator-logo.svg`, e nao
+  escritos a mao** — um desenho de icone transcrito diverge do original na
+  primeira alteracao do logo, e ninguem ve porque um icone e' so "um desenho".
+
+  **O `background` e' o gradiente e o `foreground` sao as formas.** E' assim que o
+  icone adaptativo foi feito para funcionar: o sistema recorta e enriquece cada
+  camada com a mascara do lancador, que e' redonda no Pixel e quadrada nos
+  launchers antigos. **O `foreground` nao leva o fundo** — um launcher que
+  aplicasse a mascara sobre o gradiente inteiro dava um anel duplo.
+
+  ## O que aqui estaba antes, e porque foi
+
+  Era um QR **desenhado a mao** (`drawable/ic_qr.xml`), e o proprio comentario
+  admitia que nao era um QR valido: *"o interior e' um padrao, e um padrao
+  desenhado a mao que nao seja um QR valido da um icone que a camara nao le"*, e
+  *"um icone desenhado a mao e' um segundo encoder sem nenhuma verificacao"*.
+
+  **Com o logo do projecto a porta fica resolvida**: o icone passou a ser a marca,
+  que e' o que identifica o programa. E o QR continua a ser um icone no site, onde
+  ele e' gerado pelo encoder de verdade e lido pelo ZXing — ver
+  `web/tests/descodificar-icones.py`.
 -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@android:color/white" />
-    <foreground android:drawable="@drawable/ic_qr" />
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>
