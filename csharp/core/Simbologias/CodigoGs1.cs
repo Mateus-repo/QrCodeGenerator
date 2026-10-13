@@ -58,7 +58,16 @@ public sealed record CodigoGs1
     /// curto: o <c>31</c> seguido de <c>03</c> e' o mesmo campo com o digito no sitio
     /// certo.
     /// </remarks>
-    public sealed record Campo(string Ai, string Valor, string Conteudo, bool Separador);
+    /// <summary>Um campo de um GS1.</summary>
+/// <param name="Numerico">
+/// Se o valor vai no modo de digitos do Data Matrix.
+/// <para><strong>Decide do AI e nao do valor.</strong> O <c>01</c> e' o GTIN e e'
+/// numerico por definicao, e o <c>10</c> e' o lote e e' alfanumerico — e so o AI o
+/// diz. Perguntar "o valor so tem digitos?" seria o jeito facil e errado, porque
+/// mandaria o lote para o modo de digitos, e o <c>LOTE</c> nao cabe la.</para>
+/// </param>
+public sealed record Campo(
+    string Ai, string Valor, string Conteudo, bool Separador, bool Numerico = false);
 
     /// <summary>
     /// A grelha: <c>true</c> e' barra escura, <c>false</c> e' espaco.

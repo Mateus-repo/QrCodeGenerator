@@ -51,18 +51,21 @@ public static class Program
         // a saida dos 1D, que e' uma lista de modulos em vez de uma matriz - e o
         // script que o consome falhava a ler, longe do erro.
         if (args.Length > 1
-            || (args.Length == 1 && args[0] != ModoMatriz && args[0] != ModoGs1))
+            || (args.Length == 1 && args[0] != ModoMatriz && args[0] != ModoGs1
+                && args[0] != ModoGs1DataMatrix))
         {
             // **Os argumentos que chegaram vem na mensagem.** Um `uso:` que repete
             // o que ja se leu na linha de comando nao ajuda ninguem.
             Console.Error.WriteLine(
-                $"uso: Program [{ModoMatriz}|{ModoGs1}]  (casos em JSON por stdin); "
+                $"uso: Program [{ModoMatriz}|{ModoGs1}|{ModoGs1DataMatrix}]  "
+                    + "(casos em JSON por stdin); "
                     + $"recebi: [{string.Join(", ", args)}]");
             return 2;
         }
 
         bool matriz = args.Length == 1 && args[0] == ModoMatriz;
         bool gs1 = args.Length == 1 && args[0] == ModoGs1;
+        bool gs1Matriz = args.Length == 1 && args[0] == ModoGs1DataMatrix;
 
         string entrada = Console.In.ReadToEnd();
         var casos = JsonDocument.Parse(entrada).RootElement;
@@ -83,7 +86,9 @@ public static class Program
                     ? DescreverMatriz(MatrizDe(caso))
                     : gs1
                         ? DescreverGs1(caso)
-                        : Descrever(CodigoDe(caso)));
+                        : gs1Matriz
+                            ? DescreverGs1DataMatrix(caso)
+                            : Descrever(CodigoDe(caso)));
         }
 
         saida.Append(']');
@@ -170,6 +175,17 @@ public static class Program
     /// </remarks>
     private const string ModoGs1 = "--gs1";
 
+    /// <summary>O argumento que pede a saida do GS1 DataMatrix.</summary>
+    /// <remarks>
+    /// <b>E' um modo a parte e nao mais um <c>tipo</c> nos casos</b>, pela mesma
+    /// razao que o <see cref="ModoGs1"/> e' um: o GS1 DataMatrix devolve uma
+    /// <b>matriz</b> — que o <c>CodigoDeBarras</c> nao tem — e os
+    /// <b>codewords</b>, que so o <see cref="DataMatrix"/> tem. Encaixa-lo no
+    /// <see cref="DescreverGs1"/> obrigava a perder a matriz, e a perder era uma
+    /// <c>KeyError</c> no script de paridade que so aparecia em C#.
+    /// </remarks>
+    private const string ModoGs1DataMatrix = "--gs1-datamatrix";
+
     /// <summary>
     /// Um caso do GS1-128 e' so <c>[texto]</c>, e nao <c>[tipo, texto]</c>.
     /// </summary>
@@ -239,6 +255,102 @@ public static class Program
             sb.Append(",\"valor\":\"").Append(JsonEscape(campo.Valor)).Append('"');
             sb.Append(",\"conteudo\":\"").Append(JsonEscape(campo.Conteudo)).Append('"');
             sb.Append(",\"separador\":").Append(campo.Separador ? "true" : "false");
+            sb.Append('}');
+        }
+
+        sb.Append("]}");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Passa um <see cref="CodigoGs1Matriz"/> para JSON.
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Os modulos saem como lista de linhas, e nao achatada</b>, pelo mesmo
+    /// motivo que no <see cref="DescreverMatriz"/>: no achatado o script nao sabe onde
+    /// muda a linha, e uma divergencia dizia "o modulo 137" em vez de "(linha 8,
+    /// modulo 9)".</para>
+    ///
+    /// <para><b>E os codewords sao a comparacao principal, e nao a imagem.</b> Um 232 no
+    /// sitio errado da o mesmo numero de modulos e le-se com o campo partido.</para>
+    ///
+    /// <para><b>Uma recusa e' um resultado, e nao uma excecao</b>, como no
+    /// <see cref="DescreverGs1"/>: o script via um <c>stack trace</c> em vez de um
+    /// caso, e nao sabia qual dos dois encoder recusou.</para>
+    /// </remarks>
+    private static string DescreverGs1DataMatrix(JsonElement caso)
+    {
+        string texto = caso[0].GetString()!;
+
+        var sb = new StringBuilder();
+        sb.Append("{\"texto\":\"").Append(JsonEscape(texto)).Append('"');
+
+        CodigoGs1Matriz codigo;
+        try
+        {
+            codigo = Gs1_DataMatrix.Gerar(texto);
+        }
+        catch (SimbologiaException e)
+        {
+            sb.Append(",\"erro\":\"").Append(JsonEscape(e.Message)).Append("\"}");
+            return sb.ToString();
+        }
+
+        sb.Append(",\"modulos\":[");
+        for (int y = 0; y < codigo.Codigo.Linhas; y++)
+        {
+            if (y > 0)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append('[');
+            for (int x = 0; x < codigo.Codigo.Colunas; x++)
+            {
+                if (x > 0)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append(codigo.Codigo.Modulos[y, x] ? '1' : '0');
+            }
+
+            sb.Append(']');
+        }
+
+        sb.Append("],\"codewords\":[");
+        for (int i = 0; i < codigo.Codigo.Codewords.Length; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append(codigo.Codigo.Codewords[i]);
+        }
+
+        sb.Append(']');
+        sb.Append(",\"separadores\":").Append(codigo.Separadores);
+        sb.Append(",\"payload\":\"").Append(JsonEscape(codigo.Payload)).Append('"');
+        sb.Append(",\"gs1\":\"").Append(JsonEscape(codigo.Gs1)).Append('"');
+        sb.Append(",\"legenda\":\"").Append(JsonEscape(codigo.Legenda)).Append('"');
+        sb.Append(",\"colunas\":").Append(codigo.Codigo.Colunas);
+        sb.Append(",\"linhas\":").Append(codigo.Codigo.Linhas);
+        sb.Append(",\"campos\":[");
+
+        for (int i = 0; i < codigo.Campos.Count; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            CodigoGs1.Campo campo = codigo.Campos[i];
+            sb.Append("{\"ai\":\"").Append(JsonEscape(campo.Ai)).Append('"');
+            sb.Append(",\"valor\":\"").Append(JsonEscape(campo.Valor)).Append('"');
+            sb.Append(",\"conteudo\":\"").Append(JsonEscape(campo.Conteudo)).Append('"');
+            sb.Append(",\"separador\":").Append(campo.Separador ? "true" : "false");
+            sb.Append(",\"numerico\":").Append(campo.Numerico ? "true" : "false");
             sb.Append('}');
         }
 

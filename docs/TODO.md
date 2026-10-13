@@ -540,12 +540,35 @@ encoder, e todos verificados pelo ZXing antes de entrarem.
       > está partido. Não está — os `bytes` é que têm de se ler, em UTF-8.
 - [x] **GS1 DataMatrix** — não é um encoder novo: é Data Matrix com o
       cabeçalho FNC1 em ASCII, para rastreabilidade na saúde e na logística.
-      > **Feito, ligado à interface e verificado pelo ZXing**: 8 de 8, com
-      > `]d2` e `ContentType.GS1` reconhecidos e os separadores no sítio.
+      > **Feito nas cinco stacks**, cada uma verificada pelas três vias: leitura
+      > pelo ZXing, paridade byte a byte com o Python, e **reintrodução de bugs**.
+      >
+      > | stack | o que foi medido | como se sabe que está certo |
+      > |---|---|---|
+      > | Python | a implementação de referência | 28 testes + leitura |
+      > | web | 8 de 8, com `]d2` e `ContentType.GS1` | ligado à interface |
+      > | Java | 44 testes de leitura + `SondaGs1DataMatrix` | `build.sh sonda-gdm` |
+      > | Kotlin | 38 testes de leitura | `runGs1DataMatrix` |
+      > | C# | 59 testes, 8 casos de leitura | `--gs1-datamatrix` |
       >
       > Não é só o FNC1: os campos de comprimento variável precisam de um
       > separador **no fim de cada um, menos o último**. Sem isso o leitor
       > descodifica com os campos trocados, e não há erro nenhum.
+      >
+      > **E o `Numerico` decide do AI e não do valor.** O `01` é o GTIN e é
+      > numérico por definição, e o `10` é o lote e é alfanumérico. Perguntar
+      > *"o valor só tem dígitos?"* mandava o lote para o modo de dígitos, e o
+      > `LOTE` não cabe lá. **O sintoma foi o mesmo nas três stacks onde o
+      > primeiro palpite falhou**: o GTIN-14 dava 17 codewords em vez de 9 —
+      > desenhava-se certo, lia-se certo, e ocupava o dobro do espaço. **A
+      > paridade apanhou-o em segundos**, porque o código tem o mesmo número de
+      > módulos e o código está bom; é o conteúdo que está partido.
+      >
+      > **E as afirmações de leitura foram medidas, não supostas.** A sonda do
+      > Java mostrou que três das três suposições estavam erradas: o `getText()`
+      > é `<GS>` mais o payload e não a forma humana, e os `getRawBytes()` são
+      > os **codewords** e não os caracteres. **São três leitores e três
+      > formatos**, e não se traduzem uns nos outros.
 - [ ] **Aztec** — bilhetes de comboio e cartões de embarque. Tem um padrão de
       orientação central e usa Reed-Solomon sobre GF(16) e GF(256). Não é
       apenas mais difícil: é um algoritmo diferente do QR.
@@ -785,11 +808,19 @@ o ZXing a ler o resultado.
 
 > **A tabela dos 541 AIs do GS1 já está nas cinco**, escrita por
 > `spec/gerar-tabelas-gs1.py`, e `web/tests/gs1-tabelas-paridade.test.mjs`
-> compara as cinco entrada a entrada. Falta o encoder GS1-128 e o GS1 DataMatrix
-> em Python, Java, Kotlin e C# — que não são encoders novos: são o Code 128 e o
+> compara as cinco entrada a entrada. **Os dois encoders estão agora nas cinco** — o
+> GS1-128 e o GS1 DataMatrix — e não são encoders novos: são o Code 128 e o
 > Data Matrix com o FNC1 no início e um separador no fim de cada campo de
 > comprimento variável. A tabela é que diz onde é que esse separador vai, e sem
 > ela um `(10)LOTE-A1` engole o campo fixo seguinte.
+>
+> **E a tabela é partilhada pelo `analisar` das duas notações, com um rótulo.**
+> Não há segunda tabela de AI nem segunda notação: os campos de um GS1
+> DataMatrix são os mesmos campos de um GS1-128, e um `(10)` tem o mesmo
+> comprimento num e no outro. O rótulo existe para a mensagem de recusa dizer
+> **qual** dos dois formatos está a ser codificado — **uma mensagem que diz
+> "GS1-128" quando a pessoa fez um GS1 DataMatrix manda-a procurar o erro no
+> sítio errado**.
 
 > **Um teste de paridade de tabelas é um teste que confirma um comentário, se o
 > teste for escrito a partir do comentário do código.** A primeira versão do
