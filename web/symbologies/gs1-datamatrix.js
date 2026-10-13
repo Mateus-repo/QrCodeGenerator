@@ -55,7 +55,38 @@
  */
 
 import { dataMatrixDeCodewords, FNC1_DATAMATRIX } from './datamatrix.js';
-import { AIS, aiDe } from './gs1-tabelas.js';
+
+/**
+ * O `analisar` e' **o do GS1-128**, e nao uma copia.
+ *
+ * Este ficheiro tinha o seu proprio `analisar`, e a copia divergiu em dois sitios -
+ * os dois silenciosos, que e' o pior tipo:
+ *
+ *  1. Usava `encontrado.maximo`, que e' o comprimento do **ultimo** componente, em
+ *     vez do `comprimentoTotal`, que e' a **soma**. Sao **44 AIs** em que isso
+ *     recusava um valor que a GS1 aceita e que o GS1-128 aceitava no mesmo texto.
+ *  2. Lia `campos[0]?.tipo`, e **a tabela do JavaScript usa `t`**. O `undefined` nao
+ *     da erro nenhum: `numerico` ficava sempre `false` e **nenhum numero ia no modo
+ *     de digitos**. O codigo desenhava-se certo e lia-se certo - cada digito
+ *     ocupava um codeword em vez de meio - e o unico sintoma era o simbolo ficar
+ *     maior do que devia.
+ *
+ * **Nenhum dos dois dava erro, e nenhum era apanhado por um teste de leitura.** O
+ * segundo e' o pior: um codigo que se le bem e ocupa o dobro do espaco. A prova do
+ * primeiro esta' em `tests/provar-maximo-gs1-datamatrix.mjs`.
+ *
+ * A correccao que fecha o buraco nao e' corrigir a copia: e' **nao haver copia**.
+ * A tabela de 541 AIs, o `fixo`, o `maximo`, o `resto` e o `regex` da GS1 sao os
+ * mesmos nos dois formatos - o que muda entre um GS1-128 e um GS1 DataMatrix e' o
+ * desenho, nao a notacao dos campos - e o `rotulo` existe so para a mensagem dizer
+ * "GS1 DataMatrix" em vez de "GS1-128".
+ *
+ * E **a tabela dos digitos nao vem de outra fonte**: o Python usa `tipo` e o
+ * JavaScript usa `t`, porque o `spec/gerar-tabelas-gs1.py` escreve chaves do
+ * tamanho de cada linguagem. Ler o codigo de uma com as chaves da outra da `undefined`
+ * - e `undefined` nao parte, o codigo corre e faz a coisa errada.
+ */
+import { analisar } from './gs1-128.js';
 
 /** O FNC1 do Data Matrix, que faz as duas coisas: sinaliza e separa. */
 export const FNC1 = FNC1_DATAMATRIX;
@@ -105,7 +136,12 @@ function ascii(texto) {
  *   lê. Os parênteses não vão para o símbolo.
  */
 export function gs1DataMatrix(elementoString) {
-  const campos = analisar(elementoString);
+  /*
+   * **O `analisar` e' o do GS1-128, com o rotulo certo.** O rotulo nao e' um
+   * detalhe: uma mensagem que diz "GS1-128" quando o utilizador esta' a fazer um
+   * GS1 DataMatrix manda-o procurar o erro na codigo de barras em vez de na matriz.
+   */
+  const { campos } = analisar(elementoString, 'GS1 DataMatrix');
 
   /*
    * Os codewords, na ordem: FNC1, e depois cada campo com o seu separador.
@@ -148,104 +184,3 @@ export function gs1DataMatrix(elementoString) {
   };
 }
 
-/**
- * Separa o texto em campos e valida cada um contra a tabela de AIs.
- *
- * **A validação é a do GS1-128, e a tabela é a mesma.** Só não se copia: o
- * `aiDe` e a tabela vêm de `gs1-tabelas.js`, e o que se repete é a *chamada*, que
- * é o que se quer. Duas listas de AI divergem - e já houve uma divergência
- * dessas no repositório, entre o HTML e o registo.
- */
-function analisar(texto) {
-  const campos = [];
-  let i = 0;
-
-  while (i < texto.length) {
-    if (texto[i] !== '(') {
-      throw new Error(
-        `GS1 DataMatrix: esperava um "(" na posicao ${i} de "${texto}". A forma de ` +
-          "leitura humana e' (01)04012345678901(10)LOTE-A1.",
-      );
-    }
-
-    const fecho = texto.indexOf(')', i);
-    if (fecho < 0) {
-      throw new Error(`GS1 DataMatrix: o "(" na posicao ${i} de "${texto}" nao fecha.`);
-    }
-
-    const numero = texto.slice(i + 1, fecho);
-    if (!/^\d+$/.test(numero)) {
-      throw new Error(`GS1 DataMatrix: o AI "${numero}" nao e' so digitos.`);
-    }
-
-    const encontrado = aiDe(numero);
-    if (!encontrado) {
-      throw new Error(
-        `GS1 DataMatrix: o AI (${numero}) nao existe. A tabela tem ${Object.keys(AIS).length} AIs.`,
-      );
-    }
-
-    const inicio = fecho + 1;
-    let conteudo;
-    let fim;
-
-    if (encontrado.fixo !== null) {
-      fim = inicio + encontrado.fixo;
-      conteudo = texto.slice(inicio, fim);
-    } else {
-      const proximo = texto.indexOf('(', inicio);
-      fim = proximo < 0 ? texto.length : proximo;
-      conteudo = texto.slice(inicio, fim);
-    }
-
-    const limpo = conteudo.trim();
-
-    if (limpo === '') {
-      throw new Error(`GS1 DataMatrix: o AI (${encontrado.numero}) nao tem valor.`);
-    }
-
-    if (encontrado.maximo !== null && limpo.length > encontrado.maximo) {
-      throw new Error(
-        `GS1 DataMatrix: o AI (${encontrado.numero}) aceita no maximo ` +
-          `${encontrado.maximo} caracteres e o valor "${limpo}" tem ${limpo.length}.`,
-      );
-    }
-
-    if (!new RegExp(`^(?:${encontrado.re})$`).test(limpo)) {
-      throw new Error(
-        `GS1 DataMatrix: o valor "${limpo}" do AI (${encontrado.numero}) nao ` +
-          `corresponde ao que a GS1 define. O formato e' ${encontrado.f}.`,
-      );
-    }
-
-    /*
-     * `numerico` decide se o valor vai no modo de dígitos ou em ASCII, e é a
-     * diferença entre `(01)04012345678901` e `(10)LOTE-A1`.
-     *
-     * A pergunta não é "o valor tem só dígitos?", que seria o jeito fácil e
-     * errado: `(17)270630` tem só dígitos e o AI é numérico, mas um `(240)`
-     * pode ter um valor alfanumérico que **só** se pode ir em ASCII. O que
-     * decide é o **AI**, não o valor: o `01` é o GTIN e é numérico por
-     * definição, e o `10` é o lote e é alfanumérico. Um AI numérico com letras
-     * no valor é um dado inválido, e o regex da GS1 já o recusa.
-     */
-    const tipo = encontrado.campos[0]?.tipo;
-    const numerico = tipo === 'N';
-
-    campos.push({
-      ai: encontrado.numero,
-      conteudo: (encontrado.resto || '') + limpo,
-      valor: (encontrado.resto || '') + limpo,
-      separador: encontrado.sep,
-      numerico,
-    });
-
-    i = fim;
-  }
-
-  if (campos.length === 0) {
-    throw new Error('GS1 DataMatrix: o texto nao tem nenhum campo.');
-  }
-
-  return campos;
-}

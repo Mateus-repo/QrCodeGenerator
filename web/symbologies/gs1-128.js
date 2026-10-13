@@ -272,14 +272,48 @@ function caracterNoConjuntoB(caractere, ai) {
  * A forma humana da GS1 nao tem separadores: os campos estao separados por
  * parenteses. O FNC1 so existe na forma de maquina, e e' o encoder que o poe.
  */
-function analisar(texto) {
+/**
+ * Separa o texto nos campos, e valida cada um contra a tabela de AIs.
+ *
+ * **E' exportado, e e' o mesmo para o GS1-128 e para o GS1 DataMatrix.**
+ *
+ * A tabela de 541 AIs, o `fixo`, o `maximo`, o `resto` do `aiDe` e o `regex` da GS1
+ * sao **os mesmos nos dois**: o que muda entre um GS1-128 e um GS1 DataMatrix e' o
+ * desenho, nao a notacao dos campos. O `rotulo` existe so para a mensagem de erro
+ * dizer "GS1-128" ou "GS1 DataMatrix", porque **uma mensagem que identifica o
+ * formato errado e' pior do que uma mensagem sem rotulo**.
+ *
+ * ## Porque isto deixou de ser uma copia
+ *
+ * O `gs1-datamatrix.js` tinha o seu proprio `analisar`, e a copia divergiu: usava
+ * `encontrado.maximo` - o comprimento do **ultimo** componente - em vez do
+ * `comprimentoTotal`, que e' a **soma**. Sao **44 AIs** em que isso recusava um valor
+ * que a GS1 aceita, e o GS1-128 aceitava o mesmo texto. A prova esta' em
+ * `tests/provar-maximo-gs1-datamatrix.mjs`.
+ *
+ * **A divergencia nao era do `maximo`: era de haver duas copias.** Corrigir o
+ * `maximo` na copia deixava a copia, e a proxima divergencia era outra. A correcao
+ * que fecha o buraco e' uma implementacao so, que e' o que este `export` e' - e e' a
+ * mesma regra do `casos-barras.mjs`, em que uma lista partilhada obrigou cada
+ * consumidor a implementar tudo.
+ *
+ * ## O que e' que a forma do valor depende do AI e nao do valor
+ *
+ * `numerico` diz se o valor vai no modo de digitos do Data Matrix ou em ASCII, e e'
+ * o **AI** que decide: o `01` e' o GTIN e e' numerico por definicao, e o `10` e' o
+ * lote e e' alfanumerico. A pergunta facil - "o valor so tem digitos?" - daria o
+ * mesmo resposta para `(17)270630`, que e' numerico, e para um `(240)` com valor
+ * alfanumerico, que **so** pode ir em ASCII. Um AI numerico com letras no valor e' um
+ * dado invalido, e o `regex` da GS1 ja o recusa.
+ */
+export function analisar(texto, rotulo = 'GS1-128') {
   const campos = [];
   let i = 0;
 
   while (i < texto.length) {
     if (texto[i] !== '(') {
       throw new Error(
-        `GS1-128: esperava um "(" na posicao ${i} de "${texto}". A forma de ` +
+        `${rotulo}: esperava um "(" na posicao ${i} de "${texto}". A forma de ` +
           "leitura humana e' (01)04012345678901(10)LOTE-A1, com os AIs entre parenteses.",
       );
     }
@@ -293,18 +327,18 @@ function analisar(texto) {
      */
     const fecho = texto.indexOf(')', i);
     if (fecho < 0) {
-      throw new Error(`GS1-128: o "(" na posicao ${i} de "${texto}" nao fecha.`);
+      throw new Error(`${rotulo}: o "(" na posicao ${i} de "${texto}" nao fecha.`);
     }
 
     const numero = texto.slice(i + 1, fecho);
     if (!/^\d+$/.test(numero)) {
-      throw new Error(`GS1-128: o AI "${numero}" nao e' so digitos.`);
+      throw new Error(`${rotulo}: o AI "${numero}" nao e' so digitos.`);
     }
 
     const encontrado = aiDe(numero);
     if (!encontrado) {
       throw new Error(
-        `GS1-128: o AI (${numero}) nao existe. A tabela tem ${Object.keys(AIS).length} AIs.`,
+        `${rotulo}: o AI (${numero}) nao existe. A tabela tem ${Object.keys(AIS).length} AIs.`,
       );
     }
 
@@ -337,7 +371,7 @@ function analisar(texto) {
       valor = texto.slice(inicioValor, fim);
     }
 
-    const limpo = validar(encontrado, valor, texto);
+    const limpo = validar(encontrado, valor, rotulo);
 
     campos.push({
       ai: encontrado.numero,
@@ -345,6 +379,8 @@ function analisar(texto) {
       /** O valor so, sem o resto do AI implicito. */
       conteudo: limpo,
       separador: encontrado.sep,
+      /** Se o valor vai no modo de digitos do Data Matrix. Ver `analisar`. */
+      numerico: encontrado.campos[0]?.t === 'N',
     });
 
     i = fim;
@@ -413,11 +449,11 @@ export function comprimentoTotal(ai) {
   return temVariavel ? soma : null;
 }
 
-function validar(ai, valor, texto) {
+function validar(ai, valor, rotulo) {
   const limpo = valor.trim();
 
   if (limpo === '') {
-    throw new Error(`GS1-128: o AI (${ai.numero}) nao tem valor.`);
+    throw new Error(`${rotulo}: o AI (${ai.numero}) nao tem valor.`);
   }
 
   /*
@@ -436,7 +472,7 @@ function validar(ai, valor, texto) {
   if (ai.fixo !== null && limpo.length !== ai.fixo) {
     const unidade = ai.fixo === 1 ? 'digito' : 'digitos';
     throw new Error(
-      `GS1-128: o AI (${ai.numero}) tem ${ai.fixo} ${unidade} fixos e o valor ` +
+      `${rotulo}: o AI (${ai.numero}) tem ${ai.fixo} ${unidade} fixos e o valor ` +
         `"${limpo}" tem ${limpo.length}.`,
     );
   }
@@ -444,7 +480,7 @@ function validar(ai, valor, texto) {
   const maximo = comprimentoTotal(ai);
   if (maximo !== null && limpo.length > maximo) {
     throw new Error(
-      `GS1-128: o AI (${ai.numero}) aceita no maximo ${maximo} caracteres e o ` +
+      `${rotulo}: o AI (${ai.numero}) aceita no maximo ${maximo} caracteres e o ` +
         `valor "${limpo}" tem ${limpo.length}.`,
     );
   }
@@ -458,7 +494,7 @@ function validar(ai, valor, texto) {
   const padrao = new RegExp(`^(?:${ai.re})$`);
   if (!padrao.test(limpo)) {
     throw new Error(
-      `GS1-128: o valor "${limpo}" do AI (${ai.numero}) nao corresponde ao que a ` +
+      `${rotulo}: o valor "${limpo}" do AI (${ai.numero}) nao corresponde ao que a ` +
         `GS1 define. O formato e' ${ai.f}.`,
     );
   }
