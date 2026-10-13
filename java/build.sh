@@ -239,6 +239,36 @@ case "${1:-test}" in
         com.qrcodegen.tools.ParidadeGs1 "$@"
       ;;
 
+  # A sonda do GS1 DataMatrix: **o que o ZXing devolve, medido.**
+  #
+  # Este nao e' um comando de paridade nem um teste: e' a **medicao que precede o
+  # encoder**. A `AGENTS.md` manda que o que se compara seja medido antes, e nao
+  # assumido — e assumir foi o que custou os 14 testes a falhar de uma vez, porque
+  # se supoe que o `getText()` devolve a forma humana e que os `getRawBytes()`
+  # devolvem a forma de maquina, e **nenhum dos dois era verdade**.
+  #
+  # Fica no `build.sh` porque e' a forma de o correr sem montar o `-cp` a mao, e o
+  # `-cp` a mao e' a razao de as sondas ficarem por correr.
+  sonda-gdm)
+    fetch_jars
+    { compile_core; compile_tools; } >&2
+    shift || true
+    exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
+      com.qrcodegen.tools.SondaGs1DataMatrix "$@"
+    ;;
+
+    # A ponta de Java da comparacao do **GS1 DataMatrix**. E' um comando a parte e nao
+    # mais um `case` no `run-linear` por duas razoes: devolve uma **matriz** (e o
+    # `CodigoDeBarras` nao a tem) e devolve **os codewords**, que sao a comparacao que
+    # apanha um `232` no sitio errado — ver o docstring do `ParidadeGs1DataMatrix`.
+  run-gs1-datamatrix)
+    fetch_jars
+    { compile_core; compile_tools; } >&2
+    shift || true
+    exec "$JAVA" -cp "$TOOLS_CLASSES$SEP$CORE_CLASSES$SEP$(core_cp)" \
+      com.qrcodegen.tools.ParidadeGs1DataMatrix "$@"
+    ;;
+
   app)
     fetch_jars; fetch_javafx
     compile_core; compile_app

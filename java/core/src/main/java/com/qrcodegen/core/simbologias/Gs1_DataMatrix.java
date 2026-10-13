@@ -58,8 +58,17 @@ public final class Gs1_DataMatrix {
      */
     static final String ROTULO = "GS1 DataMatrix";
 
-    /** O GS que separa os campos, o mesmo byte que o leitor devolve. */
-    static final char GS = Gs1_128.GS;
+    /**
+     * O GS que separa os campos, o mesmo byte que o leitor devolve.
+     *
+     * <p><strong>E' publico porque o teste de leitura precisa dele.</strong> O ZXing
+     * escreve o separador no {@code getText()} como {@code 0x1D}, e o teste compara
+     * esse texto com o payload que o encoder montou — sem a constante nao ha como
+     * escrever a comparacao sem repetir o {@code "0x1D"} a mao, que e' a razao de as
+     * duas metades deixarem de bater. **E' a mesma razao que o {@code GS} do GS1-128
+     * e' publico.**
+     */
+    public static final char GS = Gs1_128.GS;
 
     private Gs1_DataMatrix() {
     }
