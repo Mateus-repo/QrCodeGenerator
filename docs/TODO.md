@@ -140,7 +140,30 @@ qualquer código novo:
 - [ ] **Estilo e logo nos QR: em todas as plataformas ou só web+Python?**
       → **decidido: em todas as cinco stacks**, e o logo é a próxima grande
       bloco depois das simbologias.
-      > **Porquê o logo primeiro do que a Estilo.** O `frameqr.js` do web já tem o
+      >
+      > **O logo do projecto já existe** (`logo/qrcodegenerator-logo.svg` e
+      > `.png`, 512×512), e **foi medido dentro de um QR** — `web/tests/medir-logo.py`,
+      > que é o **nível 3** do `AGENTS.md`: desenha o logo na zona apagada e lê com o
+      > ZXing. O maior logo que ainda lê, por nível:
+      >
+      > | nível | maior logo que lê | zona apagada |
+      > |---|---|---|
+      > | L | **3 módulos** | 2,4% da área |
+      > | M | **6 módulos** | ~4% |
+      > | Q | 9 módulos | ~6% |
+      > | H | 9 módulos | ~5% |
+      >
+      > **O mesmo a 4 e a 8 píxeis por módulo** — não é artefacto de escala, é o
+      > limite do logo. **E este logo é o pior dos dois casos**, por três razões que
+      > a medição confirma: fundo gradiente escuro (contraste mínimo contra o QR),
+      > cantos arredondados, e o padrão de localização desenhado dentro de si.
+      >
+      > **Consequência para o desenho, e é a decisão que fica pendente:** a 3
+      > módulos no nível L o logotipo é quase um ponto. Ou o logo só entra a partir
+      > do nível M, ou entra com um contorno/marca mais leve que a app-icon actual.
+      > **Isto mede; não decide.** A decisão de Design é do dono do projecto.
+      >
+      > **Porquê o logo antes do Estilo.** O `frameqr.js` do web já tem o
       > logotipo a funcionar e verificado por leitura (`analisar-frameqr.py`), com
       > os valores medidos de percentagem de correcção de erros. **Nenhuma das
       > outras quatro stacks tem sequer a zona apagada** — é código por escrever

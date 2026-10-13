@@ -165,6 +165,7 @@ _ReSharper*/
 
 web/tests/.gs1-datamatrix.json
 web/tests/.gs1-datamatrix-python.json
+web/tests/.logo.json
 web/tests/.dm-fnc1.json
 web/tests/.code93.json
 web/tests/.sqrc.json
