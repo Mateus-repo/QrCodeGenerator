@@ -4,7 +4,7 @@ A app desktop multiplataforma. O mesmo código corre em **Windows, macOS e
 Linux**, e o `jpackage` gera o instalador nativo de cada um.
 
 **Stack:** Java 21 / JavaFX / ZXing
-**Estado:** ✅ 11 tipos · ✅ 205 testes · ✅ payloads idênticos às outras stacks
+**Estado:** ✅ 11 tipos · ✅ 303 testes · ✅ payloads idênticos às outras stacks
 
 ---
 
@@ -158,7 +158,7 @@ Mais:
 cd java && ./build.sh test
 ```
 
-205 testes, em seis grupos:
+303 testes, em seis grupos:
 
 | Ficheiro | O que garante |
 |---|---|

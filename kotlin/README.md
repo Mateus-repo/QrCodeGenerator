@@ -45,8 +45,20 @@ noutra máquina o encoder produzia um código diferente.
 
 ```bash
 cd kotlin
-./gradlew :core:test      # Windows: gradlew.bat :core:test
+./gradlew :core:test      # Windows: gradlew.bat :core:test   # 177 testes no :core
 ```
+
+**177 testes no `:core`, em seis classes.** A app Android **nao tem `src/test`**
+e por isso nao tem `gradlew :app:test` — ela mede-se a correr num emulador, que
+e' a unica forma de apanhar um bug de interface nesta stack:
+
+```bash
+python kotlin/android/tools/verificar-app.py
+```
+
+**E a GS1 DataMatrix tem uma ponta de paridade propria**, `runGs1DataMatrix`,
+pelo mesmo motivo que a do GS1-128: o resultado e' uma **matriz** e **codewords**,
+e o `CodigoDeBarras` nao tem nenhum dos dois.
 
 **Não precisa de Gradle instalado** — o `gradlew` descarrega a versão fixada em
 `gradle/wrapper/gradle-wrapper.properties`. Precisa de um JDK, e o toolchain

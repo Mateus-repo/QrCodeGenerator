@@ -5,10 +5,10 @@ regras** partilhado.
 
 | Pasta | O que é | Stack | Estado |
 |---|---|---|---|
-| [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 9 simbologias · 295 testes · Lighthouse 100/100/100 |
-| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 252 testes |
-| [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 177 testes |
-| [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ 11 tipos · 323 testes |
+| [`web`](web) | **Site / PWA** | HTML + ES modules, zero dependências | ✅ 11 tipos · 9 simbologias · 314 testes · Lighthouse 100/100/100 |
+| [`csharp`](csharp) | App Windows + núcleo de payloads | C# / .NET 8 / WinForms | ✅ 11 tipos · 390 testes |
+| [`java`](java) | App desktop **multiplataforma** | Java 21 / JavaFX / ZXing | ✅ 11 tipos · 303 testes |
+| [`python`](python) | Biblioteca + linha de comandos | Python / segno / Pillow | ✅ 11 tipos · 471 testes |
 | [`kotlin/core`](kotlin/core) | Núcleo JVM, app Android a seguir | Kotlin / Gradle / ZXing | ✅ 11 tipos · 60 testes |
 | [`kotlin/android`](kotlin/android) | App Android | Kotlin / Compose / ZXing | ⬜ por fazer |
 | [`go`](go) | App terminal, **por último** | Go | ⬜ por decidir |
@@ -129,11 +129,11 @@ Detalhes e armadilhas de cada um: [`docs/TIPOS-QR.md`](docs/TIPOS-QR.md).
 ## Testes
 
 ```bash
-cd python && python -m pytest tests -q            # 323
-node --test "web/tests/*.test.mjs"                # 292
-cd csharp && dotnet test                          # 236
-cd java && ./build.sh test                        # 161
-cd kotlin && ./gradlew.bat :core:test             #  44
+cd python && python -m pytest tests -q            # 471
+node --test "web/tests/*.test.mjs"                # 314
+cd csharp && dotnet test                          # 390
+cd java && ./build.sh test                        # 303
+cd kotlin && ./gradlew.bat :core:test             # 177
 
 # o teste que apanha bugs de verdade — o leitor independente:
 node web/tests/cross-check.mjs && python web/tests/descodificar.py

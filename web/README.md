@@ -322,7 +322,7 @@ Lighthouse dá 100/100/100 nas 18 combinações.
 python -m pip install python-barcode   # só para os testes
 python web/tests/extrair-tabelas.py
 
-# 295 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
+# 314 testes: encoder + payloads + temas + simbologias + tabelas + FrameQR + PDF417 + Data Matrix + GS1 + formatos + os 10 vetores da spec
 node --test "web/tests/*.test.mjs"
 
 # o teste que importa: o ZXing lê o que o encoder produz?

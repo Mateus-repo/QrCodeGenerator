@@ -41,7 +41,7 @@ cd python
 python -m pytest tests -q
 ```
 
-381 testes. Cobrem a spec partilhada (`spec/vectors.json`), o exemplo oficial do
+471 testes. Cobrem a spec partilhada (`spec/vectors.json`), o exemplo oficial do
 Banco Central, e — o mais importante — **descodificam o PNG gerado** com o
 ZXing e confirmam que devolvem o payload original.
 
