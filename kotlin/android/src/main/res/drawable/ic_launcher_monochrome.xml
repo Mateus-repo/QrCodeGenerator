@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gerado por web/tests/gerar-marca.py. Nao editar a mao. -->
+<!--
+  A camada tematica do Android 13. O sistema pinta isto com a cor do tema,
+  pelo que so interessa a silhueta — **e por isso que sao as mesmas formas
+  do `foreground`, todas numa cor so, e sem gradiente**: um gradiente
+  tintado de uma cor e' uma mancha, e e' o que apanha o nome da marca.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.225000"
+        android:scaleY="0.225000">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M132,120h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M332,120h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M132,320h48a12,12 0 0 1 12,12v48a12,12 0 0 1 -12,12h-48a12,12 0 0 1 -12,-12v-48a12,12 0 0 1 12,-12z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M356 296 Q362 350 416 356 Q362 362 356 416 Q350 362 296 356 Q350 350 356 296 Z" />
+    </group>
+</vector>
