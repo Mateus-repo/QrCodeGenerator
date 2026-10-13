@@ -169,3 +169,22 @@ tasks.register<JavaExec>("runGs1") {
 
     standardInput = System.`in`
 }
+
+/**
+ * A ponta de Kotlin do **GS1 DataMatrix**. E' uma tarefa a parte pela mesma razao que
+ * a [runGs1] e' uma tarefa a parte do `runLinear`: o GS1 DataMatrix devolve uma
+ * **matriz** e **os codewords**, e o `CodigoDeBarras` nao tem nenhum dos dois.
+ *
+ * **Os codewords sao a comparacao que apanha**, e nao a imagem: um `232` no sitio
+ * errado da o mesmo numero de modulos e le-se com o campo partido.
+ */
+tasks.register<JavaExec>("runGs1DataMatrix") {
+    group = "verification"
+    description = "Casos de GS1 DataMatrix em JSON (stdin) -> matriz e codewords em JSON (stdout)"
+
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.qrcodegen.tools.ParidadeGs1DataMatrixKt")
+
+    standardInput = System.`in`
+}

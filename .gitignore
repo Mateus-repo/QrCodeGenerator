@@ -171,3 +171,4 @@ web/tests/.code93.json
 web/tests/.sqrc.json
 web/tests/.sqrc-frameqr.json
 java/.casos-gdm.json
+kotlin/.casos-gdm.json

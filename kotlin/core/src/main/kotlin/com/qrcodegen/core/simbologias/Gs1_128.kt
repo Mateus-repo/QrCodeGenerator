@@ -70,6 +70,13 @@ object Gs1_128 {
      */
     const val GS: Char = '\u001D'
 
+    // **O rotulo do formato, para as mensagens de recusa.** E' o mesmo para o GS1-128 e
+    // para o GS1 DataMatrix: a tabela, o `fixo`, o `maximo` e o `regex` sao os mesmos,
+    // e o que muda entre os dois e' o desenho, nao a notacao dos campos. Uma mensagem que
+    // diz "GS1-128" quando o utilizador fez um GS1 DataMatrix manda-o procurar o erro
+    // no sitio errado.
+    const val ROTULO: String = "GS1-128"
+
     /** O codeword de inicio do conjunto B, que e' o unico que o GS1-128 usa. */
     private const val INICIO_B = 104
 
@@ -85,7 +92,7 @@ object Gs1_128 {
      *   nao os ve. **Os digitos do AI vao**, ao contrario dos parenteses.
      */
     fun gs1_128(elementoString: String): CodigoGs1 {
-        val campos = analisar(elementoString)
+        val campos = analisar(elementoString, ROTULO)
 
         /*
          * A forma de maquina: os campos concatenados, com o FNC1 onde a GS1 o quer.
@@ -214,7 +221,7 @@ object Gs1_128 {
      * A forma humana da GS1 nao tem separadores: os campos estao separados por
      * parenteses. O FNC1 so existe na forma de maquina, e e' o encoder que o poe.
      */
-    internal fun analisar(texto: String): List<CodigoGs1.Campo> {
+    internal fun analisar(texto: String, rotulo: String = "GS1-128"): List<CodigoGs1.Campo> {
         val campos = ArrayList<CodigoGs1.Campo>()
         val fonte = texto.ifEmpty { "" }
         var i = 0
@@ -222,7 +229,7 @@ object Gs1_128 {
         while (i < fonte.length) {
             if (fonte[i] != '(') {
                 throw SimbologiaException(
-                    "GS1-128: esperava um \"(\" na posicao $i de \"$fonte\". A forma de " +
+                    "$rotulo: esperava um \"(\" na posicao $i de \"$fonte\". A forma de " +
                         "leitura humana e' (01)04012345678901(10)LOTE-A1, com os AIs " +
                         "entre parenteses."
                 )
@@ -237,18 +244,18 @@ object Gs1_128 {
             val fecho = fonte.indexOf(')', i)
             if (fecho < 0) {
                 throw SimbologiaException(
-                    "GS1-128: o \"(\" na posicao $i de \"$fonte\" nao fecha."
+                    "$rotulo: o \"(\" na posicao $i de \"$fonte\" nao fecha."
                 )
             }
 
             val numero = fonte.substring(i + 1, fecho)
             if (!numero.all { it in '0'..'9' }) {
-                throw SimbologiaException("GS1-128: o AI \"$numero\" nao e' so digitos.")
+                throw SimbologiaException("$rotulo: o AI \"$numero\" nao e' so digitos.")
             }
 
             val encontrado = TabelasGs1.aiDe(numero)
                 ?: throw SimbologiaException(
-                    "GS1-128: o AI ($numero) nao existe. A tabela tem " +
+                    "$rotulo: o AI ($numero) nao existe. A tabela tem " +
                         "${TabelasGs1.AIS.size} AIs."
                 )
 
@@ -281,7 +288,7 @@ object Gs1_128 {
                 conteudo = fonte.substring(inicioValor, fim)
             }
 
-            val limpo = validar(encontrado, conteudo)
+            val limpo = validar(encontrado, conteudo, rotulo)
 
             campos.add(
                 CodigoGs1.Campo(
@@ -289,6 +296,13 @@ object Gs1_128 {
                     valor = (encontrado.resto ?: "") + limpo,
                     conteudo = limpo,
                     separador = encontrado.separador,
+                    // **O `numerico` decide do AI e nao do valor.** O `01` e' o GTIN e
+                    // e' numerico por definicao, e o `10` e' o lote e e' alfanumerico —
+                    // e so o AI o diz. Perguntar "o valor so tem digitos?" mandaria o
+                    // lote para o modo de digitos, e o `LOTE` nao cabe la. E' o GS1-128
+                    // que o ignora (so usa o conjunto B), mas o GS1 DataMatrix precisa
+                    // dele, porque e' a decisao que torna o 232 ambiguo.
+                    numerico = encontrado.campos.first().tipo == "N",
                 )
             )
 
@@ -297,7 +311,7 @@ object Gs1_128 {
 
         if (campos.isEmpty()) {
             throw SimbologiaException(
-                "GS1-128: o texto nao tem nenhum campo. Escreve (01)04012345678901."
+                "$rotulo: o texto nao tem nenhum campo. Escreve (01)04012345678901."
             )
         }
 
@@ -332,11 +346,11 @@ object Gs1_128 {
      * passe.** Sem `^` e `$` um regex nao ancorado aceita o valor se *contiver* um
      * match.
      */
-    internal fun validar(ai: TabelasGs1.Ai, valor: String): String {
+    internal fun validar(ai: TabelasGs1.Ai, valor: String, rotulo: String = "GS1-128"): String {
         val limpo = valor.trim()
 
         if (limpo.isEmpty()) {
-            throw SimbologiaException("GS1-128: o AI (${ai.numero}) nao tem valor.")
+            throw SimbologiaException("$rotulo: o AI (${ai.numero}) nao tem valor.")
         }
 
         /*
@@ -350,7 +364,7 @@ object Gs1_128 {
         if (ai.fixo != null && limpo.length != ai.fixo) {
             val unidade = if (ai.fixo == 1) "digito" else "digitos"
             throw SimbologiaException(
-                "GS1-128: o AI (${ai.numero}) tem ${ai.fixo} $unidade fixos e o valor " +
+                "$rotulo: o AI (${ai.numero}) tem ${ai.fixo} $unidade fixos e o valor " +
                     "\"$limpo\" tem ${limpo.length}."
             )
         }
@@ -367,14 +381,14 @@ object Gs1_128 {
         val maximo = comprimentoTotal(ai)
         if (maximo != null && limpo.length > maximo) {
             throw SimbologiaException(
-                "GS1-128: o AI (${ai.numero}) aceita no maximo $maximo caracteres e o " +
+                "$rotulo: o AI (${ai.numero}) aceita no maximo $maximo caracteres e o " +
                     "valor \"$limpo\" tem ${limpo.length}."
             )
         }
 
         if (!Regex(ai.regex).matches(limpo)) {
             throw SimbologiaException(
-                "GS1-128: o valor \"$limpo\" do AI (${ai.numero}) nao corresponde ao " +
+                "$rotulo: o valor \"$limpo\" do AI (${ai.numero}) nao corresponde ao " +
                     "que a GS1 define. O formato e' ${ai.formato}."
             )
         }

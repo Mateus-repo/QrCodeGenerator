@@ -103,5 +103,12 @@ data class CodigoGs1(
         val valor: String,
         val conteudo: String,
         val separador: Boolean,
+        // **Decide do AI e nao do valor.** O `01` e' o GTIN e e' numerico por
+        // definicao, e o `10` e' o lote e e' alfanumerico — e so o AI o diz.
+        // Perguntar "o valor so tem digitos?" seria o jeito facil e errado, porque
+        // mandaria o lote para o modo de digitos, e o `LOTE` nao cabe la. E' o GS1-128
+        // que o ignora — so usa o conjunto B — mas o GS1 DataMatrix precisa dele, porque
+        // e' a decisao que torna o 232 ambiguo.
+        val numerico: Boolean = false,
     )
 }
