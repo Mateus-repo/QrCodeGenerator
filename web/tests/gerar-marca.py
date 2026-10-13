@@ -157,7 +157,48 @@ def vector() -> None:
     texto = SVG.read_text(encoding="utf-8")
 
     escala = SEGURO / 320.0
-    pivo = VISTA / 2.0
+
+    # **O pivo e' onde o centro do conteudo esta, e nao o centro da zona segura.**
+    #
+    # Sao coisas diferentes e a confusao entre elas e' o que fez o icone sair
+    # 45 unidades para baixo e para a direita — ver a nota longa no fim deste
+    # ficheiro. A conta:
+    #
+    #     pivo + (256 - pivo) × escala = 54
+    #     pivo × (1 - escala) = 54 - 256 × escala
+    #
+    # `android:pivotX` e' **o ponto que fica quieto durante a escala**, e nao o sitio
+    # onde o conteudo vai parar. **Um pivo no centro da zona segura (54) pune o logo
+    # inteiro para o canto** — e nao da erro nenhum: compila, instala, e o que se ve
+    # e' o canto do fundo.
+    pivo = (VISTA / 2.0 - 256.0 * escala) / (1.0 - escala)
+
+    # Quantas formas ha no SVG. **Contadas no original e nao no resultado** — e' o
+    # original que e' a verdade, e e' contra ele que o Drawing se compara.
+    #
+    # **Esta conta e' o que apanha um gerador que perde uma forma.** Aconteceu uma
+    # vez: o regex dos `rect` so aceitava 6 digitos hex, os rects brancos dos
+    # padroes de localizacao — que o SVG escreve como `#fff`, 3 digitos — cafram
+    # fora, e o Drawing ficou com escuro sobre escuro. O `aapt` aceitou, o APK
+    # instalou, e o icone nao se via. **Nada disso da erro**, e por isso que a
+    # defesa e' um numero e nao uma revisao a olho.
+    # Quantas formas **devem estar nesta camada**.
+    #
+    # **Contam-se as do foreground e nao as do ficheiro**, porque o rect do fundo
+    # (`fill="url(#bg)"`) e' **outra camada por desenho** — o gradiente que o sistema
+    # recorta com a mascara do lancador. Um guarda que o contasse acusava o gerador
+    # de perder uma forma quando fez a coisa certa, e um guarda que acusa sem razao
+    # acaba "corrigido" a ser desligado — que e' como um guarda vira codigo morto.
+    #
+    # **O `fill="url(#...)"` e' o que distingue as duas**: e' um preenchimento por
+    # referencia e nao uma cor, e nao pode ser posto num `fillColor` do Android.
+    esperado = (
+        len(re.findall(r'<rect(?![^>]*fill="url)[^>]*\b\b', texto))
+        + len(re.findall(r"<path\b", texto))
+    )
+
+    _conferir("foreground", _vector_frente(texto, escala, pivo), esperado)
+    _conferir("monochrome", _vector_mono(texto, escala, pivo), esperado)
 
     # --- o fundo: o gradiente, que e' o que a mascara vai recortar ----------
     fundo = _vector_fundo()
@@ -188,6 +229,33 @@ def vector() -> None:
     ):
         destino = pasta / nome
         print(f"  {destino.relative_to(RAIZ)}  {destino.stat().st_size} bytes")
+
+
+def _conferir(camada: str, xml: str, esperado: int) -> None:
+    """
+    O Drawing tem tantas formas como o SVG, e o script recusa se nao tiver.
+
+    **Cada forma e' um `<path>` com `android:fillColor`**, e a faisca e' o unico
+    caso em que a cor vem de um `<aapt:attr>`. **Contam-se os dois** — e contar so o
+    `fillColor` dava um numero a menos sem dar erro, que e' o mesmo bug que esta
+    funcao existe para apanhar.
+    """
+    formas = len(re.findall(r'android:fillColor="#', xml)) + len(
+        re.findall(r'<aapt:attr name="android:fillColor">', xml)
+    )
+
+    if formas != esperado:
+        raise SystemExit(
+            f"  A camada {camada} tem {formas} formas e o SVG tem {esperado}.\n"
+            "\n"
+            "  **O Drawing e' um ficheiro valido e esta incompleto**: o `aapt` aceita,\n"
+            "  o APK instala, e o icone mostra so parte do logo. Ja aconteceu uma vez\n"
+            "  com os rects brancos dos padroes de localizacao, que o SVG escreve\n"
+            "  como `#fff` e o regex so aceitava 6 digitos hex.\n"
+            "\n"
+            "  **Um gerador que perde uma forma nao da erro nenhum** — e por isso que\n"
+            "  a defesa e' esta conta e nao a leitura do ficheiro."
+        )
 
 
 def _vector_fundo() -> str:
@@ -360,66 +428,80 @@ def _formas(texto: str) -> list[str]:
     """
     Os `<rect>` e os `<path>` do SVG, convertidos para `path` do Android.
 
-    **Cada `rect` com `rx` vira um path com os cantos arredondados**, e essa
-    conversao e' uma conta: os cantos sao arcos de raio `rx`, e o `A` do path
-    desenha um arco ate ao ponto seguinte. **O interior e' o mesmo rect, que e' um
-    `path` com `h`/`v` — e por isso que o Android ter so `path` nao custa nada aqui.**
+    **Cada `rect` com `rx` vira um path com os cantos arredondados**, e essa conversao
+    e' uma conta: os cantos sao arcos de raio `rx`, e o `a` do path desenha o arco ate
+    ao ponto seguinte. **O interior e' o mesmo rect, com `h`/`v`** — e por isso que o
+    Android ter so `path` nao custa nada aqui.
 
-    A cor de cada forma vem do `fill` do SVG. **O `fill-opacity` do grupo dos modulos
-    e' posto no `fillAlpha` do path**, que e' o mesmo valor com outro nome.
+    ## A cor de um rect vem do rect ou do grupo
+
+    **O SVG tem rects com `fill` e rects sem `fill` nenhum.** Os padroes de localizacao
+    trazem o seu; os modulos de dados estao dentro de um
+
+        <g fill="#fff" fill-opacity="0.9"> … </g>
+
+    e **nao tem `fill` — herdam o do grupo**. Um regex que exija `fill="..."` no
+    proprio rect deixa os **14 modulos** de fora, e o Drawing fica com 10 formas em
+    vez de 25.
+
+    **Foi o que aconteceu, e nao da erro nenhum:** o `aapt` aceita um Drawing
+    incompleto, o APK instala, e o icone mostra so os padroes. **A unica defesa e' a
+    contagem de formas contra o original** — ver `vector`.
+
+    Por isso que aqui se le o estado do grupo e se herda a cor, em vez de se exigir um
+    `fill` que nem existe.
     """
     saida: list[str] = []
 
-    # --- os rects ----------------------------------------------------------
-    #
-    # O grupo dos modulos de dados tem `fill-opacity="0.9"`, e o finder e' `#fff`.
-    # O SVG agrupa-os com um `fill` no `<g>`, e cada `rect` dentro herda. **A
-    # conversao le o `fill` do `g` que envolve o rect** — e nao do proprio rect,
-    # que nao tem.
-    alfa_grupo = 0.9
-    cor_grupo = "#ffffff"
+    cor_herdada: str | None = None
+    alfa_herdado: float | None = None
 
-    dentro_dos_dados = False
     for linha in texto.splitlines():
-        if 'fill-opacity="0.9"' in linha:
-            dentro_dos_dados = True
+        # --- o grupo dos modulos ------------------------------------------
+        m_g = re.search(r'<g\s+fill="(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})"[^>]*'
+                        r'fill-opacity="([\d.]+)"', linha)
+        if m_g:
+            cor_herdada, alfa_herdado = m_g.group(1), float(m_g.group(2))
             continue
-        if dentro_dos_dados and "</g>" in linha:
-            dentro_dos_dados = False
-            continue
-        if dentro_dos_dados:
-            cor_grupo, alfa_grupo = "#FFFFFF", 0.9
-        else:
-            cor_grupo, alfa_grupo = None, None
 
+        if "</g>" in linha:
+            cor_herdada, alfa_herdado = None, None
+            continue
+
+        # --- os rects ------------------------------------------------------
         m = re.search(
             r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"'
-            r'(?: rx="([\d.]+)")? fill="(#[0-9a-fA-F]{6})"',
+            r'(?: rx="([\d.]+)")?(?: fill="(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})")?',
             linha,
         )
         if m:
-            x, y, w, h, rx, cor = (
-                float(m.group(1)),
-                float(m.group(2)),
-                float(m.group(3)),
-                float(m.group(4)),
-                float(m.group(5)) if m.group(5) else 0.0,
-                m.group(6),
-            )
-            if dentro_dos_dados:
-                cor = cor_grupo
-            saida.append(_rect_path(x, y, w, h, rx, cor, alfa_grupo))
+            x, y, w, h = (float(m.group(i)) for i in (1, 2, 3, 4))
+            rx = float(m.group(5)) if m.group(5) else 0.0
+            cor = m.group(6) or cor_herdada
+            alfa = alfa_herdado if m.group(6) is None else None
+
+            # **Um rect sem cor nenhuma e' um rect invisivel**, e escreva-lo com cor
+            # nenhuma dava um `path` sem `fillColor` — que o Android desenha com o
+            # preto por omissao, ou ignora. O `AGENTS.md` chama a isto "uma funcao
+            # que ignora uma opcao desconhecida": a forma existe e nao se ve.
+            if cor is None:
+                raise SystemExit(
+                    f"  um rect sem `fill` e sem grupo: {ascii(linha.strip()[:70])}.\n"
+                    "  **Seria desenhado sem cor, e nao se veria** — e um Drawing "
+                    "completo com uma forma invisivel."
+                )
+
+            saida.append(_rect_path(x, y, w, h, rx, cor, alfa))
             continue
 
-        # --- o path da faisca ----------------------------------------------
+        # --- a faisca ------------------------------------------------------
         if "<path fill=" in linha:
-            m = re.search(r'fill="(url\(#spark\)|#[0-9a-fA-F]{6})"', linha)
+            m_c = re.search(r'fill="(url\(#spark\)|#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})"', linha)
             d = re.search(r'd="([^"]+)"', linha)
-            if m and d:
-                saida.append(_path_gradiente(d.group(1), m.group(1)))
+            if m_c and d:
+                saida.append(_path_gradiente(d.group(1), m_c.group(1)))
 
     return saida
-
 
 def _rect_path(x: float, y: float, w: float, h: float, rx: float, cor: str, alfa) -> str:
     """Um rect com cantos arredondados, como um path do Android."""
@@ -473,8 +555,25 @@ def _path_gradiente(d: str, fill: str) -> str:
 
 
 def _android(cor: str) -> str:
-    """`#RRGGBB` para `#AARRGGBB`, que e' o que o Android usa."""
-    return "#FF" + cor.lstrip("#").upper()
+    """`#RGB` ou `#RRGGBB` para `#AARRGGBB`, que e' o que o Android usa.
+
+    **O SVG escreve `#fff` e nao `#ffffff`**, e a expandicao de 3 para 6 e' aqui.
+    **Foi este o bug que o icone quase entrou no repositorio**: o regex dos `rect`
+    so aceitava 6 digitos, os tres rects brancos dos padroes de localizacao cafram
+    fora, e o que ficou foi um Drawing com **escuro sobre escuro** — um ficheiro
+    valido, um APK valido, e um icone que nao se via.
+
+    **E a razao de o `gerar` contar o que escreve**, ver `_formas`.
+    """
+    cor = cor.lstrip("#")
+
+    if len(cor) == 3:
+        cor = "".join(c * 2 for c in cor)
+
+    if len(cor) != 6:
+        raise ValueError(f"a cor {cor!r} nao e' nem #RGB nem #RRGGBB")
+
+    return "#FF" + cor.upper()
 
 
 def main() -> int:
