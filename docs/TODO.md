@@ -138,6 +138,45 @@ qualquer código novo:
       ao C#; macOS só com `jpackage` a dar)
 - [x] **PIX entra já?** → sim, implementado e validado
 - [ ] **Estilo e logo nos QR: em todas as plataformas ou só web+Python?**
+      → **decidido: em todas as cinco stacks**, e o logo é a próxima grande
+      bloco depois das simbologias.
+      > **Porquê o logo primeiro do que a Estilo.** O `frameqr.js` do web já tem o
+      > logotipo a funcionar e verificado por leitura (`analisar-frameqr.py`), com
+      > os valores medidos de percentagem de correcção de erros. **Nenhuma das
+      > outras quatro stacks tem sequer a zona apagada** — é código por escrever
+      > cinco vezes, e a parte difícil (a geometria, a medição, a escala) já está
+      > feita e testada num lado só.
+      >
+      > **Os três erros que a zona apagada deu, e que têm de entrar à**
+      > **primeira nas outras quatro** — nenhum deles aparece num teste
+      > estrutural, e todos os três passaram:
+      >
+      > 1. **A zona é dada em coordenadas do _código_, e o canvas desenha a**
+      >    **partir da _margem_.** São a mesma grelha com origens diferentes: o
+      >    logotipo saiu 4 módulos à esquerda, o QR **continuou a ler** — nenhum
+      >    teste falhou porque o código estava certo — e o único sintoma era um
+      >    desenho torto.
+      > 2. **Uma função que ignora uma opção desconhecida é a pior forma de**
+      >    **bug.** `desenharLogotipo` recebia `offset` e a chamada passava
+      >    `margem`; o `offset` ficava no zero do valor por omissão. A assinatura
+      >    prometia e o corpo ignorava, e **o erro tem de sair no browser**, porque
+      >    `offset` a zero é um valor legítimo e um valor de esquecimento e nada no
+      >    desenho os distingue.
+      > 3. **Um teste que prova que uma peça está boa não prova que a máquina**
+      >    **liga.** Os primeiros testes do `frameqr-centragem.test.mjs` passavam
+      >    com o bug e sem ele — importavam `frameqr.js` e não `app.js`, e o bug
+      >    estava na _chamada_. O que o apanha é o teste que lê o fonte e procura
+      >    a linha.
+      >
+      > **E a armadilha numérica que custou um dia**, para não repetir: a
+      > percentagem de correcção de erros do QR (4% a L, 24% a H) **não é uma
+      > percentagem de área**. É de _codewords_ errados, e só vale com os erros
+      > espalhados por vários blocos. Num QR pequeno há poucos — a versão 2 a
+      > nível M tem um só bloco — e uma mancha de logótipo é contígua, pelo que
+      > toca muitos codewords de uma vez. Medido com o ZXing, a teórica é 4 a 6
+      > vezes o que um QR pequeno aguenta. **Os valores em `frameqr.js` são
+      > medidos, e `analisar-frameqr.py` é quem os mede — não se volte a pôr a
+      > percentagem da norma.**
 - [ ] **QR dinâmico (link curto + analytics)?** isso implica backend, muda o
       âmbito de "app local" para "serviço"
 

@@ -19,6 +19,7 @@ o teste desse cliente passe.
 from .code93 import SIMBOLOGIAS_CODE93, code93
 from .datamatrix import SIMBOLOGIAS_DATAMATRIX, data_matrix, data_matrix_de_codewords
 from .gs1 import SIMBOLOGIAS_GS1, gs1_128
+from .gs1_datamatrix import SIMBOLOGIAS_GS1_DATAMATRIX, gs1_datamatrix
 from .lineares import (
     SIMBOLOGIAS_LINEARES,
     codabar,
@@ -57,6 +58,7 @@ SIMBOLOGIAS_TODAS = {
     **SIMBOLOGIAS_CODE93,
     **SIMBOLOGIAS_DATAMATRIX,
     **SIMBOLOGIAS_GS1,
+    **SIMBOLOGIAS_GS1_DATAMATRIX,
 }
 
 __all__ = [
@@ -75,6 +77,8 @@ __all__ = [
     "code128",
     "SIMBOLOGIAS_GS1",
     "gs1_128",
+    "SIMBOLOGIAS_GS1_DATAMATRIX",
+    "gs1_datamatrix",
     "SIMBOLOGIAS_CODE93",
     "code93",
     "SIMBOLOGIAS_DATAMATRIX",

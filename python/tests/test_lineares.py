@@ -1040,6 +1040,7 @@ def test_o_registro_tem_o_que_se_declara():
     from qrcode_core.simbologias import SIMBOLOGIAS_CODE93
     from qrcode_core.simbologias import SIMBOLOGIAS_DATAMATRIX
     from qrcode_core.simbologias import SIMBOLOGIAS_GS1
+    from qrcode_core.simbologias import SIMBOLOGIAS_GS1_DATAMATRIX
 
     assert set(SIMBOLOGIAS_CODE93) == {"code93"}
     assert set(SIMBOLOGIAS_DATAMATRIX) == {"datamatrix"}
@@ -1051,8 +1052,18 @@ def test_o_registro_tem_o_que_se_declara():
     #: um deles aceita texto solto e o outro aceita `(01)040…`.
     assert set(SIMBOLOGIAS_GS1) == {"gs1-128"}
 
-    # O registo de todos tem os quatro grupos de 1D e o de 2D, e cada entrada e'
-    # uma funcao.
+    #: **O GS1 DataMatrix tem registo proprio pelo mesmo motivo do GS1-128**: nao e'
+    #: por ser 2D — o `datamatrix` ja e' 2D e o seu registo esta' la — e sim porque
+    #: **nao e' um formato, e' uma notacao**: e' um Data Matrix com o FNC1, e o que
+    #: muda sao os campos que vao dentro. Regista-lo ao lado do `datamatrix` diria
+    #: que sao dois formatos, e so o segundo aceita `(01)040…`.
+    assert set(SIMBOLOGIAS_GS1_DATAMATRIX) == {"gs1-datamatrix"}
+
+    # O registo de todos tem os grupos de 1D, o de 2D e as duas notacoes GS1, e cada
+    # entrada e' uma funcao. **Este e' o teste que apanha um formato no registo e no
+    # selector ao mesmo tempo** — quando o GS1 DataMatrix entrou no registo com o
+    # encoder e a validacao, este teste obrigou a lista a ser actualizada, que e'
+    #: o que impede um registo que funciona e nao aparece.
     assert set(SIMBOLOGIAS_TODAS) == {
         "ean13",
         "ean8",
@@ -1065,6 +1076,7 @@ def test_o_registro_tem_o_que_se_declara():
         "code93",
         "datamatrix",
         "gs1-128",
+        "gs1-datamatrix",
     }
     assert all(callable(f) for f in SIMBOLOGIAS_TODAS.values())
 

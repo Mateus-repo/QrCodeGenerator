@@ -215,7 +215,7 @@ def _valor_no_conjunto_b(caractere: str, ai: str) -> int:
     return codigo - 32
 
 
-def analisar(texto: str) -> list[dict]:
+def analisar(texto: str, rotulo: str = "GS1-128") -> list[dict]:
     """
     Separa o texto nos campos, e valida cada um contra a tabela de AIs.
 
@@ -227,8 +227,15 @@ def analisar(texto: str) -> list[dict]:
     A forma humana da GS1 nao tem separadores: os campos estao separados por
     parenteses. O FNC1 so existe na forma de maquina, e e' o encoder que o poe.
 
-    :returns: a lista de campos, cada um com ``ai``, ``valor``, ``conteudo`` e
-        ``separador``.
+    :param texto: a forma humana da GS1, com os AIs entre parenteses.
+    :param rotulo: o nome do formato, para a mensagem de recusa. **O mesmo para o
+        GS1-128 e para o GS1 DataMatrix**: a tabela, o `fixo`, o `maximo`, o `resto`
+        e o `regex` da GS1 sao os mesmos, e o que muda entre os dois e' o desenho e
+        nao a notacao dos campos. O rotulo existe para a mensagem identificar o
+        formato certo - **uma mensagem que diz "GS1-128" quando o utilizador fez um
+        GS1 DataMatrix manda-o procurar o erro no sitio errado.**
+    :returns: a lista de campos, cada um com ``ai``, ``valor``, ``conteudo``,
+        ``separador`` e ``numerico``.
 
     **O `resto` que o `ai_de` devolve entra no valor.** Num `3103`, o digito da
     posicao decimal implicita e' o ultimo do AI e faz parte do valor - o que o
@@ -240,7 +247,7 @@ def analisar(texto: str) -> list[dict]:
     while i < len(texto):
         if texto[i] != "(":
             raise SimbologiaError(
-                f'GS1-128: esperava um "(" na posicao {i} de "{texto}". A forma de '
+                f'{rotulo}: esperava um "(" na posicao {i} de "{texto}". A forma de '
                 "leitura humana e' (01)04012345678901(10)LOTE-A1, com os AIs entre "
                 "parenteses."
             )
@@ -251,16 +258,16 @@ def analisar(texto: str) -> list[dict]:
         # diz onde acaba.
         fecho = texto.find(")", i)
         if fecho < 0:
-            raise SimbologiaError(f'GS1-128: o "(" na posicao {i} de "{texto}" nao fecha.')
+            raise SimbologiaError(f'{rotulo}: o "(" na posicao {i} de "{texto}" nao fecha.')
 
         numero = texto[i + 1 : fecho]
         if not re.fullmatch(r"\d+", numero):
-            raise SimbologiaError(f'GS1-128: o AI "{numero}" nao e\' so digitos.')
+            raise SimbologiaError(f'{rotulo}: o AI "{numero}" nao e\' so digitos.')
 
         encontrado = ai_de(numero)
         if encontrado is None:
             raise SimbologiaError(
-                f"GS1-128: o AI ({numero}) nao existe. A tabela tem {len(AIS)} AIs."
+                f"{rotulo}: o AI ({numero}) nao existe. A tabela tem {len(AIS)} AIs."
             )
 
         # O valor comeca logo a seguir ao `)`, e e' o comprimento que decide ate onde
@@ -280,7 +287,7 @@ def analisar(texto: str) -> list[dict]:
             fim = proximo if proximo >= 0 else len(texto)
             conteudo = texto[inicio_valor:fim]
 
-        limpo = validar(encontrado, conteudo)
+        limpo = validar(encontrado, conteudo, rotulo)
 
         campos.append(
             {
@@ -289,6 +296,12 @@ def analisar(texto: str) -> list[dict]:
                 # O valor so, sem o resto do AI implicito.
                 "conteudo": limpo,
                 "separador": encontrado["separador"],
+                # Se o valor de um AI numerico vai no modo de digitos do Data Matrix.
+                # **E' o AI que decide, e nao o valor**: o `01` e' o GTIN e e' numerico
+                # por definicao, e o `10` e' o lote e e' alfanumerico. Perguntar "o
+                # valor so tem digitos?" seria o jeito facil e errado, porque mandaria
+                # o lote para o modo de digitos - e o `LOTE` nao cabe la.
+                "numerico": encontrado["campos"][0].get("tipo") == "N",
             }
         )
 
@@ -296,7 +309,7 @@ def analisar(texto: str) -> list[dict]:
 
     if not campos:
         raise SimbologiaError(
-            "GS1-128: o texto nao tem nenhum campo. Escreve (01)04012345678901."
+            f"{rotulo}: o texto nao tem nenhum campo. Escreve (01)04012345678901."
         )
 
     return campos
@@ -340,7 +353,7 @@ def comprimento_total(ai: dict) -> int | None:
     return soma if tem_variavel else None
 
 
-def validar(ai: dict, valor: str) -> str:
+def validar(ai: dict, valor: str, rotulo: str = "GS1-128") -> str:
     """
     Confere o valor de um campo contra o que a GS1 diz dele.
 
@@ -381,26 +394,26 @@ def validar(ai: dict, valor: str) -> str:
     limpo = valor.strip()
 
     if not limpo:
-        raise SimbologiaError(f"GS1-128: o AI ({ai['numero']}) nao tem valor.")
+        raise SimbologiaError(f"{rotulo}: o AI ({ai['numero']}) nao tem valor.")
 
     # O comprimento primeiro, e com os dois numeros na mensagem.
     if ai["fixo"] is not None and len(limpo) != ai["fixo"]:
         unidade = "digito" if ai["fixo"] == 1 else "digitos"
         raise SimbologiaError(
-            f"GS1-128: o AI ({ai['numero']}) tem {ai['fixo']} {unidade} fixos e o "
+            f"{rotulo}: o AI ({ai['numero']}) tem {ai['fixo']} {unidade} fixos e o "
             f'valor "{limpo}" tem {len(limpo)}.'
         )
 
     maximo = comprimento_total(ai)
     if maximo is not None and len(limpo) > maximo:
         raise SimbologiaError(
-            f"GS1-128: o AI ({ai['numero']}) aceita no maximo {maximo} "
+            f"{rotulo}: o AI ({ai['numero']}) aceita no maximo {maximo} "
             f'caracteres e o valor "{limpo}" tem {len(limpo)}.'
         )
 
     if not re.fullmatch(ai["regex"], limpo):
         raise SimbologiaError(
-            f'GS1-128: o valor "{limpo}" do AI ({ai["numero"]}) nao corresponde ao que '
+            f'{rotulo}: o valor "{limpo}" do AI ({ai["numero"]}) nao corresponde ao que '
             f"a GS1 define. O formato e' {ai['formato']}."
         )
 
